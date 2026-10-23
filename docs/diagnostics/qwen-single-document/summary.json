@@ -1,0 +1,1413 @@
+{
+  "git_commit": "909ae3d934bf6dc81021af5e9e50f9f904e12fb0",
+  "scope": "single-document development smoke, two public questions; not held-out accuracy",
+  "model": "qwen3.8-flash",
+  "thinking": "disabled",
+  "page_selection": "local",
+  "document": "2012.07440v3.pdf",
+  "question_ids": [
+    "C31",
+    "C18"
+  ],
+  "hard_cost_cap_usd": 0.05,
+  "pricing_per_million_tokens": {
+    "input": 0.15,
+    "output": 0.47,
+    "cache_read": 0.016,
+    "cache_write": 0.2
+  },
+  "source_sha256": "dfbea8f46eb77a10d21bde81e6986d65856ae35ba9752c722f6fb176dc225dc3",
+  "protected_inputs_unchanged": true,
+  "total_cost_usd": 0.01079835,
+  "conservative_admission_usd": 0.012912600000000002,
+  "results": [
+    {
+      "id": "C31",
+      "query": "How many Monte Carlo paths did the rough Bergomi pricing routine use to generate prices in the Chebyshev-tensor calibration study?",
+      "status": "answered",
+      "answer": "The rough Bergomi pricing routine used 60,000 Monte Carlo paths to generate prices in the Chebyshev-tensor calibration study. [2012.07440v3.pdf p15]",
+      "latency_seconds": 19.127716167015024,
+      "returned_chunks": 1,
+      "query_calls": 4,
+      "query_cost_usd": 0.000874,
+      "judge_cost_usd": 0.00025205,
+      "metrics": {
+        "answer_precision": 0.6666666666666666,
+        "answer_recall": 0.6666666666666666,
+        "context_precision": 1.0,
+        "context_recall": 1.0
+      },
+      "coverage": {
+        "aspects": [
+          {
+            "id": "a1",
+            "text": "Number of Monte Carlo paths used in the rough Bergomi pricing routine for Chebyshev-tensor calibration",
+            "entity": "Rough Bergomi model",
+            "period": "August 2020",
+            "evidence_ids": [
+              "E1"
+            ],
+            "claim_ids": [
+              "c1"
+            ],
+            "status": "supported"
+          }
+        ],
+        "obligations": [
+          {
+            "id": "a1",
+            "text": "Number of Monte Carlo paths used in the rough Bergomi pricing routine for Chebyshev-tensor calibration",
+            "entity": "Rough Bergomi model",
+            "period": "August 2020",
+            "evidence_ids": [
+              "E1"
+            ],
+            "claim_ids": [
+              "c1"
+            ],
+            "status": "supported"
+          }
+        ],
+        "limitations": [],
+        "counts": {
+          "candidate_pages": 24,
+          "cards_surveyed": 0,
+          "raw_candidate_pages": 5,
+          "elements_retrieved": 56,
+          "raw_fragments_verified": 8
+        },
+        "completeness_proven": false
+      },
+      "usage": {
+        "calls": 4,
+        "input_tokens": 3508,
+        "output_tokens": 740,
+        "cost_usd": 0.000874,
+        "estimated_input_budget_units": 14056,
+        "unknown_reason": null
+      },
+      "stages": [
+        {
+          "step_name": "query_planning",
+          "description": "Compile query obligations and explicit scopes",
+          "input": {
+            "query": "How many Monte Carlo paths did the rough Bergomi pricing routine use to generate prices in the Chebyshev-tensor calibration study?",
+            "catalogue_count": 1
+          },
+          "output": {
+            "intent": "factoid",
+            "obligations": [
+              {
+                "aspect_id": "a1",
+                "text": "Number of Monte Carlo paths used in the rough Bergomi pricing routine for Chebyshev-tensor calibration",
+                "keywords": [
+                  "Monte Carlo paths",
+                  "rough Bergomi pricing routine",
+                  "Chebyshev-tensor calibration",
+                  "number of paths"
+                ],
+                "entity": "Rough Bergomi model",
+                "period": "August 2020",
+                "scope": "Calibration study methodology"
+              }
+            ],
+            "notes": "The specific number of Monte Carlo paths is a factual detail likely found within the methodology section of the paper. The catalogue confirms the document covers this topic but does not provide the specific integer value in the metadata.",
+            "limitations": [],
+            "duration_ms": 5769.355
+          }
+        },
+        {
+          "step_name": "routing_guard",
+          "description": "Guard document identity and reporting period",
+          "input": {
+            "planned_doc_ids": [
+              "ad8116cccf"
+            ]
+          },
+          "output": {
+            "dropped_unknown": [],
+            "added_by_entity": [],
+            "excluded": [],
+            "fallback": false,
+            "global_escape": false,
+            "missing_requests": [],
+            "routed_doc_ids": [
+              "ad8116cccf"
+            ],
+            "duration_ms": 0.763
+          }
+        },
+        {
+          "step_name": "candidate_pages",
+          "description": "Find scoped source pages and independent lexical matches",
+          "input": {
+            "doc_ids": [
+              "ad8116cccf"
+            ]
+          },
+          "output": {
+            "documents": {
+              "ad8116cccf": {
+                "available": 24,
+                "mode": "all",
+                "ranked_pages": [
+                  15,
+                  2,
+                  20,
+                  17,
+                  13,
+                  16,
+                  22,
+                  3,
+                  9,
+                  5,
+                  1,
+                  11,
+                  14,
+                  24,
+                  4,
+                  21,
+                  23,
+                  6,
+                  18,
+                  12,
+                  19,
+                  8,
+                  7,
+                  10
+                ],
+                "selected": 24
+              }
+            },
+            "omitted_cards": 0,
+            "total": 24,
+            "escape_pages": [],
+            "duration_ms": 33.656
+          }
+        },
+        {
+          "step_name": "page_survey",
+          "description": "Survey finite page cards with visible omissions",
+          "input": {
+            "pool_pages": 24
+          },
+          "output": {
+            "skipped": true,
+            "reason": "single-document single-obligation factual path",
+            "picked_pages": 5,
+            "cards_surveyed": 0,
+            "duration_ms": 1.921
+          }
+        },
+        {
+          "step_name": "element_retrieval",
+          "description": "Recover exact source elements and dependencies",
+          "input": {
+            "picked_pages": 5
+          },
+          "output": {
+            "total": 56,
+            "by_source": {
+              "survey_high": 0,
+              "hybrid": 40,
+              "survey_lexical": 33,
+              "survey_medium": 0,
+              "source_dependency": 0,
+              "escape": 0
+            },
+            "duration_ms": 2.435
+          }
+        },
+        {
+          "step_name": "element_triage",
+          "description": "Order bounded verification work with local relevance scores",
+          "input": {
+            "candidates": 56
+          },
+          "output": {
+            "scored": 56,
+            "pairs": 56,
+            "auto_kept": 0,
+            "auto_dropped": 0,
+            "dropped_budget": 0,
+            "scores": [
+              [
+                "ad8116cccf:p0001:e001",
+                1.6194064617156982
+              ],
+              [
+                "ad8116cccf:p0001:e002",
+                -9.42591667175293
+              ],
+              [
+                "ad8116cccf:p0002:e001",
+                -9.982599258422852
+              ],
+              [
+                "ad8116cccf:p0002:e005",
+                -6.743494033813477
+              ],
+              [
+                "ad8116cccf:p0003:e002",
+                2.181459903717041
+              ],
+              [
+                "ad8116cccf:p0003:e004",
+                -9.576116561889648
+              ],
+              [
+                "ad8116cccf:p0003:e005",
+                1.1824593544006348
+              ],
+              [
+                "ad8116cccf:p0005:e004",
+                -10.059596061706543
+              ],
+              [
+                "ad8116cccf:p0005:e005",
+                0.26947376132011414
+              ],
+              [
+                "ad8116cccf:p0006:e000",
+                -2.3281078338623047
+              ],
+              [
+                "ad8116cccf:p0013:e001",
+                0.9068524837493896
+              ],
+              [
+                "ad8116cccf:p0013:e004",
+                -0.9703718423843384
+              ],
+              [
+                "ad8116cccf:p0014:e001",
+                -5.498500347137451
+              ],
+              [
+                "ad8116cccf:p0014:e002",
+                -3.9303488731384277
+              ],
+              [
+                "ad8116cccf:p0014:e007",
+                -4.351650714874268
+              ],
+              [
+                "ad8116cccf:p0015:e001",
+                -1.6359548568725586
+              ],
+              [
+                "ad8116cccf:p0015:e002",
+                2.805208683013916
+              ],
+              [
+                "ad8116cccf:p0015:e005",
+                0.5354143381118774
+              ],
+              [
+                "ad8116cccf:p0016:e003",
+                1.7426384687423706
+              ],
+              [
+                "ad8116cccf:p0016:e005",
+                1.1381874084472656
+              ],
+              [
+                "ad8116cccf:p0016:e006",
+                -3.1376845836639404
+              ],
+              [
+                "ad8116cccf:p0017:e001",
+                -0.1979866623878479
+              ],
+              [
+                "ad8116cccf:p0017:e002",
+                3.542318344116211
+              ],
+              [
+                "ad8116cccf:p0017:e003",
+                -11.214298248291016
+              ],
+              [
+                "ad8116cccf:p0017:e004",
+                1.3210808038711548
+              ],
+              [
+                "ad8116cccf:p0018:e000",
+                -11.049578666687012
+              ],
+              [
+                "ad8116cccf:p0018:e002",
+                -4.05897331237793
+              ],
+              [
+                "ad8116cccf:p0018:e004",
+                -11.330438613891602
+              ],
+              [
+                "ad8116cccf:p0019:e000",
+                -2.210216999053955
+              ],
+              [
+                "ad8116cccf:p0019:e002",
+                -3.6186506748199463
+              ],
+              [
+                "ad8116cccf:p0020:e000",
+                1.0932292938232422
+              ],
+              [
+                "ad8116cccf:p0020:e001",
+                3.993967056274414
+              ],
+              [
+                "ad8116cccf:p0020:e002",
+                -1.2729673385620117
+              ],
+              [
+                "ad8116cccf:p0020:e003",
+                0.97382652759552
+              ],
+              [
+                "ad8116cccf:p0020:e004",
+                -2.5803072452545166
+              ],
+              [
+                "ad8116cccf:p0021:e000",
+                -8.596015930175781
+              ],
+              [
+                "ad8116cccf:p0021:e001",
+                -4.0548906326293945
+              ],
+              [
+                "ad8116cccf:p0021:e002",
+                -2.2549080848693848
+              ],
+              [
+                "ad8116cccf:p0022:e002",
+                1.41517972946167
+              ],
+              [
+                "ad8116cccf:p0023:e003",
+                -5.654143333435059
+              ],
+              [
+                "ad8116cccf:p0002:e000",
+                -11.379600524902344
+              ],
+              [
+                "ad8116cccf:p0002:e002",
+                -11.491329193115234
+              ],
+              [
+                "ad8116cccf:p0002:e003",
+                -11.269988059997559
+              ],
+              [
+                "ad8116cccf:p0002:e004",
+                -11.448731422424316
+              ],
+              [
+                "ad8116cccf:p0002:e006",
+                -2.348294496536255
+              ],
+              [
+                "ad8116cccf:p0002:e007",
+                -11.490132331848145
+              ],
+              [
+                "ad8116cccf:p0015:e000",
+                -2.5260984897613525
+              ],
+              [
+                "ad8116cccf:p0015:e003",
+                -4.390193939208984
+              ],
+              [
+                "ad8116cccf:p0015:e004",
+                -6.785221099853516
+              ],
+              [
+                "ad8116cccf:p0015:e006",
+                -11.310962677001953
+              ],
+              [
+                "ad8116cccf:p0015:e007",
+                -10.725604057312012
+              ],
+              [
+                "ad8116cccf:p0015:e008",
+                -11.352724075317383
+              ],
+              [
+                "ad8116cccf:p0017:e000",
+                0.003487984649837017
+              ],
+              [
+                "ad8116cccf:p0017:e005",
+                -2.3017117977142334
+              ],
+              [
+                "ad8116cccf:p0020:e005",
+                -7.59084415435791
+              ],
+              [
+                "ad8116cccf:p0021:e003",
+                -5.060974597930908
+              ]
+            ],
+            "limitations": [],
+            "middle": 56,
+            "duration_ms": 1159.224
+          }
+        },
+        {
+          "step_name": "element_verification",
+          "description": "Verify source-visible evidence against obligations",
+          "input": {
+            "candidates": 56
+          },
+          "output": {
+            "batches": 1,
+            "failed_batches": 0,
+            "elements_seen": 8,
+            "elements_kept": 1,
+            "unknown_ids_ignored": 0,
+            "invalid_quotes": 0,
+            "duplicates_merged": 0,
+            "omitted_fragments": 0,
+            "limitations": [],
+            "bounded_candidates_not_verified": 48,
+            "artifact_id": "verified_evidence",
+            "duration_ms": 2644.219
+          }
+        },
+        {
+          "step_name": "answer_generation",
+          "description": "Select complementary evidence and draft supported claims",
+          "input": {
+            "evidence": 1
+          },
+          "output": {
+            "selected": 1,
+            "omitted": 0,
+            "redundant_removed": 0,
+            "input_budget_units": 628,
+            "obligation_evidence_counts": {
+              "a1": 1
+            },
+            "token_budget_method": "conservative_utf8_bytes",
+            "draft_claims": 1,
+            "writer_source_ids": [
+              "ad8116cccf:p0015:e002"
+            ],
+            "duration_ms": 3930.557
+          }
+        },
+        {
+          "step_name": "answer_verification",
+          "description": "Check claim support and deterministic calculations",
+          "input": {
+            "claims": 1
+          },
+          "output": {
+            "accepted": 1,
+            "rejected": 0,
+            "duration_ms": 5107.786
+          }
+        },
+        {
+          "step_name": "citation_render",
+          "description": "Render immutable source citations and full writer context",
+          "input": {
+            "accepted_claims": 1
+          },
+          "output": {
+            "citations": 1,
+            "evidence_cited": 1,
+            "evidence_total": 1,
+            "duration_ms": 0.135
+          }
+        }
+      ]
+    },
+    {
+      "id": "C18",
+      "query": "Bank supervisors' model-risk expectations stress conceptual soundness, ongoing monitoring, outcomes analysis and care when a model is used outside its original purpose. Apply that lens to a desk that wants to calibrate a rough-volatility model daily by replacing its slow Monte Carlo pricer with a fast polynomial surrogate built offline: what evidence does the research offer on accuracy, speed and build cost, and what controls and limitations would you insist on before production use?",
+      "status": "partial",
+      "answer": "No supporting information was found within the searched collection scope.",
+      "latency_seconds": 120.36056649999227,
+      "returned_chunks": 26,
+      "query_calls": 17,
+      "query_cost_usd": 0.00835515,
+      "judge_cost_usd": 0.0013171499999999996,
+      "metrics": {
+        "answer_precision": 0.0,
+        "answer_recall": 0.0,
+        "context_precision": 0.9230769230769231,
+        "context_recall": 0.4897959183673469
+      },
+      "coverage": {
+        "aspects": [
+          {
+            "id": "a1",
+            "text": "Evidence on accuracy, speed, and build cost of Chebyshev Tensor surrogates for Rough Bergomi model calibration compared to Monte Carlo pricers.",
+            "entity": "Chebyshev Tensors / Rough Bergomi Model",
+            "period": "August 2020",
+            "evidence_ids": [
+              "E1",
+              "E2",
+              "E3",
+              "E4",
+              "E5",
+              "E6",
+              "E8",
+              "E10",
+              "E12",
+              "E14",
+              "E16",
+              "E17",
+              "E19",
+              "E20",
+              "E22",
+              "E24",
+              "E25",
+              "E26"
+            ],
+            "claim_ids": [],
+            "status": "unresolved"
+          },
+          {
+            "id": "a2",
+            "text": "Model risk controls and limitations regarding the use of offline-built polynomial surrogates outside their original purpose or domain.",
+            "entity": "Bank Supervisors' Expectations / Model Risk Management",
+            "period": "N/A",
+            "evidence_ids": [
+              "E1",
+              "E2",
+              "E3",
+              "E4",
+              "E7",
+              "E9",
+              "E11",
+              "E13",
+              "E15",
+              "E18",
+              "E21",
+              "E23"
+            ],
+            "claim_ids": [],
+            "status": "unresolved"
+          }
+        ],
+        "obligations": [
+          {
+            "id": "a1",
+            "text": "Evidence on accuracy, speed, and build cost of Chebyshev Tensor surrogates for Rough Bergomi model calibration compared to Monte Carlo pricers.",
+            "entity": "Chebyshev Tensors / Rough Bergomi Model",
+            "period": "August 2020",
+            "evidence_ids": [
+              "E1",
+              "E2",
+              "E3",
+              "E4",
+              "E5",
+              "E6",
+              "E8",
+              "E10",
+              "E12",
+              "E14",
+              "E16",
+              "E17",
+              "E19",
+              "E20",
+              "E22",
+              "E24",
+              "E25",
+              "E26"
+            ],
+            "claim_ids": [],
+            "status": "unresolved"
+          },
+          {
+            "id": "a2",
+            "text": "Model risk controls and limitations regarding the use of offline-built polynomial surrogates outside their original purpose or domain.",
+            "entity": "Bank Supervisors' Expectations / Model Risk Management",
+            "period": "N/A",
+            "evidence_ids": [
+              "E1",
+              "E2",
+              "E3",
+              "E4",
+              "E7",
+              "E9",
+              "E11",
+              "E13",
+              "E15",
+              "E18",
+              "E21",
+              "E23"
+            ],
+            "claim_ids": [],
+            "status": "unresolved"
+          }
+        ],
+        "limitations": [
+          "44 verified fragments omitted from writer context",
+          "The provided evidence focuses on technical performance and specific mathematical limitations of Chebyshev Tensors but does not contain explicit text regarding 'Bank Supervisors' expectations' or formal 'Model Risk Management' governance frameworks beyond the technical validation steps mentioned in E2 and E9.",
+          "10 draft claims rejected for invalid source support"
+        ],
+        "counts": {
+          "candidate_pages": 24,
+          "cards_surveyed": 0,
+          "raw_candidate_pages": 11,
+          "elements_retrieved": 114,
+          "raw_fragments_verified": 114
+        },
+        "completeness_proven": false
+      },
+      "usage": {
+        "calls": 17,
+        "input_tokens": 33611,
+        "output_tokens": 7050,
+        "cost_usd": 0.008355149999999999,
+        "estimated_input_budget_units": 135151,
+        "unknown_reason": null
+      },
+      "stages": [
+        {
+          "step_name": "query_planning",
+          "description": "Compile query obligations and explicit scopes",
+          "input": {
+            "query": "Bank supervisors' model-risk expectations stress conceptual soundness, ongoing monitoring, outcomes analysis and care when a model is used outside its original purpose. Apply that lens to a desk that wants to calibrate a rough-volatility model daily by replacing its slow Monte Carlo pricer with a fast polynomial surrogate built offline: what evidence does the research offer on accuracy, speed and build cost, and what controls and limitations would you insist on before production use?",
+            "catalogue_count": 1
+          },
+          "output": {
+            "intent": "analytical",
+            "obligations": [
+              {
+                "aspect_id": "a1",
+                "text": "Evidence on accuracy, speed, and build cost of Chebyshev Tensor surrogates for Rough Bergomi model calibration compared to Monte Carlo pricers.",
+                "keywords": [
+                  "accuracy",
+                  "speed",
+                  "computational efficiency",
+                  "build cost",
+                  "proxy pricer",
+                  "Monte Carlo simulation",
+                  "Chebyshev Tensors",
+                  "Rough Bergomi"
+                ],
+                "entity": "Chebyshev Tensors / Rough Bergomi Model",
+                "period": "August 2020",
+                "scope": "Technical performance metrics (error bounds, runtime, training overhead)"
+              },
+              {
+                "aspect_id": "a2",
+                "text": "Model risk controls and limitations regarding the use of offline-built polynomial surrogates outside their original purpose or domain.",
+                "keywords": [
+                  "model risk",
+                  "conceptual soundness",
+                  "ongoing monitoring",
+                  "outcomes analysis",
+                  "limitations",
+                  "curse of dimensionality",
+                  "Tensor Train format",
+                  "production use"
+                ],
+                "entity": "Bank Supervisors' Expectations / Model Risk Management",
+                "period": "N/A",
+                "scope": "Governance, validation, and operational constraints for surrogate models"
+              }
+            ],
+            "notes": "The query asks for an application of supervisory expectations (conceptual soundness, monitoring, etc.) to a specific technical scenario. The provided catalogue contains only one academic paper (ad8116cccf) which offers the technical data (accuracy/speed/cost) and inherent model limitations (dimensionality, interpolation errors). It does not contain explicit regulatory guidelines or supervisory documents. Therefore, the retrieval focuses on extracting technical evidence and identifying intrinsic model risks/limitations from the paper that would inform the supervisory lens, rather than citing external regulation.",
+            "limitations": [],
+            "duration_ms": 9703.755
+          }
+        },
+        {
+          "step_name": "routing_guard",
+          "description": "Guard document identity and reporting period",
+          "input": {
+            "planned_doc_ids": [
+              "ad8116cccf"
+            ]
+          },
+          "output": {
+            "dropped_unknown": [],
+            "added_by_entity": [],
+            "excluded": [],
+            "fallback": false,
+            "global_escape": false,
+            "missing_requests": [],
+            "routed_doc_ids": [
+              "ad8116cccf"
+            ],
+            "duration_ms": 0.33
+          }
+        },
+        {
+          "step_name": "candidate_pages",
+          "description": "Find scoped source pages and independent lexical matches",
+          "input": {
+            "doc_ids": [
+              "ad8116cccf"
+            ]
+          },
+          "output": {
+            "documents": {
+              "ad8116cccf": {
+                "available": 24,
+                "mode": "all",
+                "ranked_pages": [
+                  20,
+                  3,
+                  23,
+                  22,
+                  13,
+                  1,
+                  2,
+                  15,
+                  16,
+                  17,
+                  14,
+                  18,
+                  24,
+                  5,
+                  12,
+                  9,
+                  11,
+                  21,
+                  6,
+                  8,
+                  7,
+                  4,
+                  19,
+                  10
+                ],
+                "selected": 24
+              }
+            },
+            "omitted_cards": 0,
+            "total": 24,
+            "escape_pages": [],
+            "duration_ms": 67.604
+          }
+        },
+        {
+          "step_name": "page_survey",
+          "description": "Survey finite page cards with visible omissions",
+          "input": {
+            "pool_pages": 24
+          },
+          "output": {
+            "batches": 0,
+            "failed_batches": 0,
+            "cards_surveyed": 0,
+            "lexical_added": 0,
+            "truncated": 0,
+            "limitations": [],
+            "selection_mode": "local",
+            "method": "initial source FTS and dense ranks plus obligation lexical matches",
+            "navigation_only": true,
+            "picked_pages": 11,
+            "duration_ms": 0.114
+          }
+        },
+        {
+          "step_name": "element_retrieval",
+          "description": "Recover exact source elements and dependencies",
+          "input": {
+            "picked_pages": 11
+          },
+          "output": {
+            "total": 114,
+            "by_source": {
+              "survey_high": 0,
+              "hybrid": 74,
+              "survey_lexical": 77,
+              "survey_medium": 0,
+              "source_dependency": 0,
+              "escape": 0
+            },
+            "duration_ms": 3.152
+          }
+        },
+        {
+          "step_name": "element_triage",
+          "description": "Order bounded verification work with local relevance scores",
+          "input": {
+            "candidates": 114
+          },
+          "output": {
+            "scored": 114,
+            "pairs": 114,
+            "auto_kept": 0,
+            "auto_dropped": 0,
+            "dropped_budget": 0,
+            "scores": [
+              [
+                "ad8116cccf:p0001:e001",
+                3.9679994583129883
+              ],
+              [
+                "ad8116cccf:p0002:e005",
+                -4.370100021362305
+              ],
+              [
+                "ad8116cccf:p0002:e006",
+                -2.97292423248291
+              ],
+              [
+                "ad8116cccf:p0003:e002",
+                3.3863296508789062
+              ],
+              [
+                "ad8116cccf:p0003:e003",
+                -1.5917181968688965
+              ],
+              [
+                "ad8116cccf:p0003:e004",
+                -7.820247650146484
+              ],
+              [
+                "ad8116cccf:p0003:e005",
+                0.9986411929130554
+              ],
+              [
+                "ad8116cccf:p0005:e005",
+                5.280088901519775
+              ],
+              [
+                "ad8116cccf:p0006:e004",
+                -10.086020469665527
+              ],
+              [
+                "ad8116cccf:p0006:e006",
+                -10.709792137145996
+              ],
+              [
+                "ad8116cccf:p0007:e000",
+                -8.374959945678711
+              ],
+              [
+                "ad8116cccf:p0008:e002",
+                -10.895027160644531
+              ],
+              [
+                "ad8116cccf:p0008:e006",
+                -9.176515579223633
+              ],
+              [
+                "ad8116cccf:p0009:e001",
+                -9.33771800994873
+              ],
+              [
+                "ad8116cccf:p0009:e002",
+                -3.9024767875671387
+              ],
+              [
+                "ad8116cccf:p0009:e007",
+                -9.028511047363281
+              ],
+              [
+                "ad8116cccf:p0010:e000",
+                -9.937891006469727
+              ],
+              [
+                "ad8116cccf:p0010:e001",
+                -10.882770538330078
+              ],
+              [
+                "ad8116cccf:p0010:e002",
+                -11.382173538208008
+              ],
+              [
+                "ad8116cccf:p0010:e003",
+                -11.254889488220215
+              ],
+              [
+                "ad8116cccf:p0010:e004",
+                -11.38196849822998
+              ],
+              [
+                "ad8116cccf:p0010:e005",
+                -11.390623092651367
+              ],
+              [
+                "ad8116cccf:p0010:e006",
+                -11.399646759033203
+              ],
+              [
+                "ad8116cccf:p0010:e007",
+                -11.38614273071289
+              ],
+              [
+                "ad8116cccf:p0010:e008",
+                -11.21490478515625
+              ],
+              [
+                "ad8116cccf:p0010:e009",
+                -11.266777038574219
+              ],
+              [
+                "ad8116cccf:p0011:e003",
+                -10.931002616882324
+              ],
+              [
+                "ad8116cccf:p0011:e005",
+                -11.329423904418945
+              ],
+              [
+                "ad8116cccf:p0012:e000",
+                -11.207673072814941
+              ],
+              [
+                "ad8116cccf:p0013:e000",
+                -5.111622333526611
+              ],
+              [
+                "ad8116cccf:p0013:e004",
+                1.2703570127487183
+              ],
+              [
+                "ad8116cccf:p0013:e006",
+                -2.483926773071289
+              ],
+              [
+                "ad8116cccf:p0014:e002",
+                -3.098331928253174
+              ],
+              [
+                "ad8116cccf:p0014:e003",
+                -7.6198930740356445
+              ],
+              [
+                "ad8116cccf:p0014:e005",
+                -2.5936431884765625
+              ],
+              [
+                "ad8116cccf:p0014:e006",
+                -0.26053956151008606
+              ],
+              [
+                "ad8116cccf:p0015:e000",
+                -0.5937924385070801
+              ],
+              [
+                "ad8116cccf:p0015:e002",
+                -8.805364608764648
+              ],
+              [
+                "ad8116cccf:p0016:e003",
+                3.468038320541382
+              ],
+              [
+                "ad8116cccf:p0016:e005",
+                5.575929641723633
+              ],
+              [
+                "ad8116cccf:p0017:e000",
+                -0.4479518532752991
+              ],
+              [
+                "ad8116cccf:p0017:e001",
+                -0.0028289370238780975
+              ],
+              [
+                "ad8116cccf:p0017:e002",
+                -3.553527593612671
+              ],
+              [
+                "ad8116cccf:p0017:e003",
+                -9.747596740722656
+              ],
+              [
+                "ad8116cccf:p0017:e004",
+                -0.4406954050064087
+              ],
+              [
+                "ad8116cccf:p0017:e005",
+                -0.9814862012863159
+              ],
+              [
+                "ad8116cccf:p0018:e000",
+                -10.5603609085083
+              ],
+              [
+                "ad8116cccf:p0018:e001",
+                -5.059714317321777
+              ],
+              [
+                "ad8116cccf:p0018:e002",
+                -0.2339269369840622
+              ],
+              [
+                "ad8116cccf:p0018:e003",
+                -0.7726871371269226
+              ],
+              [
+                "ad8116cccf:p0018:e004",
+                -8.917499542236328
+              ],
+              [
+                "ad8116cccf:p0018:e005",
+                -0.7216134071350098
+              ],
+              [
+                "ad8116cccf:p0019:e000",
+                -0.9742759466171265
+              ],
+              [
+                "ad8116cccf:p0019:e001",
+                -0.4424556493759155
+              ],
+              [
+                "ad8116cccf:p0019:e002",
+                -0.8983172178268433
+              ],
+              [
+                "ad8116cccf:p0020:e000",
+                1.4168696403503418
+              ],
+              [
+                "ad8116cccf:p0020:e001",
+                -0.7471597194671631
+              ],
+              [
+                "ad8116cccf:p0020:e002",
+                -2.2821030616760254
+              ],
+              [
+                "ad8116cccf:p0020:e003",
+                -0.23604679107666016
+              ],
+              [
+                "ad8116cccf:p0020:e004",
+                -1.3729450702667236
+              ],
+              [
+                "ad8116cccf:p0020:e005",
+                -5.473341464996338
+              ],
+              [
+                "ad8116cccf:p0021:e000",
+                -10.338953018188477
+              ],
+              [
+                "ad8116cccf:p0021:e001",
+                2.5470492839813232
+              ],
+              [
+                "ad8116cccf:p0021:e002",
+                -0.01798143796622753
+              ],
+              [
+                "ad8116cccf:p0021:e003",
+                -0.00347237940877676
+              ],
+              [
+                "ad8116cccf:p0022:e001",
+                0.03476444631814957
+              ],
+              [
+                "ad8116cccf:p0022:e002",
+                2.177252769470215
+              ],
+              [
+                "ad8116cccf:p0022:e003",
+                -1.0837483406066895
+              ],
+              [
+                "ad8116cccf:p0022:e004",
+                2.276750087738037
+              ],
+              [
+                "ad8116cccf:p0023:e001",
+                1.6022499799728394
+              ],
+              [
+                "ad8116cccf:p0023:e005",
+                0.8174765110015869
+              ],
+              [
+                "ad8116cccf:p0024:e002",
+                -10.28585433959961
+              ],
+              [
+                "ad8116cccf:p0024:e004",
+                -8.490569114685059
+              ],
+              [
+                "ad8116cccf:p0024:e008",
+                -10.77775764465332
+              ],
+              [
+                "ad8116cccf:p0001:e000",
+                -1.1050471067428589
+              ],
+              [
+                "ad8116cccf:p0001:e002",
+                -8.709867477416992
+              ],
+              [
+                "ad8116cccf:p0002:e000",
+                -10.149682998657227
+              ],
+              [
+                "ad8116cccf:p0002:e001",
+                -8.282554626464844
+              ],
+              [
+                "ad8116cccf:p0002:e002",
+                -10.02568244934082
+              ],
+              [
+                "ad8116cccf:p0002:e003",
+                -10.419700622558594
+              ],
+              [
+                "ad8116cccf:p0002:e004",
+                -9.843354225158691
+              ],
+              [
+                "ad8116cccf:p0002:e007",
+                -10.820916175842285
+              ],
+              [
+                "ad8116cccf:p0003:e000",
+                -8.902491569519043
+              ],
+              [
+                "ad8116cccf:p0003:e001",
+                -8.464635848999023
+              ],
+              [
+                "ad8116cccf:p0009:e000",
+                -10.8537015914917
+              ],
+              [
+                "ad8116cccf:p0009:e003",
+                -10.782891273498535
+              ],
+              [
+                "ad8116cccf:p0009:e004",
+                -10.676986694335938
+              ],
+              [
+                "ad8116cccf:p0009:e005",
+                -5.240174293518066
+              ],
+              [
+                "ad8116cccf:p0009:e006",
+                -10.194272994995117
+              ],
+              [
+                "ad8116cccf:p0013:e001",
+                0.35620322823524475
+              ],
+              [
+                "ad8116cccf:p0013:e002",
+                1.0385894775390625
+              ],
+              [
+                "ad8116cccf:p0013:e003",
+                -0.22109290957450867
+              ],
+              [
+                "ad8116cccf:p0013:e005",
+                -1.9222809076309204
+              ],
+              [
+                "ad8116cccf:p0014:e000",
+                -0.7660757303237915
+              ],
+              [
+                "ad8116cccf:p0014:e001",
+                -5.538698196411133
+              ],
+              [
+                "ad8116cccf:p0014:e004",
+                -4.599752426147461
+              ],
+              [
+                "ad8116cccf:p0014:e007",
+                -4.135921478271484
+              ],
+              [
+                "ad8116cccf:p0015:e001",
+                -3.8040175437927246
+              ],
+              [
+                "ad8116cccf:p0015:e003",
+                -1.8117852210998535
+              ],
+              [
+                "ad8116cccf:p0015:e004",
+                -4.1474151611328125
+              ],
+              [
+                "ad8116cccf:p0015:e005",
+                -2.8316900730133057
+              ],
+              [
+                "ad8116cccf:p0015:e006",
+                -10.377665519714355
+              ],
+              [
+                "ad8116cccf:p0015:e007",
+                -9.336009979248047
+              ],
+              [
+                "ad8116cccf:p0015:e008",
+                -10.297353744506836
+              ],
+              [
+                "ad8116cccf:p0022:e000",
+                -3.3626551628112793
+              ],
+              [
+                "ad8116cccf:p0023:e000",
+                -7.685514450073242
+              ],
+              [
+                "ad8116cccf:p0023:e002",
+                -1.5967257022857666
+              ],
+              [
+                "ad8116cccf:p0023:e003",
+                -4.124876022338867
+              ],
+              [
+                "ad8116cccf:p0023:e004",
+                -9.747425079345703
+              ],
+              [
+                "ad8116cccf:p0023:e006",
+                -10.100037574768066
+              ],
+              [
+                "ad8116cccf:p0023:e007",
+                -5.225620269775391
+              ],
+              [
+                "ad8116cccf:p0023:e008",
+                -5.96962833404541
+              ],
+              [
+                "ad8116cccf:p0023:e009",
+                -10.16407299041748
+              ],
+              [
+                "ad8116cccf:p0023:e010",
+                -10.033058166503906
+              ]
+            ],
+            "limitations": [],
+            "middle": 114,
+            "duration_ms": 2355.07
+          }
+        },
+        {
+          "step_name": "element_verification",
+          "description": "Verify source-visible evidence against obligations",
+          "input": {
+            "candidates": 114
+          },
+          "output": {
+            "batches": 15,
+            "failed_batches": 0,
+            "elements_seen": 114,
+            "elements_kept": 70,
+            "unknown_ids_ignored": 0,
+            "invalid_quotes": 0,
+            "duplicates_merged": 0,
+            "omitted_fragments": 0,
+            "limitations": [],
+            "artifact_id": "verified_evidence",
+            "duration_ms": 82162.204
+          }
+        },
+        {
+          "step_name": "answer_generation",
+          "description": "Select complementary evidence and draft supported claims",
+          "input": {
+            "evidence": 70
+          },
+          "output": {
+            "selected": 26,
+            "omitted": 44,
+            "redundant_removed": 0,
+            "input_budget_units": 15973,
+            "obligation_evidence_counts": {
+              "a1": 18,
+              "a2": 12
+            },
+            "token_budget_method": "conservative_utf8_bytes",
+            "draft_claims": 0,
+            "writer_source_ids": [
+              "ad8116cccf:p0013:e005",
+              "ad8116cccf:p0013:e004",
+              "ad8116cccf:p0013:e002",
+              "ad8116cccf:p0003:e002",
+              "ad8116cccf:p0018:e004",
+              "ad8116cccf:p0018:e000",
+              "ad8116cccf:p0023:e003",
+              "ad8116cccf:p0019:e000",
+              "ad8116cccf:p0014:e005",
+              "ad8116cccf:p0002:e006",
+              "ad8116cccf:p0009:e000",
+              "ad8116cccf:p0015:e004",
+              "ad8116cccf:p0014:e007",
+              "ad8116cccf:p0023:e000",
+              "ad8116cccf:p0023:e004",
+              "ad8116cccf:p0021:e001",
+              "ad8116cccf:p0023:e001",
+              "ad8116cccf:p0014:e001",
+              "ad8116cccf:p0018:e001",
+              "ad8116cccf:p0014:e003",
+              "ad8116cccf:p0015:e000",
+              "ad8116cccf:p0023:e002",
+              "ad8116cccf:p0023:e005",
+              "ad8116cccf:p0022:e000",
+              "ad8116cccf:p0015:e005",
+              "ad8116cccf:p0021:e000"
+            ],
+            "duration_ms": 25657.086
+          }
+        },
+        {
+          "step_name": "answer_verification",
+          "description": "Check claim support and deterministic calculations",
+          "input": {
+            "claims": 0
+          },
+          "output": {
+            "accepted": 0,
+            "rejected": 0,
+            "skipped": "no claims",
+            "duration_ms": 0.47
+          }
+        },
+        {
+          "step_name": "citation_render",
+          "description": "Render immutable source citations and full writer context",
+          "input": {
+            "accepted_claims": 0
+          },
+          "output": {
+            "citations": 0,
+            "evidence_cited": 0,
+            "evidence_total": 26,
+            "duration_ms": 0.526
+          }
+        }
+      ],
+      "call_counts": {
+        "plan": 1,
+        "verify": 15,
+        "answer": 1
+      }
+    }
+  ]
+}

@@ -1,0 +1,211 @@
+{
+  "schema": "diagnostics only; never import into serving code",
+  "obligations": [
+    {
+      "id": "a1",
+      "text": "Evidence on accuracy, speed, and build cost of Chebyshev Tensor surrogates for Rough Bergomi model calibration compared to Monte Carlo pricers.",
+      "entity": "Chebyshev Tensors / Rough Bergomi Model",
+      "period": "August 2020",
+      "scope": "Technical performance metrics (error bounds, runtime, training overhead)"
+    },
+    {
+      "id": "a2",
+      "text": "Model risk controls and limitations regarding the use of offline-built polynomial surrogates outside their original purpose or domain.",
+      "entity": "Bank Supervisors' Expectations / Model Risk Management",
+      "period": "N/A",
+      "scope": "Governance, validation, and operational constraints for surrogate models"
+    }
+  ],
+  "draft_status": "answered",
+  "limitations": [
+    "The provided evidence focuses on technical performance and specific mathematical limitations of Chebyshev Tensors but does not contain explicit text regarding 'Bank Supervisors' expectations' or formal 'Model Risk Management' governance frameworks beyond the technical validation steps mentioned in E2 and E9."
+  ],
+  "claims": [
+    {
+      "id": "c1",
+      "text": "Chebyshev Tensor surrogates allow for offline building and online evaluation, enabling fast calibrations (less than a second) with minimal loss of accuracy compared to the original pricing model.",
+      "aspect_ids": [],
+      "evidence_ids": [
+        "E1",
+        "E3",
+        "E4"
+      ],
+      "quotes": [
+        {
+          "evidence_id": "E1",
+          "quote_chars": 278,
+          "exact_source_substring": true
+        },
+        {
+          "evidence_id": "E3",
+          "quote_chars": 375,
+          "exact_source_substring": false
+        },
+        {
+          "evidence_id": "E4",
+          "quote_chars": 230,
+          "exact_source_substring": true
+        }
+      ]
+    },
+    {
+      "id": "c2",
+      "text": "In terms of speed, a single calibration using a C++ implementation of Chebyshev Tensors is approximately 40,000 times faster than using the original pricing function.",
+      "aspect_ids": [],
+      "evidence_ids": [
+        "E17"
+      ],
+      "quotes": [
+        {
+          "evidence_id": "E17",
+          "quote_chars": 239,
+          "exact_source_substring": true
+        }
+      ]
+    },
+    {
+      "id": "c3",
+      "text": "Regarding build cost, using 20,000 randomly selected grid points represents a reduction in building cost of 75%, 50%, and 98% compared to Deep Neural Net approaches cited in references [13], [14], and [2] respectively.",
+      "aspect_ids": [],
+      "evidence_ids": [
+        "E26"
+      ],
+      "quotes": [
+        {
+          "evidence_id": "E26",
+          "quote_chars": 277,
+          "exact_source_substring": true
+        }
+      ]
+    },
+    {
+      "id": "c4",
+      "text": "For a specific test case involving 10,000 values, the Rank Adaptive Algorithm took under 5 minutes to build a TT-format Chebyshev Tensor in Matlab, resulting in a maximum rank of 12 and a memory footprint of 20 KB.",
+      "aspect_ids": [],
+      "evidence_ids": [
+        "E19"
+      ],
+      "quotes": [
+        {
+          "evidence_id": "E19",
+          "quote_chars": 237,
+          "exact_source_substring": true
+        }
+      ]
+    },
+    {
+      "id": "c5",
+      "text": "Accuracy tests on 1,000 synthetically generated implied volatility surfaces showed that all errors measured by RMSE were less than 0.6%.",
+      "aspect_ids": [],
+      "evidence_ids": [
+        "E14",
+        "E25"
+      ],
+      "quotes": [
+        {
+          "evidence_id": "E14",
+          "quote_chars": 229,
+          "exact_source_substring": true
+        },
+        {
+          "evidence_id": "E25",
+          "quote_chars": 146,
+          "exact_source_substring": true
+        }
+      ]
+    },
+    {
+      "id": "c6",
+      "text": "A critical limitation is that Chebyshev Tensors do not extrapolate; there is no guarantee of accuracy outside the defined domain of approximation.",
+      "aspect_ids": [],
+      "evidence_ids": [
+        "E9",
+        "E23"
+      ],
+      "quotes": [
+        {
+          "evidence_id": "E9",
+          "quote_chars": 256,
+          "exact_source_substring": false
+        },
+        {
+          "evidence_id": "E23",
+          "quote_chars": 87,
+          "exact_source_substring": true
+        }
+      ]
+    },
+    {
+      "id": "c7",
+      "text": "To mitigate domain limitations, controls must include defining parameter ranges large enough for good calibration, potentially using historical data to identify suitable domains, or employing a hybrid approach that falls back to the original pricing function when parameters fall outside the tensor's domain.",
+      "aspect_ids": [],
+      "evidence_ids": [
+        "E13",
+        "E18",
+        "E21"
+      ],
+      "quotes": [
+        {
+          "evidence_id": "E13",
+          "quote_chars": 292,
+          "exact_source_substring": false
+        },
+        {
+          "evidence_id": "E18",
+          "quote_chars": 233,
+          "exact_source_substring": true
+        },
+        {
+          "evidence_id": "E21",
+          "quote_chars": 341,
+          "exact_source_substring": true
+        }
+      ]
+    },
+    {
+      "id": "c8",
+      "text": "Numerical stability is a concern; unstable algorithms like the Vandermonde method can produce unexpected errors, requiring careful selection of evaluation methods.",
+      "aspect_ids": [],
+      "evidence_ids": [
+        "E11"
+      ],
+      "quotes": [
+        {
+          "evidence_id": "E11",
+          "quote_chars": 274,
+          "exact_source_substring": true
+        }
+      ]
+    },
+    {
+      "id": "c9",
+      "text": "The effectiveness of the surrogate decreases as the dimension of the model parameter space increases; the maximum dimension tested was 13, and the limit for higher dimensions is unknown.",
+      "aspect_ids": [],
+      "evidence_ids": [
+        "E15"
+      ],
+      "quotes": [
+        {
+          "evidence_id": "E15",
+          "quote_chars": 278,
+          "exact_source_substring": true
+        }
+      ]
+    },
+    {
+      "id": "c10",
+      "text": "Validation requires direct comparison of the tensor's accuracy against the pricing model before use, ensuring the approximation is verified.",
+      "aspect_ids": [],
+      "evidence_ids": [
+        "E2"
+      ],
+      "quotes": [
+        {
+          "evidence_id": "E2",
+          "quote_chars": 166,
+          "exact_source_substring": true
+        }
+      ]
+    }
+  ]
+}

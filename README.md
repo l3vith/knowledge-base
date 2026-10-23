@@ -1,5 +1,8 @@
 # Smart Knowledge Base
 
+For the current failures, measured benchmark evidence, reproduction steps and next-agent repair checklist, read [major_issues.md](major_issues.md).
+
+
 Person 1's ingestion track and Person 2's bounded query/evaluation track are integrated. The API exposes exactly POST /index and POST /query. The query path has ten stages, exact source fragments, coverage limitations, structured claim verification, and separate Langfuse observations.
 
 Start with [Track B handoff](docs/TRACK_B_HANDOFF.md) for implementation status and teammate integration notes. [Unified final plan](docs/unified-plan/README.md) reconciles the original architecture and audit; it specifies the target design, including compiler work that is not yet implemented. The original docs remain as legacy references. No 0.95 accuracy result or production readiness is claimed.
