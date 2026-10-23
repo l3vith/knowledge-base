@@ -1,0 +1,41 @@
+# Render Blueprint (free tier: 512 MB RAM, 0.1 CPU, ephemeral disk, sleeps after 15 min idle).
+# The free instance SERVES prebuilt collections: indexes are built on a PC (scripts/index_local.py) and stored in
+# MongoDB Atlas; the service downloads the active generation on first use after each cold start.
+services:
+  - type: web
+    name: knowledge-base
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt && python scripts/prefetch_models.py
+    startCommand: uvicorn kb.api:app --host 0.0.0.0 --port $PORT --workers 1 --timeout-keep-alive 3600
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.10.0
+      - key: FASTEMBED_CACHE_PATH          # models baked into the build, not downloaded per cold start
+        value: ./models
+      - key: KB_DATA_DIR                   # ephemeral; Atlas is the source of truth
+        value: /tmp/kb-data
+      - key: KB_RERANKER                   # ~100 MB RAM saved; the 512 MB limit is otherwise too tight (measured ~490 MB)
+        value: "0"
+      - key: KB_PARSE_LAYOUT
+        value: "0"
+      - key: KB_PAGE_CARDS
+        value: extractive
+      - key: KB_PARSE_WORKERS
+        value: "1"
+      - key: OPENCODE_API_KEY
+        sync: false
+      - key: OPENCODE_BASE_URL
+        value: https://opencode.ai/inference/openai/v1/chat/completions
+      - key: LLM_MODEL
+        value: deepseek-v4.1-flash
+      - key: KB_BUDGET_USD
+        sync: false
+      - key: MONGODB_URI
+        sync: false
+      - key: LANGFUSE_PUBLIC_KEY
+        sync: false
+      - key: LANGFUSE_SECRET_KEY
+        sync: false
+      - key: LANGFUSE_HOST
+        value: https://jp.cloud.langfuse.com
