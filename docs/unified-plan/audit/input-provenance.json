@@ -1,0 +1,165 @@
+{
+  "captured": "2026-10-23",
+  "inputs": {
+    "Hackathon_Problem_Statement_Final.docx": {
+      "sha256": "db5c4930acc88e21739fa2a0ba930e82a73b41bf37251ae213280ba0e195d95a",
+      "bytes": 34281
+    },
+    "Train/Benchmarks/benchmark_100.jsonl": {
+      "sha256": "bce8a3e48d493e5635fa83cfd5c0c309f02a171fc1951a2f76bd128b23cd1288",
+      "bytes": 9454809
+    },
+    "Train/Evaluation/Evaluation.ipynb": {
+      "sha256": "f75493648896a79fc28499f04bb4909baea9bf717c1b040d0c3fb3974aa5f583",
+      "bytes": 23385
+    },
+    "final_plan/ARCHITECTURE.md": {
+      "sha256": "d2b9d04c4d27f146d3204d30222b8a7f29a21d25f589fb260e4204b0435b4d72",
+      "bytes": 23665
+    },
+    "final_plan/PLAN.md": {
+      "sha256": "1a391a79a063b1faae94640da30a6744dea14c6158b45fa98b45d8c0b9fdfda9",
+      "bytes": 76570
+    },
+    "final_plan/TEAM_ASSIGNMENT.md": {
+      "sha256": "3ca026664b2de306958c811d06326e4e59dd758ae5249ea69685f1fdb44bfdcd",
+      "bytes": 3734
+    },
+    "knowledge-base-plan/01_MASTER_PLAN.md": {
+      "sha256": "7afde2e8739421c3665ff3f2e541ea3d8b387f8d1506fc0e5873abb4dded9362",
+      "bytes": 48905
+    },
+    "knowledge-base-plan/02_CONTRACTS.md": {
+      "sha256": "f1cf6c469e26585ce3dee723aae80d17b7b9a4e86c9e8ed0613cb4e93c56c7de",
+      "bytes": 29021
+    },
+    "knowledge-base-plan/03_RESEARCH_REVIEW.md": {
+      "sha256": "772431eb64a42d1f6590f7f04e0644437f05c66fe98b5d00485dc0b4f89ce8f5",
+      "bytes": 24836
+    },
+    "knowledge-base-plan/04_EVALUATION.md": {
+      "sha256": "ecd77636bd1c31ea7693b501c899276b5740ce2725149702997ed6cc300dc6de",
+      "bytes": 17689
+    },
+    "knowledge-base-plan/05_ORCHESTRATION.md": {
+      "sha256": "14944b1b4aef794f141f1850b1a844570de735840685fcb377d0fe1ff96b911e",
+      "bytes": 14973
+    },
+    "knowledge-base-plan/06_COMPLIANCE_AUDIT.md": {
+      "sha256": "0939d71dab50f611217b93adf8a55f5d30c1211a82e3a441e8539fad3bc79ff8",
+      "bytes": 16255
+    },
+    "knowledge-base-plan/FULL_HANDOFF.md": {
+      "sha256": "1672fc2deec0aa42f0540acc8be18997924fb10c6e139eb5a96f1a518764e5f4",
+      "bytes": 233586
+    },
+    "knowledge-base-plan/IMPLEMENTATION_CHECKLIST.md": {
+      "sha256": "8b82f9dbf7474c86e6092ffe93f79df47e7ba2b0ba8c20a26929d910b9aa9668",
+      "bytes": 3892
+    },
+    "knowledge-base-plan/README.md": {
+      "sha256": "60b5cc8c26b86d8f129260d531a43b616692c874511bf9f6c7849ee58c4a07a1",
+      "bytes": 5547
+    },
+    "knowledge-base-plan/agents/00_LEAD_AND_INTEGRATION.md": {
+      "sha256": "217be8f4e3fb929873b7c721710b190c0937469d43419c9edcdabbf236b85c17",
+      "bytes": 7167
+    },
+    "knowledge-base-plan/agents/01_EVALUATION_AND_DATA_INTEGRITY.md": {
+      "sha256": "8320ed1e58cb0f74da6ebbb90b4de57bb413e9b034479a4c773dd62ff9759c1b",
+      "bytes": 7331
+    },
+    "knowledge-base-plan/agents/02_PDF_OCR_TABLE_INGESTION.md": {
+      "sha256": "93ff47fdc731a25231d6609922565874848d436aadfeb2f59c51e02b1aac6b18",
+      "bytes": 7005
+    },
+    "knowledge-base-plan/agents/03_STORAGE_IDENTITY_AND_HIERARCHY.md": {
+      "sha256": "e7957d4fd0b5ecfe8336f9f3d97021e8d20a6c8b70b961b49e2fea4c2f21a751",
+      "bytes": 6964
+    },
+    "knowledge-base-plan/agents/04_RETRIEVAL_INDEXES_AND_MODELS.md": {
+      "sha256": "d9b8b664ab204ed64e191ea78eec3c29c4e9c203934bb63b4568dcb8ae04e9c0",
+      "bytes": 7046
+    },
+    "knowledge-base-plan/agents/05_QUERY_PLANNING_AND_COVERAGE.md": {
+      "sha256": "c8b5d445c74f83eef93745bad50608cc91ea2cc950eeaca8bac5c548f8b7315c",
+      "bytes": 7082
+    },
+    "knowledge-base-plan/agents/06_CLAIM_LEDGER_AND_NUMBERS.md": {
+      "sha256": "bf6ee1087dad4bc4ed25982260ee71ff5ce49ff2c136d2eece22548c55a471ad",
+      "bytes": 7056
+    },
+    "knowledge-base-plan/agents/07_GENERATION_PROVIDER_AND_VERIFICATION.md": {
+      "sha256": "254d21d7218061d4eb0e31e30809140125630d18eb6fa28a73c4d47771bfae65",
+      "bytes": 7161
+    },
+    "knowledge-base-plan/agents/08_API_OBSERVABILITY_AND_DEPLOYMENT.md": {
+      "sha256": "5ea7d21c272ce0dc43d8aa3057a6ab7df3998d8fdce46f29feafd164aefe6f41",
+      "bytes": 7043
+    },
+    "knowledge-base-plan/agents/09_RESEARCH_EXPERIMENTS_AND_AUDIT.md": {
+      "sha256": "b77bc8b91dc60571fbd33e6013185bc947bfe312d407b3ce0cbf548c38b7dc76",
+      "bytes": 7189
+    },
+    "knowledge-base-plan/audit/compliance-checks.json": {
+      "sha256": "b1e1cd477f544449d0faa458f3c223735e2d84cc71f40765da21ed7df895627c",
+      "bytes": 747
+    },
+    "knowledge-base-plan/audit/dataset-audit.json": {
+      "sha256": "c509084360be5ba3b89495e771ebec15b272e823a90a7fc67c1f044d61932b60",
+      "bytes": 7016
+    },
+    "knowledge-base-plan/audit/document-manifest.json": {
+      "sha256": "b77d96cac5a057e1cec42067570e56cb214712a7c673f5f338a2ecd325a1ec5a",
+      "bytes": 34104
+    },
+    "knowledge-base-plan/audit/identity-review.json": {
+      "sha256": "3a771689b58e5566c8bbfef36f6f3d061de7d5ea2176c23ca279449d333b22a2",
+      "bytes": 1717
+    },
+    "knowledge-base-plan/audit/page-probes.json": {
+      "sha256": "aa4df15398d27ee3673cd5df0c0086edf11280e91f3037c1c8c66bf850c60911",
+      "bytes": 169793
+    },
+    "knowledge-base-plan/audit/question-inventory.json": {
+      "sha256": "c21ec30fdc4e81a08702ad536ba247a25d9fa72e350ee32868b0c7073baf1031",
+      "bytes": 129719
+    },
+    "knowledge-base-plan/audit/validation-report.json": {
+      "sha256": "97481430fe6ba4a3ff8543c8577f0dbf2a8bff98fa665f51c16c2cf76ece78c1",
+      "bytes": 1677
+    },
+    "knowledge-base-plan/diagrams/architecture.mmd": {
+      "sha256": "4d8a2d0a1000a25b68e53d8cc5322911346641107781d4a8db229383341a9756",
+      "bytes": 1616
+    },
+    "knowledge-base-plan/diagrams/architecture.svg": {
+      "sha256": "980aba320f576c350eee51cbd2a2adca6e5b6562e7305ac47ef3f1d944a4dccf",
+      "bytes": 41353
+    },
+    "knowledge-base-plan/diagrams/build-waves.mmd": {
+      "sha256": "7b5f168002de9fc8906d7f2ff5925c4d9afe62c23bb848dc9eb7de00f37e1da3",
+      "bytes": 418
+    },
+    "knowledge-base-plan/diagrams/build-waves.svg": {
+      "sha256": "f1c3ba95fade66b4893f09cd236c4b543134fb933ac6e155933d2a84f0959fd3",
+      "bytes": 18196
+    },
+    "knowledge-base-plan/overview.html": {
+      "sha256": "3acffccfd5b1948f1eb058ea980ed15c926f2d5ff4690c6b199ca23a4caf1f1c",
+      "bytes": 59155
+    },
+    "knowledge-base-plan/package-manifest.json": {
+      "sha256": "82e838b3f3a3275e8054a26b2dcb9db7eb7ce79e49ea4691d3c79a276f85fbb9",
+      "bytes": 5444
+    },
+    "knowledge-base-plan/reference-config.yaml": {
+      "sha256": "7ca59a7690162769075b746089cdd55f95c7a0a7f1652f3845c039358d887476",
+      "bytes": 2874
+    },
+    "knowledge-base-plan/tools/audit_dataset.py": {
+      "sha256": "2d8e06ebe814a0033ded6d428d98f7ac4dc30401431aaf746b911d043bf93874",
+      "bytes": 4780
+    }
+  }
+}

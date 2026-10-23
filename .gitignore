@@ -8,3 +8,12 @@ __pycache__/
 *.zip
 Train/
 Problem Statement 1/
+.env.*
+!.env.example
+*.py[cod]
+.coverage
+.DS_Store
+artifacts/
+*.log
+
+.venv*/

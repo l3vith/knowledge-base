@@ -137,10 +137,13 @@ def test_make_pdf_image_only_page(tmp_path):
     assert doc.get_toc() == [[1, "Intro", 1]]
 
 
-def test_api_health_and_error_shape():
+def test_api_exact_routes_and_error_shape():
     from kb.api import app
 
     client = TestClient(app)
-    assert client.get("/health").json() == {"status": "ok"}
+    assert client.get("/health").status_code == 404
+    assert client.get("/docs").status_code == 404
+    assert client.get("/openapi.json").status_code == 404
+    assert {(r.path, method) for r in app.routes for method in r.methods} == {("/index", "POST"), ("/query", "POST")}
     body = CollectionNotFound("x").to_body("req_1")
     assert body["error"]["code"] == "COLLECTION_NOT_FOUND" and isinstance(KBError("A", "b", 400), Exception)

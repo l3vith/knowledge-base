@@ -1,3 +1,5 @@
+> Legacy input plan. Use [unified-plan/README.md](unified-plan/README.md) and [TRACK_B_HANDOFF.md](TRACK_B_HANDOFF.md) for reconciled rules and the implementation delta.
+
 # Team assignment — who builds what
 
 Read in this order: **this file → `ARCHITECTURE.md` → your modules in `PLAN.md`** (plus the "Global rules" and "M0 interfaces" sections of PLAN.md).

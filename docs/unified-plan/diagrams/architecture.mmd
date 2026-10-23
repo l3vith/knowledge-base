@@ -1,0 +1,25 @@
+flowchart TB
+    subgraph Compiler["Source compiler: Person 1"]
+      Z["ZIP + named collection"] --> P["Native pages + selective OCR"]
+      P --> S["Skeleton + tables + exact source elements"]
+      S --> M["Qualified identity + source-derived cards"]
+      M --> I["FTS + page-window vectors + immutable generation"]
+    end
+    subgraph Query["Bounded query executor: Person 2"]
+      Q["User query"] --> A["1 Query planning: evidence obligations"]
+      A --> B["2 Routing guard: entity / period / scope"]
+      B --> C["3 Candidate pages: lexical + dense + structure"]
+      C --> D["4 Page survey: explicit visibility limits"]
+      D --> E["5 Element retrieval: original source spans"]
+      E --> F["6 Triage: relevance ordering only"]
+      F --> G["7 Evidence verification: quotes + qualifiers"]
+      G --> H["8 Answer generation: coverage portfolio"]
+      H --> J["9 Answer verification: claims + calculations"]
+      J --> K["10 Citation render: actual filename + physical page"]
+      K --> R["Answer + all writer source chunks + four-field trace"]
+    end
+    I --> B
+    I --> C
+    I --> E
+    L["Langfuse + durable attempt/evidence ledger"] -.-> Query
+    V["Unchanged official evaluator: offline only"] -.-> R

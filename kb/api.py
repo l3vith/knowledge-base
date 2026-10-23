@@ -36,13 +36,5 @@ async def _unexpected(request: Request, exc: Exception):
     return JSONResponse(status_code=500, content=err.to_body(new_request_id()))
 
 
-@app.get("/health")
-def health() -> dict:
-    return {"status": "ok"}
-
-
 for _module in ("kb.routes.index", "kb.routes.query"):
-    try:
-        app.include_router(importlib.import_module(_module).router)
-    except ImportError as e:
-        log.warning("route module %s not available yet: %s", _module, e)
+    app.include_router(importlib.import_module(_module).router)

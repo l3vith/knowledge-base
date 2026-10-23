@@ -1,3 +1,5 @@
+> Legacy input plan. Use [unified-plan/README.md](unified-plan/README.md) and [TRACK_B_HANDOFF.md](TRACK_B_HANDOFF.md) for reconciled rules and the implementation delta.
+
 # Smart Knowledge Base for Agents — FINAL Architecture Spec
 
 Version: final-1.0 · Date: 2026-10-23 · Companion: `docs/PLAN.md` (module-by-module build instructions)

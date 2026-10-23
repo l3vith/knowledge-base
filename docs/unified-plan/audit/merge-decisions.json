@@ -1,0 +1,310 @@
+[
+  {
+    "id": "A01",
+    "decision": "Adopt",
+    "issue": "M0-first seams and M6\u2013M11 Person 2 ownership",
+    "source": "final_plan/PLAN.md module table",
+    "resolution": "PLAN.md and TEAM_ASSIGNMENT.md preserve independent work against protocols."
+  },
+  {
+    "id": "A02",
+    "decision": "Adopt",
+    "issue": "Fixed query execution with bounded work",
+    "source": "final_plan/ARCHITECTURE.md \u00a74",
+    "resolution": "No retrieval back-edge; ten ordered stages include answer support verification."
+  },
+  {
+    "id": "A03",
+    "decision": "Adopt",
+    "issue": "Natural source elements and page-level navigation",
+    "source": "final_plan/PLAN.md M2\u2013M4",
+    "resolution": "Canonical source paragraphs/tables remain distinct from tokenized search windows."
+  },
+  {
+    "id": "A04",
+    "decision": "Adopt",
+    "issue": "Explicit source obligations and provenance",
+    "source": "knowledge-base-plan/01_MASTER_PLAN.md",
+    "resolution": "Coverage slots, source spans, table dependencies and qualified claim support remain core."
+  },
+  {
+    "id": "A05",
+    "decision": "Adopt",
+    "issue": "Atomic collection generations and scoped search",
+    "source": "both source plans",
+    "resolution": "Query binds one generation; filter before top-k; reader-safe retention."
+  },
+  {
+    "id": "R01",
+    "decision": "Revise",
+    "issue": "Nine versus ten query stages",
+    "source": "final_plan/PLAN.md M10",
+    "resolution": "Add answer_verification before citation_render; all contracts/prompts follow ten names."
+  },
+  {
+    "id": "R02",
+    "decision": "Revise",
+    "issue": "Full ingest-time page-card LLM work",
+    "source": "final_plan/PLAN.md M4\u2013M5",
+    "resolution": "Source-derived cards by default, selective budgeted enrichment; no mandatory ~1743 page-batch calls."
+  },
+  {
+    "id": "R03",
+    "decision": "Revise",
+    "issue": "240-token canonical chunks",
+    "source": "knowledge-base-plan/reference-config.yaml",
+    "resolution": "Natural source elements plus tokenizer-limited search windows; never reshape evidence to evaluator counts."
+  },
+  {
+    "id": "R04",
+    "decision": "Revise",
+    "issue": "Character limits claimed to enforce token limits",
+    "source": "final_plan/PLAN.md M0,M3,M7",
+    "resolution": "Count actual model tokens including query/prefix; no silent text-tail clipping."
+  },
+  {
+    "id": "R05",
+    "decision": "Revise",
+    "issue": "Global normalized-text deduplication",
+    "source": "final_plan/PLAN.md M8,M10",
+    "resolution": "Deduplicate by source identity/anchor within qualified scope; preserve cross-year contradictions."
+  },
+  {
+    "id": "R06",
+    "decision": "Revise",
+    "issue": "40-bit document hashes",
+    "source": "final_plan/PLAN.md global rule 10",
+    "resolution": "Full SHA-256 identities in new compiler specification; legacy integration gap must be recorded."
+  },
+  {
+    "id": "R07",
+    "decision": "Revise",
+    "issue": "Year histogram metadata fallback",
+    "source": "final_plan/PLAN.md M4",
+    "resolution": "Unknown period stays null; cited source or explicit inference required."
+  },
+  {
+    "id": "R08",
+    "decision": "Revise",
+    "issue": "Issuer normalization removes Group/Holdings",
+    "source": "final_plan/PLAN.md M4",
+    "resolution": "Preserve legal-entity distinctions, document kind, scope and identifiers."
+  },
+  {
+    "id": "R09",
+    "decision": "Revise",
+    "issue": "Only newest sibling retained",
+    "source": "final_plan/PLAN.md M6",
+    "resolution": "Retain every explicit entity/period; latest only within comparable verified versions."
+  },
+  {
+    "id": "R10",
+    "decision": "Revise",
+    "issue": "Hard eight-document/eight-aspect truncation",
+    "source": "final_plan/PLAN.md M6",
+    "resolution": "Document limits are soft for explicit scope; separate aspect groups from up to 64 obligation slots."
+  },
+  {
+    "id": "R11",
+    "decision": "Revise",
+    "issue": "Catalog answerable=false exits before search",
+    "source": "final_plan/PLAN.md M10",
+    "resolution": "Uncertain/empty route schedules fixed escape; summaries cannot prove absence."
+  },
+  {
+    "id": "R12",
+    "decision": "Revise",
+    "issue": "Stop-word removal includes not",
+    "source": "final_plan/PLAN.md M0",
+    "resolution": "Preserve negation in semantic inputs; quote FTS safely instead of deleting meaning."
+  },
+  {
+    "id": "R13",
+    "decision": "Revise",
+    "issue": "Short repeated lines deleted as boilerplate",
+    "source": "final_plan/PLAN.md M2",
+    "resolution": "Flags and scoring only; preserve unit/header/definition recovery and raw text."
+  },
+  {
+    "id": "R14",
+    "decision": "Revise",
+    "issue": "Cross-encoder high score auto-verifies",
+    "source": "final_plan/PLAN.md M7",
+    "resolution": "Relevance ordering only by default; no score-based factual entailment."
+  },
+  {
+    "id": "R15",
+    "decision": "Revise",
+    "issue": "Long element clipped then whole unit kept",
+    "source": "final_plan/PLAN.md M8",
+    "resolution": "Verify visible bounded fragments and source dependencies; never certify unseen tails."
+  },
+  {
+    "id": "R16",
+    "decision": "Revise",
+    "issue": "Unknown evidence ID removed leaving assertion",
+    "source": "final_plan/PLAN.md M9",
+    "resolution": "Reject or qualify whole unsupported claim, then deterministic rendering."
+  },
+  {
+    "id": "R17",
+    "decision": "Revise",
+    "issue": "Provider error becomes no-information answer",
+    "source": "final_plan/PLAN.md M9",
+    "resolution": "Infrastructure errors are typed failures; partial requires verified support and disclosed limits."
+  },
+  {
+    "id": "R18",
+    "decision": "Revise",
+    "issue": "Uncited writer evidence hidden from response",
+    "source": "both source plans ambiguous",
+    "resolution": "Return every writer-visible source fragment, with role and claim links; offline adapter passes exact returned list."
+  },
+  {
+    "id": "R19",
+    "decision": "Revise",
+    "issue": "Trace clips scores and evidence arbitrarily",
+    "source": "final_plan/PLAN.md M0",
+    "resolution": "Compact public summaries reference durable complete evidence/attempt artifacts."
+  },
+  {
+    "id": "R20",
+    "decision": "Revise",
+    "issue": "Langfuse exceptions silently swallowed",
+    "source": "final_plan/PLAN.md M0",
+    "resolution": "Visible tracing/export state; actual reconciliation required for release."
+  },
+  {
+    "id": "R21",
+    "decision": "Revise",
+    "issue": "Guessed provider price and unknown tokens as zero",
+    "source": "final_plan/PLAN.md Settings,LLM",
+    "resolution": "Unknown cost/usage is null with reason; verified dated price record required."
+  },
+  {
+    "id": "R22",
+    "decision": "Revise",
+    "issue": "Nested pools and loose global concurrency",
+    "source": "final_plan/PLAN.md M5",
+    "resolution": "Single shared scheduler, initial provider concurrency two, measured CPU/OCR jobs."
+  },
+  {
+    "id": "R23",
+    "decision": "Revise",
+    "issue": "Stale lock removal by age and automatic old-generation cleanup",
+    "source": "final_plan/PLAN.md M3",
+    "resolution": "Owner-checked locks and reader-safe explicit retention cleanup."
+  },
+  {
+    "id": "R24",
+    "decision": "Revise",
+    "issue": "Delete staging/src after build",
+    "source": "final_plan/PLAN.md M5",
+    "resolution": "Retain original PDFs/content-addressed source bytes and provenance."
+  },
+  {
+    "id": "R25",
+    "decision": "Revise",
+    "issue": "Windows paths and system-install instructions",
+    "source": "final_plan/PLAN.md global rules",
+    "resolution": "Portable checkout paths, isolated environment, real server capability validation."
+  },
+  {
+    "id": "R26",
+    "decision": "Revise",
+    "issue": "Holdout performance selects rollback",
+    "source": "final_plan/PLAN.md M12",
+    "resolution": "Freeze first, inspect once; future tuning invalidates untouched holdout status."
+  },
+  {
+    "id": "R27",
+    "decision": "Revise",
+    "issue": "60% overlap implies document alias",
+    "source": "final_plan/PLAN.md M11",
+    "resolution": "Verified identity precedes overlap; ambiguous references stay unresolved, not hard negatives."
+  },
+  {
+    "id": "R28",
+    "decision": "Revise",
+    "issue": "603 chunks become a hard semantic-recall ceiling",
+    "source": "final_plan/ARCHITECTURE.md source audit",
+    "resolution": "Count references honestly; unique absent facts and alternate support remain unquantified."
+  },
+  {
+    "id": "R29",
+    "decision": "Revise",
+    "issue": "All page cards imply all relevant facts found",
+    "source": "final_plan/ARCHITECTURE.md",
+    "resolution": "Separate available, surveyed-card and raw-inspected coverage; summaries remain lossy."
+  },
+  {
+    "id": "R30",
+    "decision": "Revise",
+    "issue": "Fixed ingest time/price/throughput copied as measured here",
+    "source": "final_plan/PLAN.md budgeting",
+    "resolution": "Treat source-report timings as unverified on this machine; measure cold/warm on target server."
+  },
+  {
+    "id": "R31",
+    "decision": "Revise",
+    "issue": "Prose response plus STATUS line bypasses claim checks",
+    "source": "final_plan/PLAN.md M9",
+    "resolution": "Structured claims with exact source quotes; renderer uses accepted claims only."
+  },
+  {
+    "id": "R32",
+    "decision": "Revise",
+    "issue": "Listwise attribution for arXiv 2510.11358",
+    "source": "final_plan/ARCHITECTURE.md research table",
+    "resolution": "Actual topic is LLM-specific evidence utility; correction in R36."
+  },
+  {
+    "id": "X01",
+    "decision": "Reject",
+    "issue": "GET /health and optional missing-router startup",
+    "source": "final_plan/PLAN.md M0",
+    "resolution": "Exactly two routes; docs disabled; missing required route is a startup error."
+  },
+  {
+    "id": "X02",
+    "decision": "Reject",
+    "issue": "Gold-based runtime aliases, answer caching and hidden access",
+    "source": "all runtime work",
+    "resolution": "Offline labels stay outside index/query code; no hidden set scraping/reconstruction."
+  },
+  {
+    "id": "X03",
+    "decision": "Reject",
+    "issue": "Other-track CPU/no-LLM/size constraints",
+    "source": "earlier conversation possibilities",
+    "resolution": "Only the KB statement controls this submission."
+  },
+  {
+    "id": "D01",
+    "decision": "Defer",
+    "issue": "Training/fine-tuning and learned fusion",
+    "source": "knowledge-base-plan experiments",
+    "resolution": "Disabled strict profile pending organizer eligibility and clean evidence; not needed for core."
+  },
+  {
+    "id": "D02",
+    "decision": "Defer",
+    "issue": "Recursive reader/corrective retrieval",
+    "source": "knowledge-base-plan/reference-config.yaml repair passes",
+    "resolution": "No retrieval repair in core; fixed DAG and bounded same-source answer checking."
+  },
+  {
+    "id": "D03",
+    "decision": "Defer",
+    "issue": "Visual sidecar, element vectors, heavier models and full claim compilation",
+    "source": "both research plans",
+    "resolution": "One-at-a-time bottleneck-driven experiments after core correctness and baseline."
+  },
+  {
+    "id": "D04",
+    "decision": "Defer",
+    "issue": "Procedural eligibility, live deployment and actual 0.95 results",
+    "source": "requirements versus implementation",
+    "resolution": "Require real organizer conduct/API/export/evaluation evidence; no design certification."
+  }
+]

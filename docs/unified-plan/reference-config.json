@@ -1,0 +1,111 @@
+{
+  "schema_version": "ufp-2.0",
+  "profile": "strict_submission",
+  "runtime": {
+    "python_target": "3.11",
+    "provider_concurrency": 2,
+    "cpu_jobs": 2,
+    "query_deadline_seconds": 120
+  },
+  "paths": {
+    "collections": "data/collections",
+    "runs": "artifacts/runs",
+    "models": "data/models"
+  },
+  "models": {
+    "embedding": {
+      "backend": "fastembed",
+      "id": "BAAI/bge-small-en-v1.5",
+      "revision": null,
+      "expected_dimension": 384,
+      "max_input_tokens": 512
+    },
+    "reranker": {
+      "backend": "fastembed",
+      "id": "Xenova/ms-marco-MiniLM-L-6-v2",
+      "revision": null,
+      "max_pair_tokens": 512
+    },
+    "provider": {
+      "base_url_env": "OPENCODE_BASE_URL",
+      "model_env": "OPENCODE_MODEL",
+      "key_env": "OPENCODE_API_KEY",
+      "require_capability_check": true,
+      "price_record": null
+    }
+  },
+  "ingest": {
+    "native_workers": 2,
+    "ocr_workers": 2,
+    "ocr_dpi": 300,
+    "low_text_screen_chars": 80,
+    "allow_partial": false,
+    "retain_original_pdf": true,
+    "page_cards": "source_derived",
+    "llm_card_enrichment": false,
+    "element_vectors": false,
+    "search_window_target_tokens": 384,
+    "search_window_overlap_tokens": 64
+  },
+  "retrieval": {
+    "rrf_k": 60,
+    "documents_precise_soft": 6,
+    "documents_broad_soft": 12,
+    "pages_precise": 60,
+    "pages_broad": 200,
+    "global_escape_pages": 20,
+    "max_survey_cards": 400,
+    "max_raw_pages": 200,
+    "max_rerank_pairs": 400,
+    "reference_depth": 1,
+    "automatic_score_thresholds": false
+  },
+  "planning": {
+    "max_aspect_groups": 8,
+    "max_obligation_slots": 64,
+    "preserve_explicit_scopes": true
+  },
+  "evidence": {
+    "fact_tokens": 4000,
+    "complex_tokens": 16000,
+    "broad_tokens": 48000,
+    "verification_batch_tokens": 3000,
+    "return_all_writer_source_context": true
+  },
+  "budget": {
+    "max_llm_attempts": 24,
+    "max_total_input_tokens": 200000,
+    "max_total_output_tokens": 24000,
+    "max_cost_usd": null,
+    "schema_repair_attempts": 1,
+    "answer_repair_attempts": 1,
+    "retrieval_repair_passes": 0
+  },
+  "observability": {
+    "langfuse_required": true,
+    "base_url_env": "LANGFUSE_BASE_URL",
+    "durable_local_events": true,
+    "unknown_usage": "null_with_reason",
+    "unknown_price": "null_with_reason"
+  },
+  "compliance": {
+    "public_routes": [
+      "POST /index",
+      "POST /query"
+    ],
+    "api_docs": false,
+    "runtime_web": false,
+    "training": false,
+    "fine_tuning": false,
+    "recursive_retrieval": false,
+    "gold_runtime_access": false,
+    "preserve_evaluator": true
+  },
+  "experiments": {
+    "stronger_pretrained_profile": false,
+    "visual_sidecar": false,
+    "docling_parser": false,
+    "element_vectors": false,
+    "learned_fusion": false
+  }
+}

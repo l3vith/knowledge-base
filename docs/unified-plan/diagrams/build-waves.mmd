@@ -1,0 +1,11 @@
+flowchart LR
+  M0["M0: contracts / fakes / budgets"] --> A["Person 1: M1-M4 source compiler + stores"]
+  M0 --> B["Person 2: M6-M9 query mechanisms"]
+  M0 --> C["Person 2: M11 evaluation"]
+  A --> M5["M5: blocking index"]
+  B --> M10["M10: query API"]
+  M5 --> I["I1: real boundary integration"]
+  M10 --> I
+  C --> T["Development ablations / frozen holdout"]
+  I --> T
+  T --> R["M12: measured release + short write-up"]

@@ -1,3 +1,5 @@
+> Legacy input plan. Use [unified-plan/README.md](unified-plan/README.md) and [TRACK_B_HANDOFF.md](TRACK_B_HANDOFF.md) for reconciled rules and the implementation delta.
+
 # Smart Knowledge Base — FINAL Module Plan (instruction set for zero-context agents)
 
 > **For agentic workers:** this plan is executed module by module. Each module has one owner. Read `docs/ARCHITECTURE.md` in full first, then **only your own module section** plus the "Global rules" and "M0 interfaces" sections. Steps use checkboxes (`- [ ]`).
