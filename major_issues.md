@@ -1,5 +1,7 @@
 # Major issues: Smart Knowledge Base repair handoff
 
+**Current status after the repair rerun:** factual scores are now 100% on this one case; analytical output now contains 18 verified claims, but its precision is only 25.93%. Sections describing zero claims/66.7% factual scores are historical baseline evidence. Read the final “Latest live repair result” section and its report first; analytical over-inclusion, latency and deployment/accounting gaps remain open.
+
 This is a self-contained handoff for the next agent. The benchmark details below are the historical Qwen baseline at `909ae3d`; subsequent source-selection repairs are described in the implementation update at the end. **Do not treat the latest benchmark as a successful analytical answer.** The pipeline stopped crashing on its token budget, but the analytical response contains no accepted claims and scores zero on answer quality. The factual response is useful but still misses the required official answer metrics.
 
 ## 1. Project, current branch and scope
@@ -240,7 +242,7 @@ with TemporaryDirectory() as temporary:
     print(result["status"], result["answer"], result["coverage"]["limitations"])
 ```
 
-This intentionally reproduces the bug with synthetic text. It is not a proposed repair, a model test or an official score.
+This reproduces the rejection path with synthetic text. The repaired renderer should now identify a validation failure rather than claim that retrieval found nothing. It is not a model test or an official score.
 
 ### Reproduce the public development cases only when credentials and credits are ready
 
@@ -294,3 +296,10 @@ A repair is not complete because tests pass or the response is nonempty. Require
 The answer writer now requests `selections` with one nonempty `obligation_id`, one valid `evidence_id`, and consecutive source sentence/span IDs. The application reconstructs exact support and source wording, with only a narrowly defined display cleanup for italicized thousands commas. It does not accept generated/paraphrased text as a source statement. Literal legacy adapters remain supported but paraphrases are rejected. Source support and final semantic verification remain active. Per-selection rejection reasons are saved privately. Empty accepted-claim output now distinguishes source-validation failure from retrieval absence.
 
 The supplied evaluator notebook and its point decomposition remain unchanged so new scores are comparable. These repairs address implementation causes; a live rerun is needed to establish the resulting quality. The historical diagnostics above remain unmodified evidence of the original failure.
+
+
+## Latest live repair result: extractive writer
+
+See [the new portable report](docs/diagnostics/qwen-extractive/REPORT.md) and [summary](docs/diagnostics/qwen-extractive/summary.json), evaluated at `da94752` with the original official scorer unchanged. Factual C31 now scores **100% on all four metrics** (21.82s). Analytical C18 now has **18 accepted selections and 18 semantically verified claims**, with no empty-ID/quote rejection recurrence. It remains **partial** (118.22s): answer precision **25.93%**, answer recall **88.89%**, context precision **87.50%**, context recall **42.86%**. Total cost including judging **$0.01217614**. Offline suite: **144 passed, 7 slow tests deselected**.
+
+The historical P0 failures above are retained for provenance, but the latest priority is analytical over-inclusion, reference-relevant fact selection, context coverage and deadline margin. Source-literal output does not ensure high answer precision: too many extra source facts are still included. Read the latest report before assuming that the current analytical output is still the old zero-claim abstention. Do not claim the project meets the 0.95 targets overall.

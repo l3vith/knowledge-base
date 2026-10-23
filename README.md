@@ -53,3 +53,5 @@ Page selection now uses the initial source FTS/vector rankings and per-obligatio
 BGE-small embeddings, MiniLM cross-encoder reranking, SQLite FTS5, extractive page cards, citation validation and arithmetic already run locally. No additional generative local model is required for these steps. Final-stage token reservations include both answer generation and claim verification, using the same model limits as actual calls.
 
 A live Qwen source-span smoke returned HTTP 200, text blocks only, 484 input / 77 output tokens, $0.00010879 reported-token/catalog cost, and 3.36 seconds. This is transport/evidence-selection validation, not a full analytical benchmark or an accuracy claim. See `docs/QWEN_LOCAL_INFERENCE.md` for the shipped scope and remaining validation.
+
+Latest source-selection benchmark and remaining limitations: [extractive writer report](docs/diagnostics/qwen-extractive/REPORT.md). The official evaluator remains unchanged.
