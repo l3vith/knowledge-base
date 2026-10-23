@@ -60,7 +60,7 @@ def answer_query(collection,query,*,store,generation_id,settings,llm,embedder=No
     ctx.save("run_manifest",{"collection":collection,"generation_id":generation_id,
                              "config_sha256":config_sha256,"query_config":safe_config,"mode":mode})
     cards={get(c,"doc_id"):c for c in store.docs()}
-    numbered={};draft=AnswerDraft([],"no_answer");limits=[];counts={};answer=ABSTAIN_TEXT
+    page_report={};numbered={};draft=AnswerDraft([],"no_answer");limits=[];counts={};answer=ABSTAIN_TEXT
     current_stage=-1
     try:
         with sink.span("query",input={"collection":collection,"query":query},metadata={"generation_id":generation_id,"request_id":ctx.request_id,"mode":mode}) as root:
@@ -98,7 +98,7 @@ def answer_query(collection,query,*,store,generation_id,settings,llm,embedder=No
                     picks=[];out.update(skipped=True,reason="baseline control")
                 elif narrow_factoid(plan,query):
                     picks=[SurveyPick(d,p,[a.aspect_id for a in plan.aspects],"lexical")
-                           for d,pages in lexical.items() for p in sorted(pages)]
+                           for d,pages in lexical.items() for p in dict.fromkeys(page_report.get("documents",{}).get(d,{}).get("navigation",{}).get("direct_pages",[])+sorted(pages))]
                     out.update(skipped=True,reason="single-document single-obligation factual path",
                                picked_pages=len(picks),cards_surveyed=0)
                     counts["cards_surveyed"]=0
@@ -117,7 +117,7 @@ def answer_query(collection,query,*,store,generation_id,settings,llm,embedder=No
                         limits.append(f"{report['truncated']} selected pages omitted by raw-read budget")
             with ctx.stage(STEP_NAMES[4],DESCRIPTIONS[4],{"picked_pages":len(picks)}) as out:
                 current_stage=4
-                candidates,report=element_retrieval(store,plan,query,picks,escape,embedder,settings)
+                candidates,report=element_retrieval(store,plan,query,picks,escape,embedder,settings,navigation=page_report.get("documents",{}))
                 out.update(report);counts["elements_retrieved"]=len(candidates)
             with ctx.stage(STEP_NAMES[5],DESCRIPTIONS[5],{"candidates":len(candidates)}) as out:
                 current_stage=5

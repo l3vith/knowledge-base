@@ -39,6 +39,7 @@ class Candidate:
     aspect_ids: list[str]
     sources: list[str]
     ce_score: float | None = None
+    metadata_score: float = 0.0
 
 
 @dataclass

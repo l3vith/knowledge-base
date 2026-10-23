@@ -32,6 +32,8 @@ Local indexing through the existing CLI:
 
 That CLI reads process environment variables; the server launcher loads `.env`. For offline benchmark capture, use the commands in the handoff. The source dataset remains external to the repository.
 
+Source-derived metadata routing, index/contents mapping, zero-model-cost upgrades and validation limits: [Metadata retrieval](docs/METADATA_RETRIEVAL.md).
+
 ## Validation
 
 ```bash

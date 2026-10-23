@@ -36,7 +36,14 @@ def _outline(doc) -> list[tuple[int, str, int]]:
 
 def read_pdf_info(path: Path) -> tuple[str, int, list[tuple[int, str, int]], dict]:
     with pymupdf.open(path) as doc:
-        return doc_id_for(path), doc.page_count, _outline(doc), dict(doc.metadata or {})
+        meta=dict(doc.metadata or {})
+        meta["page_label_rules"]=doc.get_page_labels()
+        meta["file_size_bytes"]=Path(path).stat().st_size
+        with open(path,"rb") as source:
+            digest=hashlib.sha256()
+            for block in iter(lambda:source.read(1<<20),b""):digest.update(block)
+            meta["source_sha256"]=digest.hexdigest()
+        return doc_id_for(path), doc.page_count, _outline(doc), meta
 
 
 def _clean(md: str) -> str:
@@ -58,6 +65,15 @@ def _markdown(doc, idx: list[int], settings: Settings, name: str, drop_margins: 
         log.warning("to_markdown failed for %s (%d pages from p%d): %s; using plain text", name, len(idx), idx[0] + 1, e)
         return {i + 1: doc[i].get_text("text") for i in idx}
 
+
+
+def page_source_metadata(page,page_count,markdown):
+    links=[int(link["page"])+1 for link in page.get_links()
+           if link.get("kind")==pymupdf.LINK_GOTO and isinstance(link.get("page"),int) and 0<=link["page"]<page_count]
+    return {"page_label":page.get_label(),"rotation":page.rotation,
+            "width_points":round(page.rect.width,2),"height_points":round(page.rect.height,2),
+            "internal_link_pages":list(dict.fromkeys(links))[:40],"image_count":len(page.get_image_info()),
+            "text_chars":len(markdown),"origin":"pdf_page"}
 
 def parse_pages(path: Path, start: int, end: int, settings: Settings, use_ocr: bool) -> tuple[list[PageText], int]:
     """Pages start..end inclusive (1-based). Returns (pages, ocr_unavailable_count). Top-level for process pools."""
@@ -94,7 +110,9 @@ def parse_pages(path: Path, start: int, end: int, settings: Settings, use_ocr: b
                     md, is_ocr = text, True
                 if not md:
                     unavailable += 1
-            pages.append(PageText(page_no=page_no, markdown=md, is_ocr=is_ocr, toc_titles=titles.get(page_no, [])))
+            metadata=page_source_metadata(page,doc.page_count,md)
+            pages.append(PageText(page_no=page_no, markdown=md, is_ocr=is_ocr,
+                                  toc_titles=titles.get(page_no, []),metadata=metadata))
     return pages, unavailable
 
 

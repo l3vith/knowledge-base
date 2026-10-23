@@ -3,6 +3,7 @@ from collections import defaultdict
 from .settings import value, budget
 from .types import Candidate
 from .utils import get, terms, rrf
+from .metadata import navigation_hints, element_metadata_score
 
 
 def _query_vectors(embedder,texts):
@@ -52,10 +53,13 @@ def candidate_pages(store, plan, query, embedder, settings):
         ranked=rrf([(d,p) for d,p,s in source],[(d,p) for d,p,s in dense])
         broad=plan.intent=="exhaustive"
         ordered=list(dict.fromkeys([p for d,p in ranked]+all_pages))
+        initial_nav=navigation_hints(store,plan,query,doc,all_pages,ordered,settings)
+        metadata_pages=initial_nav['preferred_pages'] if initial_nav['focused'] else initial_nav['direct_pages']
+        if metadata_pages:slot_lists.append([(doc,p) for p in metadata_pages])
         if broad or len(all_pages)<=cap:
             selected=all_pages
         else:
-            selected=list(dict.fromkeys(sorted(net)+ordered))[:cap]
+            selected=list(dict.fromkeys(metadata_pages+sorted(net)+ordered))[:cap]
         pools[doc]=selected
         report["documents"][doc]={"available":len(all_pages),"mode":"all" if len(selected)==len(all_pages) else "bounded", "ranked_pages":ordered}
     # Global fair cap: lexical obligation hits first, then round-robin across documents.
@@ -73,6 +77,9 @@ def candidate_pages(store, plan, query, embedder, settings):
     for doc,pages in result.items():
         report["documents"][doc]["selected"]=len(pages)
         report["documents"][doc]["ranked_pages"]=[p for p in report["documents"][doc]["ranked_pages"] if p in set(pages)]
+        nav=navigation_hints(store,plan,query,doc,pages,report["documents"][doc]["ranked_pages"],settings)
+        report["documents"][doc]["navigation"]=nav
+        report["documents"][doc]["ranked_pages"]=rrf(nav['preferred_pages'] if nav['focused'] else nav['direct_pages'],report["documents"][doc]["ranked_pages"])
         report["omitted_cards"]+=report["documents"][doc]["available"]-len(pages)
         lexical[doc]&=set(pages)
     report["total"]=len(selected)
@@ -89,14 +96,14 @@ def escape_pages(store,plan,query,embedder,settings):
     return [(d,p) for d,p,s in hits if d in others][:cap]
 
 
-def element_retrieval(store,plan,query,picks,escape,embedder,settings):
+def element_retrieval(store,plan,query,picks,escape,embedder,settings,*,navigation=None):
     merged={}
     def add(element,aspects,source):
         key=get(element,"element_id")
         if not key or not get(element,"text","").strip():
             return
         if key not in merged:
-            merged[key]=Candidate(element,[],[])
+            merged[key]=Candidate(element,[],[],metadata_score=element_metadata_score(element,navigation))
         candidate=merged[key]
         candidate.aspect_ids=list(dict.fromkeys(candidate.aspect_ids+aspects))
         candidate.sources=list(dict.fromkeys(candidate.sources+[source]))
@@ -107,7 +114,24 @@ def element_retrieval(store,plan,query,picks,escape,embedder,settings):
     for aspect in plan.aspects:
         if not plan.doc_ids:
             continue
-        sparse=store.search_elements(aspect.keywords+terms(aspect.text),plan.doc_ids,value(settings,"element_hits_per_aspect"))
+        sparse=[]
+        scoped=getattr(store,"search_elements_on_pages",None)
+        focused=any((navigation or {}).get(d,{}).get("navigation",{}).get("focused") for d in plan.doc_ids)
+        if not focused:
+            sparse=store.search_elements(aspect.keywords+terms(aspect.text),plan.doc_ids,value(settings,"element_hits_per_aspect"))
+        for doc in plan.doc_ids if focused else []:
+            route=(navigation or {}).get(doc,{}).get("navigation",{})
+            search_terms=aspect.keywords+terms(aspect.text)
+            if route.get("focused") and callable(scoped):
+                pages=[p.page_no for p in picks if p.doc_id==doc]
+                local=scoped(search_terms,doc,pages,value(settings,"element_hits_per_aspect"))
+                # Independent source matches outside metadata ranges remain eligible.
+                outside=store.search_elements(search_terms,[doc],value(settings,"element_hits_per_aspect"))
+                inside_ids={eid for eid,score in local}
+                reserve=[(eid,score) for eid,score in outside if eid not in inside_ids][:value(settings,"metadata_element_fallback_hits")]
+                sparse.extend(reserve+local[:max(0,value(settings,"element_hits_per_aspect")-len(reserve))])
+            else:
+                sparse.extend(store.search_elements(search_terms,[doc],value(settings,"element_hits_per_aspect")))
         dense=_dense(store,embedder,[aspect.text],plan.doc_ids,value(settings,"element_hits_per_aspect"),"elements") if value(settings,"embed_elements",False) else []
         ids=rrf([e for e,s in sparse],[e for e,s in dense])[:value(settings,"element_hits_per_aspect")]
         for el in store.elements_by_ids(ids):
@@ -118,10 +142,14 @@ def element_retrieval(store,plan,query,picks,escape,embedder,settings):
             add(el,[a.aspect_id for a in plan.aspects],"escape")
     # Optional source-declared dependency seam; legacy stores may not implement it.
     dependencies=getattr(store,"dependencies",None)
-    if callable(dependencies):
+    if callable(dependencies) and value(settings,"metadata_navigation_enabled"):
+        dependency_count=0
         for candidate in list(merged.values()):
+            if dependency_count>=value(settings,"metadata_dependency_elements"):break
             for el in dependencies(get(candidate.element,"element_id")):
-                add(el,candidate.aspect_ids,"source_dependency")
+                if get(el,"element_id") in merged:continue
+                add(el,candidate.aspect_ids,"source_dependency");dependency_count+=1
+                if dependency_count>=value(settings,"metadata_dependency_elements"):break
     priority={"survey_high":0,"hybrid":1,"survey_lexical":2,"survey_medium":3,"source_dependency":3,"escape":4}
     result=sorted(merged.values(),key=lambda c:(min(priority.get(s,5) for s in c.sources),get(c.element,"doc_id"),get(c.element,"page_no"),get(c.element,"idx",0)))
     return result,{"total":len(result),"by_source":{s:sum(s in c.sources for c in result) for s in priority}}

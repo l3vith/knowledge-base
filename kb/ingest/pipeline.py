@@ -25,7 +25,7 @@ from kb.errors import KBError
 from kb.ingest import cards as cards_mod
 from kb.ingest.cards import (assign_sibling_groups, augment_topics, build_doc_card, build_page_cards,
                              element_embedding_text, page_embedding_text)
-from kb.ingest.parse import parse_pages, read_pdf_info
+from kb.ingest.parse import parse_pages, read_pdf_info, page_source_metadata
 from kb.ingest.segment import mark_boilerplate, segment_document
 from kb.llm import LLM, parallel_map
 from kb.models import BLANK_PAGE_SUMMARY, DocCard, Embedder, PageCard, PageText, ParsedDoc
@@ -183,6 +183,12 @@ def _parse_all(files: list[tuple[Path, str]], settings: Settings, use_ocr: bool,
         if cached and len(cached["pages"]) == d.page_count:
             d.pages = [PageText(**p) for p in cached["pages"]]
             d.ocr_unavailable_pages = cached["ocr_unavailable"]
+            if any(not p.metadata for p in d.pages):
+                import pymupdf
+                with pymupdf.open(infos[i][0]) as pdf:
+                    for p in d.pages:
+                        if not p.metadata:p.metadata=page_source_metadata(pdf[p.page_no-1],d.page_count,p.markdown)
+                cache.save_json("parse",d.doc_id,{"pages":[asdict(p) for p in d.pages],"ocr_unavailable":d.ocr_unavailable_pages})
             hits += 1
         else:
             todo.append(i)
@@ -273,6 +279,9 @@ def index_collection(zip_path: Path, collection_name: str, *, settings: Settings
                 if counters[i].failures == 0:
                     cache.save_json("cards", docs[i].doc_id, {"doc_card": asdict(cards[i]),
                                                               "page_cards": [asdict(pc) for pc in pcs]})
+            from kb.ingest.navigation import build_navigation
+            cards=[replace(c,navigation=build_navigation(d,e,sections))
+                   for c,d,(e,sections) in zip(cards,docs,segmented)]
             cards = assign_sibling_groups(cards)
             cards = [augment_topics(c, pcs) for c, pcs in zip(cards, page_cards)]
             stage("page_cards", llm_calls=llm.usage.calls, llm_failures=sum(c.failures for c in counters.values()))

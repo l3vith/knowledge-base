@@ -189,9 +189,15 @@ def local_survey_pages(plan,pool,lexical_net,page_report,settings):
     for doc,pages in pool.items():
         allowed=set(pages)
         ranked=page_report.get("documents",{}).get(doc,{}).get("ranked_pages",pages)
-        chosen=(list(pages) if plan.intent=="exhaustive" else
-                sorted(lexical_net.get(doc,set()) & allowed)+
-                [p for p in ranked[:value(settings,"local_pages_per_doc")] if p in allowed])
+        route=page_report.get("documents",{}).get(doc,{}).get("navigation",{})
+        preferred=route.get("preferred_pages",[])
+        if route.get("focused"):
+            outside=[p for p in ranked if p not in preferred][:value(settings,"metadata_fallback_pages")]
+            chosen=preferred+outside
+        else:
+            chosen=(list(pages) if plan.intent=="exhaustive" else route.get("direct_pages",[])+
+                    sorted(lexical_net.get(doc,set()) & allowed)+
+                    [p for p in ranked[:value(settings,"local_pages_per_doc")] if p in allowed])
         bydoc[doc]=list(dict.fromkeys(chosen))
     fair=[]
     for i in range(max([len(p) for p in bydoc.values()] or [0])):
@@ -202,4 +208,5 @@ def local_survey_pages(plan,pool,lexical_net,page_report,settings):
     return fair[:cap],{"batches":0,"failed_batches":0,"cards_surveyed":0,"lexical_added":0,
                        "truncated":max(0,len(fair)-cap),"limitations":[],"selection_mode":"local",
                        "method":"initial source FTS and dense ranks plus obligation lexical matches",
-                       "navigation_only":True}
+                       "navigation_only":True,"metadata_matches":sum(len(r.get("navigation",{}).get("matches",[])) for r in page_report.get("documents",{}).values()),
+                       "metadata_focused_documents":[d for d,r in page_report.get("documents",{}).items() if r.get("navigation",{}).get("focused")]}

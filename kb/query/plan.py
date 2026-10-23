@@ -46,7 +46,15 @@ def query_hints(query, cards):
 
 def card_line(card):
     keys=("doc_id","title","doc_type","issuer","entities","period_label","period_year","publication_date","jurisdiction","identifiers","sibling_group","page_count","topics")
-    return compact({k:field(card,k) for k in keys})
+    record={k:field(card,k) for k in keys}
+    nav=get(card,"navigation",{}) or {}
+    if nav:
+        properties=nav.get("pdf_properties",{})
+        record["navigation_hints"]={"section_titles":[e.get("title","")[:50] for e in nav.get("sections",[])[:6]],
+                                    "pdf_author":str(properties.get("author","") or "")[:100],
+                                    "pdf_subject":str(properties.get("subject","") or "")[:100],
+                                    "not_factual_evidence":True}
+    return compact(record)
 
 
 def prefilter_cards(store, query, cards, limit):

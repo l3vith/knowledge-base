@@ -2,7 +2,7 @@
 
 **Current status after the repair rerun:** factual scores are now 100% on this one case; analytical output now contains 18 verified claims, but its precision is only 25.93%. Sections describing zero claims/66.7% factual scores are historical baseline evidence. Read the final “Latest live repair result” section and its report first; analytical over-inclusion, latency and deployment/accounting gaps remain open.
 
-This is a self-contained handoff for the next agent. The benchmark details below are the historical Qwen baseline at `909ae3d`; subsequent source-selection repairs are described in the implementation update at the end. **Do not treat the latest benchmark as a successful analytical answer.** The pipeline stopped crashing on its token budget, but the analytical response contains no accepted claims and scores zero on answer quality. The factual response is useful but still misses the required official answer metrics.
+This is a self-contained handoff for the next agent. The benchmark details below are the historical Qwen baseline at `909ae3d`; subsequent source-selection repairs are described in the implementation update at the end. **Historical baseline only:** that earlier analytical response had no accepted claims and zero answer quality; the earlier factual response missed the required metrics. The latest live repair result supersedes those outcomes but still has poor analytical precision.
 
 ## 1. Project, current branch and scope
 
@@ -303,3 +303,12 @@ The supplied evaluator notebook and its point decomposition remain unchanged so 
 See [the new portable report](docs/diagnostics/qwen-extractive/REPORT.md) and [summary](docs/diagnostics/qwen-extractive/summary.json), evaluated at `da94752` with the original official scorer unchanged. Factual C31 now scores **100% on all four metrics** (21.82s). Analytical C18 now has **18 accepted selections and 18 semantically verified claims**, with no empty-ID/quote rejection recurrence. It remains **partial** (118.22s): answer precision **25.93%**, answer recall **88.89%**, context precision **87.50%**, context recall **42.86%**. Total cost including judging **$0.01217614**. Offline suite: **144 passed, 7 slow tests deselected**.
 
 The historical P0 failures above are retained for provenance, but the latest priority is analytical over-inclusion, reference-relevant fact selection, context coverage and deadline margin. Source-literal output does not ensure high answer precision: too many extra source facts are still included. Read the latest report before assuming that the current analytical output is still the old zero-claim abstention. Do not claim the project meets the 0.95 targets overall.
+
+
+## Metadata navigation implementation update
+
+Source-derived metadata is now collected during ingestion and can be backfilled into an existing collection with no LLM or embedding calls. See [metadata retrieval](docs/METADATA_RETRIEVAL.md) for the implementation, upgrade command, confidence rules and limitations. This includes section ranges, validated contents/index references, page labels, internal PDF links, captions, table headers, source-local references, units, years, OCR/geometry diagnostics and declared PDF properties. Metadata is routing context, never factual evidence.
+
+An offline comparison using identical saved plans on the same one-document cases reduced factual candidate elements from 56 to 42 and retained its previously cited source. Analytical candidate count remained 89 and all 18 previously cited sources remained available. This is candidate retention, not a fresh answer-quality evaluation. No paid API calls were made.
+
+**Still open:** analytical answer over-inclusion and precision, high sequential model latency, writer-context omissions, full-corpus/held-out evaluation and the deployment/accounting gaps described above. Metadata alone has not demonstrated those issues solved. Generic topic matches do not narrow searches, specific section focus retains independent fallback sources, and table/figure dependency expansion is capped to avoid increasing irrelevant context.

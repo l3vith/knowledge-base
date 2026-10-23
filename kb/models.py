@@ -14,6 +14,7 @@ class PageText:
     markdown: str
     is_ocr: bool
     toc_titles: list[str]
+    metadata: dict = field(default_factory=dict)
 
 
 @dataclass
@@ -56,6 +57,7 @@ class DocCard:
     page_count: int
     identifiers: list[str] = field(default_factory=list)
     sibling_group: str | None = None
+    navigation: dict = field(default_factory=dict)
 
 
 @dataclass

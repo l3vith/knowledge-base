@@ -73,6 +73,7 @@ class Store:
         self.gen_dir = Path(gen_dir)
         self._conn = conn
         self._lock = threading.Lock()
+        self._doc_cache = {}
         self._vecs: dict[str, _Vectors | None] = {"page": None, "element": None}
 
     @classmethod
@@ -111,7 +112,7 @@ class Store:
         for p in pages:
             pc = cards.get(p.page_no)
             page_rows.append((card.doc_id, p.page_no, p.markdown, int(p.is_ocr), json.dumps(asdict(pc)) if pc else None))
-            extra = "\n".join([pc.summary, " ".join(pc.topics), " ".join(pc.entities), " ".join(pc.figures)]) if pc else ""
+            extra = "\n".join([pc.section,pc.summary, " ".join(pc.topics), " ".join(pc.entities), " ".join(pc.figures)]) if pc else ""
             page_fts.append((card.doc_id, p.page_no, f"{p.markdown}\n{extra}"))
         el_rows = [(e.element_id, e.doc_id, e.page_no, e.idx, e.kind, e.section, e.text, json.dumps(e.flags))
                    for e in elements]
@@ -150,13 +151,18 @@ class Store:
 
     # ---------- StoreProtocol ----------
     def docs(self) -> list[DocCard]:
-        return [DocCard(**json.loads(r[0])) for r in self._q("SELECT card_json FROM docs ORDER BY rowid")]
+        cards=[DocCard(**json.loads(r[0])) for r in self._q("SELECT card_json FROM docs ORDER BY rowid")]
+        self._doc_cache.update({c.doc_id:c for c in cards})
+        return cards
 
     def doc(self, doc_id: str) -> DocCard:
+        if doc_id in self._doc_cache:
+            return self._doc_cache[doc_id]
         rows = self._q("SELECT card_json FROM docs WHERE doc_id = ?", (doc_id,))
         if not rows:
             raise KeyError(doc_id)
-        return DocCard(**json.loads(rows[0][0]))
+        card=DocCard(**json.loads(rows[0][0]));self._doc_cache[doc_id]=card
+        return card
 
     def page_cards(self, doc_id: str, page_nos: list[int] | None = None) -> list[PageCard]:
         sql = "SELECT card_json FROM pages WHERE doc_id = ? AND card_json IS NOT NULL"
@@ -204,3 +210,37 @@ class Store:
     def dense_elements(self, query_vecs: np.ndarray, doc_ids: list[str] | None, limit: int) -> list[tuple[str, float]]:
         v = self._vecs["element"]
         return v.search(query_vecs, doc_ids, limit) if v else []
+
+
+    def navigation(self, doc_id: str) -> dict:
+        """Optional generation-bound metadata seam; legacy cards return no hints."""
+        return self.doc(doc_id).navigation
+
+    def dependencies(self, element_id: str) -> list[Element]:
+        from kb.ingest.navigation import _REFERENCE, locator_key
+        elements=self.elements_by_ids([element_id])
+        if not elements:
+            return []
+        el=elements[0];nav=self.navigation(el.doc_id)
+        pages=[]
+        for match in _REFERENCE.finditer(el.text):
+            key=locator_key(match.group(1),match.group(2))
+            if key.startswith(('table:','figure:','chart:','exhibit:')):
+                pages.extend(nav.get("locators",{}).get(key,[]))
+        pages=[p for p in dict.fromkeys(pages) if p!=el.page_no][:2]
+        targets=self.elements_for_pages(el.doc_id,pages) if pages else []
+        targets=[e for e in targets if e.kind=="table" or any(
+            locator_key(m.group(1),m.group(2)).startswith(('figure:','chart:','exhibit:'))
+            for m in _REFERENCE.finditer(e.text[:240]))]
+        return sorted(targets,key=lambda e:(e.kind!="table",e.page_no,e.idx))[:8]
+
+
+    def search_elements_on_pages(self, terms: list[str], doc_id: str, page_nos: list[int], limit: int) -> list[tuple[str,float]]:
+        match=fts_query(terms)
+        if not match or not page_nos or limit<=0:
+            return []
+        rows=self._q("SELECT elements_fts.element_id, -bm25(elements_fts) FROM elements_fts "
+                     "JOIN elements ON elements.element_id=elements_fts.element_id "
+                     f"WHERE elements_fts MATCH ? AND elements.doc_id=? AND elements.page_no IN {_IN} "
+                     "ORDER BY bm25(elements_fts) LIMIT ?",(match,doc_id,json.dumps(page_nos),int(limit)))
+        return [(eid,float(score)) for eid,score in rows]
