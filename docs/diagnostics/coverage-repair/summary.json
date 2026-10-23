@@ -1,0 +1,836 @@
+{
+  "scope": "one-document, two public development questions; not held-out accuracy",
+  "model": "qwen3.8-flash",
+  "thinking": "disabled",
+  "tests": {
+    "passed": 183,
+    "slow_deselected": 7
+  },
+  "source_document": "2012.07440v3.pdf",
+  "factual_code_commit": "177a5b6298d4b3e2201a9499d3513446f27b4dd8",
+  "final_analytical_code_commit": "4b87d26e571efab2c0bdfb18faf3da847cddf7ee",
+  "total_task_cost_usd": 0.036787482,
+  "total_task_cost_upper_bound_usd": 0.044443880000000005,
+  "aggregate_cap_usd": 0.05,
+  "paid_calls": 51,
+  "thinking_block_count": 0,
+  "protected_inputs_unchanged": true,
+  "results": [
+    {
+      "run": "first_repair",
+      "id": "C31",
+      "query": "How many Monte Carlo paths did the rough Bergomi pricing routine use to generate prices in the Chebyshev-tensor calibration study?",
+      "status": "answered",
+      "latency_seconds": 19.06381349998992,
+      "returned_chunks": 1,
+      "accepted_claims": 1,
+      "answer_chars": 125,
+      "official_metrics": {
+        "answer_precision": 1.0,
+        "answer_recall": 0.6666666666666666,
+        "context_precision": 1.0,
+        "context_recall": 1.0
+      },
+      "judge_audit": {
+        "official_scores_unchanged": true,
+        "flags": [
+          {
+            "kind": "citation_present_but_judge_marks_missing",
+            "benchmark_id": "bp3"
+          }
+        ],
+        "interpretation": "Flags require review; they do not compute corrected scores or prove semantic equivalence."
+      },
+      "coverage": {
+        "aspects": [
+          {
+            "id": "a1",
+            "text": "Number of Monte Carlo paths used in the rough Bergomi pricing routine for Chebyshev-tensor calibration",
+            "entity": "Rough Bergomi model",
+            "period": "August 2020",
+            "evidence_ids": [
+              "E1"
+            ],
+            "claim_ids": [
+              "c1"
+            ],
+            "status": "supported"
+          }
+        ],
+        "obligations": [
+          {
+            "id": "a1",
+            "text": "Number of Monte Carlo paths used in the rough Bergomi pricing routine for Chebyshev-tensor calibration",
+            "entity": "Rough Bergomi model",
+            "period": "August 2020",
+            "evidence_ids": [
+              "E1"
+            ],
+            "claim_ids": [
+              "c1"
+            ],
+            "status": "supported"
+          }
+        ],
+        "limitations": [],
+        "counts": {
+          "candidate_pages": 24,
+          "cards_surveyed": 0,
+          "raw_candidate_pages": 5,
+          "elements_retrieved": 42,
+          "raw_fragments_verified": 8
+        },
+        "completeness_proven": false,
+        "requested_topics": []
+      },
+      "answer": "It is a Monte Carlo based pricing routine; 60,000 paths were used to generate the prices in our tests. [2012.07440v3.pdf p15]"
+    },
+    {
+      "run": "first_repair",
+      "id": "C18",
+      "query": "Bank supervisors' model-risk expectations stress conceptual soundness, ongoing monitoring, outcomes analysis and care when a model is used outside its original purpose. Apply that lens to a desk that wants to calibrate a rough-volatility model daily by replacing its slow Monte Carlo pricer with a fast polynomial surrogate built offline: what evidence does the research offer on accuracy, speed and build cost, and what controls and limitations would you insist on before production use?",
+      "status": "partial",
+      "latency_seconds": 139.10706262500025,
+      "returned_chunks": 53,
+      "accepted_claims": 41,
+      "answer_chars": 18728,
+      "official_metrics": {
+        "answer_precision": 0.0297029702970297,
+        "answer_recall": 0.6818181818181818,
+        "context_precision": 0.9811320754716981,
+        "context_recall": 1.0612244897959184
+      },
+      "judge_audit": {
+        "official_scores_unchanged": true,
+        "flags": [
+          {
+            "kind": "possible_inconsistent_matching_nearly_all_answer_points_extra",
+            "matched_benchmark_count": 30,
+            "extra_answer_count": 98
+          }
+        ],
+        "interpretation": "Flags require review; they do not compute corrected scores or prove semantic equivalence."
+      },
+      "coverage": {
+        "aspects": [
+          {
+            "id": "a1",
+            "text": "Evidence on accuracy, speed, and build cost of polynomial surrogates (specifically Chebyshev Tensors) for calibrating Rough Bergomi volatility models compared to Monte Carlo pricers.",
+            "entity": "Chebyshev Tensors / Rough Bergomi model",
+            "period": "August 2020",
+            "evidence_ids": [
+              "E1",
+              "E2",
+              "E3",
+              "E4",
+              "E5",
+              "E6",
+              "E7",
+              "E9",
+              "E12",
+              "E14",
+              "E15",
+              "E16",
+              "E18",
+              "E20",
+              "E22",
+              "E23",
+              "E26",
+              "E28",
+              "E30",
+              "E32",
+              "E33",
+              "E35",
+              "E36",
+              "E37",
+              "E38",
+              "E39",
+              "E40",
+              "E41",
+              "E42",
+              "E43",
+              "E44",
+              "E45",
+              "E46",
+              "E47",
+              "E48",
+              "E49",
+              "E50",
+              "E51",
+              "E52",
+              "E53"
+            ],
+            "claim_ids": [
+              "c1",
+              "c2",
+              "c3",
+              "c4",
+              "c5",
+              "c6",
+              "c7",
+              "c8",
+              "c9",
+              "c10",
+              "c11",
+              "c12",
+              "c13",
+              "c14",
+              "c16",
+              "c17",
+              "c18",
+              "c19",
+              "c20",
+              "c21",
+              "c22",
+              "c23",
+              "c24",
+              "c25",
+              "c26",
+              "c27"
+            ],
+            "status": "supported"
+          },
+          {
+            "id": "a2",
+            "text": "Controls and limitations required before production use of fast polynomial surrogates built offline for daily calibration.",
+            "entity": "Polynomial surrogate / Rough Bergomi model",
+            "period": "August 2020",
+            "evidence_ids": [
+              "E1",
+              "E2",
+              "E3",
+              "E4",
+              "E5",
+              "E8",
+              "E10",
+              "E11",
+              "E13",
+              "E17",
+              "E19",
+              "E21",
+              "E24",
+              "E25",
+              "E27",
+              "E29",
+              "E31",
+              "E34"
+            ],
+            "claim_ids": [
+              "c29",
+              "c30",
+              "c31",
+              "c32",
+              "c34",
+              "c35",
+              "c36",
+              "c37",
+              "c38",
+              "c39",
+              "c40",
+              "c41",
+              "c42",
+              "c43",
+              "c44"
+            ],
+            "status": "supported"
+          }
+        ],
+        "obligations": [
+          {
+            "id": "a1",
+            "text": "Evidence on accuracy, speed, and build cost of polynomial surrogates (specifically Chebyshev Tensors) for calibrating Rough Bergomi volatility models compared to Monte Carlo pricers.",
+            "entity": "Chebyshev Tensors / Rough Bergomi model",
+            "period": "August 2020",
+            "evidence_ids": [
+              "E1",
+              "E2",
+              "E3",
+              "E4",
+              "E5",
+              "E6",
+              "E7",
+              "E9",
+              "E12",
+              "E14",
+              "E15",
+              "E16",
+              "E18",
+              "E20",
+              "E22",
+              "E23",
+              "E26",
+              "E28",
+              "E30",
+              "E32",
+              "E33",
+              "E35",
+              "E36",
+              "E37",
+              "E38",
+              "E39",
+              "E40",
+              "E41",
+              "E42",
+              "E43",
+              "E44",
+              "E45",
+              "E46",
+              "E47",
+              "E48",
+              "E49",
+              "E50",
+              "E51",
+              "E52",
+              "E53"
+            ],
+            "claim_ids": [
+              "c1",
+              "c2",
+              "c3",
+              "c4",
+              "c5",
+              "c6",
+              "c7",
+              "c8",
+              "c9",
+              "c10",
+              "c11",
+              "c12",
+              "c13",
+              "c14",
+              "c16",
+              "c17",
+              "c18",
+              "c19",
+              "c20",
+              "c21",
+              "c22",
+              "c23",
+              "c24",
+              "c25",
+              "c26",
+              "c27"
+            ],
+            "status": "supported"
+          },
+          {
+            "id": "a2",
+            "text": "Controls and limitations required before production use of fast polynomial surrogates built offline for daily calibration.",
+            "entity": "Polynomial surrogate / Rough Bergomi model",
+            "period": "August 2020",
+            "evidence_ids": [
+              "E1",
+              "E2",
+              "E3",
+              "E4",
+              "E5",
+              "E8",
+              "E10",
+              "E11",
+              "E13",
+              "E17",
+              "E19",
+              "E21",
+              "E24",
+              "E25",
+              "E27",
+              "E29",
+              "E31",
+              "E34"
+            ],
+            "claim_ids": [
+              "c29",
+              "c30",
+              "c31",
+              "c32",
+              "c34",
+              "c35",
+              "c36",
+              "c37",
+              "c38",
+              "c39",
+              "c40",
+              "c41",
+              "c42",
+              "c43",
+              "c44"
+            ],
+            "status": "supported"
+          }
+        ],
+        "limitations": [
+          "3 draft claims rejected for invalid source support",
+          "3 unsupported or uncertain claims removed",
+          "Requested topics not fully supported by final claims: conceptual soundness, ongoing monitoring"
+        ],
+        "counts": {
+          "candidate_pages": 24,
+          "cards_surveyed": 0,
+          "raw_candidate_pages": 13,
+          "elements_retrieved": 99,
+          "raw_fragments_verified": 99
+        },
+        "completeness_proven": false,
+        "requested_topics": [
+          {
+            "id": "R1",
+            "text": "conceptual soundness",
+            "query_start": 49,
+            "query_end": 69,
+            "status": "unresolved",
+            "claim_ids": []
+          },
+          {
+            "id": "R2",
+            "text": "ongoing monitoring",
+            "query_start": 71,
+            "query_end": 89,
+            "status": "unresolved",
+            "claim_ids": [
+              "c29",
+              "c31"
+            ]
+          },
+          {
+            "id": "R3",
+            "text": "outcomes analysis",
+            "query_start": 91,
+            "query_end": 108,
+            "status": "supported",
+            "claim_ids": [
+              "c18",
+              "c19",
+              "c20",
+              "c21",
+              "c22",
+              "c23",
+              "c24"
+            ]
+          },
+          {
+            "id": "R4",
+            "text": "outside its original purpose",
+            "query_start": 139,
+            "query_end": 167,
+            "status": "supported",
+            "claim_ids": [
+              "c27",
+              "c34",
+              "c35"
+            ]
+          },
+          {
+            "id": "R5",
+            "text": "accuracy",
+            "query_start": 380,
+            "query_end": 388,
+            "status": "supported",
+            "claim_ids": [
+              "c1",
+              "c2",
+              "c5",
+              "c6",
+              "c7"
+            ]
+          },
+          {
+            "id": "R6",
+            "text": "speed",
+            "query_start": 390,
+            "query_end": 395,
+            "status": "supported",
+            "claim_ids": [
+              "c1",
+              "c3",
+              "c4"
+            ]
+          },
+          {
+            "id": "R7",
+            "text": "build cost",
+            "query_start": 400,
+            "query_end": 410,
+            "status": "supported",
+            "claim_ids": [
+              "c1",
+              "c2",
+              "c8",
+              "c9",
+              "c10",
+              "c11",
+              "c12",
+              "c13",
+              "c14"
+            ]
+          },
+          {
+            "id": "R8",
+            "text": "controls",
+            "query_start": 421,
+            "query_end": 429,
+            "status": "supported",
+            "claim_ids": [
+              "c29",
+              "c30",
+              "c31",
+              "c32",
+              "c34",
+              "c35",
+              "c36",
+              "c38",
+              "c39",
+              "c42",
+              "c43"
+            ]
+          },
+          {
+            "id": "R9",
+            "text": "limitations",
+            "query_start": 434,
+            "query_end": 445,
+            "status": "supported",
+            "claim_ids": [
+              "c34",
+              "c35",
+              "c37",
+              "c38",
+              "c39",
+              "c40",
+              "c41",
+              "c42",
+              "c43",
+              "c44"
+            ]
+          }
+        ]
+      },
+      "answer": "[Omitted here: 18,728-character overlong first attempt; full local artifact retained.]"
+    },
+    {
+      "run": "bounded_final",
+      "id": "C18",
+      "query": "Bank supervisors' model-risk expectations stress conceptual soundness, ongoing monitoring, outcomes analysis and care when a model is used outside its original purpose. Apply that lens to a desk that wants to calibrate a rough-volatility model daily by replacing its slow Monte Carlo pricer with a fast polynomial surrogate built offline: what evidence does the research offer on accuracy, speed and build cost, and what controls and limitations would you insist on before production use?",
+      "status": "partial",
+      "latency_seconds": 66.47736712501501,
+      "returned_chunks": 51,
+      "accepted_claims": 12,
+      "answer_chars": 6062,
+      "official_metrics": {
+        "answer_precision": 0.2,
+        "answer_recall": 0.3404255319148936,
+        "context_precision": 1.0,
+        "context_recall": 1.0408163265306123
+      },
+      "judge_audit": {
+        "official_scores_unchanged": true,
+        "flags": [],
+        "interpretation": "Flags require review; they do not compute corrected scores or prove semantic equivalence."
+      },
+      "coverage": {
+        "aspects": [
+          {
+            "id": "a1",
+            "text": "Evidence on accuracy, speed, and build cost of polynomial surrogates (specifically Chebyshev Tensors) for calibrating Rough Bergomi volatility models compared to Monte Carlo pricers.",
+            "entity": "Mocax Intelligence / Mariano Zeron / Ignacio Ruiz",
+            "period": "August 2020",
+            "evidence_ids": [
+              "E1",
+              "E2",
+              "E3",
+              "E4",
+              "E5",
+              "E6",
+              "E7",
+              "E8",
+              "E9",
+              "E10",
+              "E11",
+              "E13",
+              "E15",
+              "E17",
+              "E19",
+              "E21",
+              "E22",
+              "E23",
+              "E25",
+              "E27",
+              "E29",
+              "E31",
+              "E33",
+              "E34",
+              "E35",
+              "E36",
+              "E37",
+              "E38",
+              "E39",
+              "E40",
+              "E41",
+              "E42",
+              "E43",
+              "E44",
+              "E45",
+              "E46",
+              "E47",
+              "E48",
+              "E49",
+              "E50",
+              "E51"
+            ],
+            "claim_ids": [
+              "c1",
+              "c2",
+              "c3",
+              "c4",
+              "c5",
+              "c6"
+            ],
+            "status": "supported"
+          },
+          {
+            "id": "a2",
+            "text": "Identification of controls, limitations, and conceptual soundness requirements for deploying offline-built surrogate models in production, particularly regarding use outside original purpose or daily recalibration contexts.",
+            "entity": "Bank supervisors / Model Risk Management framework",
+            "period": "Current/General",
+            "evidence_ids": [
+              "E1",
+              "E2",
+              "E3",
+              "E4",
+              "E5",
+              "E6",
+              "E7",
+              "E8",
+              "E9",
+              "E12",
+              "E14",
+              "E16",
+              "E18",
+              "E20",
+              "E24",
+              "E26",
+              "E28",
+              "E30",
+              "E32"
+            ],
+            "claim_ids": [
+              "c7",
+              "c8",
+              "c9",
+              "c10",
+              "c12",
+              "c13"
+            ],
+            "status": "supported"
+          }
+        ],
+        "obligations": [
+          {
+            "id": "a1",
+            "text": "Evidence on accuracy, speed, and build cost of polynomial surrogates (specifically Chebyshev Tensors) for calibrating Rough Bergomi volatility models compared to Monte Carlo pricers.",
+            "entity": "Mocax Intelligence / Mariano Zeron / Ignacio Ruiz",
+            "period": "August 2020",
+            "evidence_ids": [
+              "E1",
+              "E2",
+              "E3",
+              "E4",
+              "E5",
+              "E6",
+              "E7",
+              "E8",
+              "E9",
+              "E10",
+              "E11",
+              "E13",
+              "E15",
+              "E17",
+              "E19",
+              "E21",
+              "E22",
+              "E23",
+              "E25",
+              "E27",
+              "E29",
+              "E31",
+              "E33",
+              "E34",
+              "E35",
+              "E36",
+              "E37",
+              "E38",
+              "E39",
+              "E40",
+              "E41",
+              "E42",
+              "E43",
+              "E44",
+              "E45",
+              "E46",
+              "E47",
+              "E48",
+              "E49",
+              "E50",
+              "E51"
+            ],
+            "claim_ids": [
+              "c1",
+              "c2",
+              "c3",
+              "c4",
+              "c5",
+              "c6"
+            ],
+            "status": "supported"
+          },
+          {
+            "id": "a2",
+            "text": "Identification of controls, limitations, and conceptual soundness requirements for deploying offline-built surrogate models in production, particularly regarding use outside original purpose or daily recalibration contexts.",
+            "entity": "Bank supervisors / Model Risk Management framework",
+            "period": "Current/General",
+            "evidence_ids": [
+              "E1",
+              "E2",
+              "E3",
+              "E4",
+              "E5",
+              "E6",
+              "E7",
+              "E8",
+              "E9",
+              "E12",
+              "E14",
+              "E16",
+              "E18",
+              "E20",
+              "E24",
+              "E26",
+              "E28",
+              "E30",
+              "E32"
+            ],
+            "claim_ids": [
+              "c7",
+              "c8",
+              "c9",
+              "c10",
+              "c12",
+              "c13"
+            ],
+            "status": "supported"
+          }
+        ],
+        "limitations": [
+          "1 unsupported or uncertain claims removed",
+          "Requested topics not fully supported by final claims: ongoing monitoring, controls"
+        ],
+        "counts": {
+          "candidate_pages": 24,
+          "cards_surveyed": 0,
+          "raw_candidate_pages": 12,
+          "elements_retrieved": 104,
+          "raw_fragments_verified": 104
+        },
+        "completeness_proven": false,
+        "requested_topics": [
+          {
+            "id": "R1",
+            "text": "conceptual soundness",
+            "query_start": 49,
+            "query_end": 69,
+            "status": "supported",
+            "claim_ids": [
+              "c7"
+            ]
+          },
+          {
+            "id": "R2",
+            "text": "ongoing monitoring",
+            "query_start": 71,
+            "query_end": 89,
+            "status": "unresolved",
+            "claim_ids": []
+          },
+          {
+            "id": "R3",
+            "text": "outcomes analysis",
+            "query_start": 91,
+            "query_end": 108,
+            "status": "supported",
+            "claim_ids": [
+              "c2",
+              "c3"
+            ]
+          },
+          {
+            "id": "R4",
+            "text": "outside its original purpose",
+            "query_start": 139,
+            "query_end": 167,
+            "status": "supported",
+            "claim_ids": [
+              "c8",
+              "c9",
+              "c10"
+            ]
+          },
+          {
+            "id": "R5",
+            "text": "accuracy",
+            "query_start": 380,
+            "query_end": 388,
+            "status": "supported",
+            "claim_ids": [
+              "c1",
+              "c2",
+              "c3"
+            ]
+          },
+          {
+            "id": "R6",
+            "text": "speed",
+            "query_start": 390,
+            "query_end": 395,
+            "status": "supported",
+            "claim_ids": [
+              "c1",
+              "c4"
+            ]
+          },
+          {
+            "id": "R7",
+            "text": "build cost",
+            "query_start": 400,
+            "query_end": 410,
+            "status": "supported",
+            "claim_ids": [
+              "c1",
+              "c5",
+              "c6"
+            ]
+          },
+          {
+            "id": "R8",
+            "text": "controls",
+            "query_start": 421,
+            "query_end": 429,
+            "status": "unresolved",
+            "claim_ids": []
+          },
+          {
+            "id": "R9",
+            "text": "limitations",
+            "query_start": 434,
+            "query_end": 445,
+            "status": "supported",
+            "claim_ids": [
+              "c10",
+              "c12",
+              "c13"
+            ]
+          }
+        ]
+      },
+      "answer": "In this piece of research, we built Chebyshev Tensors — either directly or with the help of the Tensor Extension Algorithms — to tackle the computational bottleneck associated with the calibration of the rough Bergomi volatility model. Results are encouraging as the accuracy of model calibration via Chebyshev Tensors is similar to that when using Deep Neural Nets, but with building efforts that range between 5 and 100 times more efficient in the experiments run. Our tests indicate that when using Chebyshev Tensors, the calibration of the rough Bergomi volatility model is around 40,000 times more efficient than if calibrated via “brute-force” (using the pricing function). [2012.07440v3.pdf p1]\n\n### **5.1.2 Accuracy of proxy pricer**\nFigures 3 and 4, show a heat map of the average and maximum error of the proxy pricer, for both proxy methods (Direct Chebyshev Tensor and Chebyshev Tensor in TT-format), across the 1,000 volatility surfaces. Both methods yield similar results; the average errors fall within 0.05% and 0.35%, while the maximum errors are between 0.1% and 5%, in absolute implied volatility values. [2012.07440v3.pdf p18]\n\n### **5.1.3 Accuracy of calibration**\nFigure 5 shows quantile values of the error distribution measured using the root mean square error (RMSE), between the 1,000 synthetically generated implied volatility surfaces and the 1,000 implied volatility surfaces obtained after calibrating with the two types of Chebyshev Tensors. Note that in both cases, the 99% quantile of the RMSE is around 0.5% and the maximum RMSE value is less than 0.6%. [2012.07440v3.pdf p19]\n\nA typical volatility calibration exercise used around 100 parameter trials. This translates — assuming 100 points on the volatility surface — into 10,000 calls to the pricer or its proxy. Given the reported time of around 60.5 microseconds per Chebyshev Tensor evaluation for a C++ object, this means 0.6 seconds spent calling the tensor during calibration. This massively contrasts with the 7.2 hours that it would take, should the original pricing function be used. [2012.07440v3.pdf p20]\n\n### **5.1.1 Building cost**\nFor the Chebyshev Tensors built in the direct way, a mesh of 14,400 points was used. This was obtained by using the following number of Chebyshev points per dimension 5 _,_ 5 _,_ 3 _,_ 4 _,_ 6 _,_ 8. The decision of how many points to use per dimension was made based on one-dimensional cross sectional slices of the pricing function; variables with respect to which the pricer showed greater sensitivity got higher numbers of Chebyshev points; those with less sensitivity got lower. The memory footprint of this Chebyshev Tensor was 800 KB. [2012.07440v3.pdf p17]\n\n### **5.2.1 Building cost**\nA grid of 7 points per dimension was chosen for the Chebyshev Tensor. This gives a total of 96,889,010,407 grid points. Out of these, only 20,000 were randomly chosen to be evaluated and used in the Rank Adaptive Algorithm. This represents only 2 _×_ 10<sup>_−_5</sup> % of the total grid. From the 20,000 points evaluated, 16,000 were used for training, and 4,000 for testing. It took the Rank Adaptive Algorithm under 8 minutes to obtain a TT-format Chebyshev Tensor — in Matlab. The maximum rank of the TT-format Chebyshev Tensor was 9 and its memory footprint 16 KB. [2012.07440v3.pdf p20]\n\nThere are several key theoretical properties that justify the use of Chebyshev Tensors in this setting. The first is fast convergence for well-behaved functions: exponential for analytic; polynomial for smooth ([19]). As the vast majority of pricing models behave (outside of isolated points) very well in terms of smoothness, the use of Chebyshev Tensors to approximate them makes sense. The second is that these tensors can be evaluated very efficiently and in a numerically stable manner ([19]). [2012.07440v3.pdf p3]\n\nAs Theorem 3.2 indicates, Chebyshev Tensors are very good at approximating functions within a given domain. However, outside of it, there is no guarantee. This is an important element to bear in mind when using Chebyshev Tensors in calibration exercises due to the following. [2012.07440v3.pdf p14]\n\nThe optimisation algorithms used to minimise Equation 3 rely on sampling the parameter domain Θ. If a Chebyshev Tensor is used instead of the pricing function in the calibration exercise, it will only give accurate implied volatilities if the parameter point explored by the optimisation algorithm is within the domain of approximation. Therefore, it is preferable to use optimisation algorithms that admit domain restrictions. This ensures the parameter points evaluated by the Chebyshev Tensor are within the domain where we know the accuracy to be high. There are plenty of optimisation algorithms that admit domain restrictions; for example SLSQP, L-BFGS-B and Least Squares. [2012.07440v3.pdf p14]\n\nAnother limitation comes in the choice of domain. Chebyshev Tensors do not extrapolate. Therefore, one is restricted to either optimisation routines that admit domain constraints — such as the ones considered in this paper — or calibrations that use a combination of Chebyshev Tensors and pricing model. As mentioned in Section 4, choosing a large enough domain should solve this problem in most cases. The calibration errors presented for the rough Bergomi model show that the domain ranges considered were sufficient to obtain very good results. [2012.07440v3.pdf p23]\n\nA possible limitation of the approach relates to the dimension of the model parameter space. The greater the dimension, the less effective it is. The maximum dimension tested was 13. We do not know what will be the maximum dimension for which the presented technique would work. This is left for future research. [2012.07440v3.pdf p23]\n\nsettings. If numerically unstable algorithms are used to evaluate these polynomials — such as the Vandermode algorithm, which is exponentially unstable (chapter 5 of [19]) and often implemented in popular software packages such as SciPy — one can get unexpected errors in the results. [2012.07440v3.pdf p9]"
+    }
+  ]
+}

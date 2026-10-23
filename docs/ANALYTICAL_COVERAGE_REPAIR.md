@@ -14,7 +14,7 @@ The prior live rerun was faster but omitted important requested results. Its tra
 
 ## Validation and limits
 
-182 non-slow tests pass (seven slow model tests deselected), including literal topic extraction, independent topic retrieval, broad-query navigation, background removal, fail-closed topic coverage, numeric display/source fidelity and unchanged-score judge audits.
+183 non-slow tests pass (seven slow model tests deselected), including literal topic extraction, independent topic retrieval, broad-query navigation, background removal, fail-closed topic coverage, numeric display/source fidelity and unchanged-score judge audits.
 
 Topic detection is a bounded generic heuristic, not a semantic coverage guarantee. Relevance and completeness judgments remain model-dependent. Source-only answers cannot invent production recommendations absent from the supplied collection. Partial status is expected when the collection lacks support.
 
@@ -27,3 +27,7 @@ The first live repair recovered detail but over-selected source statements: 41 f
 The writer now receives explicit ceilings of 8,000 source characters and 24 selections for analytical output; these are ceilings, not targets. A deterministic bounded selector preserves original source statements, balances requested topics and novel numeric values, and suppresses high-overlap repeats before semantic verification. Any omissions are visible in limitations, and final coverage checks still run on the retained claims. Compact verifier responses omit unused prose explanations. On saved first-rerun output, the local-only check reduced 47 model selections to 18 selections/7,943 source characters with zero API calls. Selection is heuristic and can omit useful findings; the live diagnostic determines the tradeoff.
 
 Only the analytical case needs the follow-up live run: factual rendering was unchanged. The first pass and follow-up share an aggregate conservative $0.05 ceiling. Both results must be reported; do not replace the first run silently.
+
+## Final live measurement
+
+Read [the measured repair report](diagnostics/coverage-repair/REPORT.md): final analytical answer precision/recall are 20% / 34.04%, latency 66.48s, with a partial status. These remain below the target. Both the first overlong attempt and judge-completion costs are included in the report.

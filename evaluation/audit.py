@@ -12,6 +12,9 @@ def judge_consistency(metrics, answer):
     if ap and set(ap)<=extras and matched:
         flags.append({'kind':'all_answer_points_extra_despite_benchmark_matches',
                       'matched_benchmark_count':len(matched),'extra_answer_count':len(extras)})
+    elif ap and len(extras & set(ap))/len(ap)>=.9 and len(matched)>=3:
+        flags.append({'kind':'possible_inconsistent_matching_nearly_all_answer_points_extra',
+                      'matched_benchmark_count':len(matched),'extra_answer_count':len(extras)})
     for key in missing:
         point=bp.get(key,'')
         pages=re.findall(r'\bpage\s+(\d+)\b',point,re.I)

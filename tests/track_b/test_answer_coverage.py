@@ -106,3 +106,13 @@ def test_bounded_answers_keep_source_text_and_topic_diversity(tmp_path):
     assert {c.claim_id for c in chosen}=={'c1','c3'}
     assert report['selected_source_chars']<=100
     assert chosen[0] is claims[0] and chosen[1] is claims[2]
+
+
+def test_judge_audit_flags_nearly_all_extra_as_review_only():
+    detail={'benchmark_points':{f'bp{i}':'result' for i in range(3)},
+            'agent_points':{f'ap{i}':'result' for i in range(10)},
+            'matched_ids':['bp0','bp1','bp2'],'extra_ids':[f'ap{i}' for i in range(9)]}
+    metrics={'answer_precision':.1,'answer_detail':detail}
+    audit=judge_consistency(metrics,'source answer')
+    assert audit['flags'][0]['kind']=='possible_inconsistent_matching_nearly_all_answer_points_extra'
+    assert metrics['answer_precision']==.1
