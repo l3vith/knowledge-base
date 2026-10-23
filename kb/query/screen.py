@@ -5,6 +5,7 @@ from .errors import BudgetExceeded, QueryError
 from .plan import _call_many, field
 from .settings import value, budget
 from .types import SurveyPick, Evidence
+from .anchors import SourceCatalog
 from .utils import get, source_fragments, quote_valid, compact, support_spans, narrow_factoid
 
 NO_EVIDENCE_LIMIT = "No evidence verified before the verification budget was exhausted"
@@ -24,6 +25,18 @@ an explicit condition/limitation needed to interpret that finding. Drop general 
 methods and background theory unless explicitly requested. General implementation caveats do not establish
 formal supervisory controls, ongoing monitoring, outcomes analysis or regulatory requirements.
 Never use an incidental value or a value that only partially answers the obligation. Return no notes or explanations. Relevance does not establish exhaustive coverage."""
+
+
+ID_FINDING_SYSTEM="""
+For finding_contract=source_ids_v2, source_spans already have immutable source-offset IDs.
+Select their IDs only; NEVER retype a quantity, unit, method label or quotation. The application copies it.
+Optional keep-row fields: value_ids:[provided V IDs], experiment_id:provided A ID|null,
+method_id:provided A ID|null, metric:short_grouping_key, mode:MEASURED|PROJECTED|BOUND|REPORTED|UNSPECIFIED,
+qualification_ids:[provided A IDs]. Omit uncertain optional fields instead of guessing.
+Select the smallest complete relevant source sentences. Preserve conditions/negation and necessary
+qualifications; reference their source IDs. Different methods/experiments remain separate. Classifications
+are metadata hypotheses, not evidence. No free-text facts or synthesized values in the response.
+"""
 
 
 def aspects_block(plan):
@@ -100,6 +113,7 @@ def verify_elements(llm,store,plan,query,middle,settings,*,ctx=None):
             prepared.append(replace(candidate,element=part));visiblebytes+=size
     # A factual first pass and one reserve come from this initial candidate set only.
     fast = narrow_factoid(plan,query)
+    integrated=(plan.intent!='factoid' and value(settings,'analytical_writer_mode')=='ledger' and value(settings,'ledger_extraction_mode')=='integrated')
     initial = value(settings,"factoid_initial_elements")
     reserve = value(settings,"factoid_reserve_elements")
     if fast:
@@ -115,9 +129,12 @@ def verify_elements(llm,store,plan,query,middle,settings,*,ctx=None):
         batches.append(current)
     kept={}
     aspects={a.aspect_id for a in plan.aspects}
+    binding_catalogs={}
     def build(batch):
         local={f"E{i+1}":candidate for i,candidate in enumerate(batch)}
-        spans={eid:support_spans(get(c.element,"text")) for eid,c in local.items()}
+        catalog=SourceCatalog({eid:c.element for eid,c in local.items()}) if integrated else None
+        spans=({eid:catalog.spans(eid) for eid in local} if integrated else
+               {eid:support_spans(get(c.element,"text")) for eid,c in local.items()})
         payload={"query":query,"aspects":aspects_block(plan),"elements":[
             {"id":eid,"doc_id":get(c.element,"doc_id"),"page":get(c.element,"page_no"),
              "kind":get(c.element,"kind"),"section":get(c.element,"section"),
@@ -126,6 +143,16 @@ def verify_elements(llm,store,plan,query,middle,settings,*,ctx=None):
                  "period_label":field(store.doc(get(c.element,"doc_id")),"period_label"),
                  "issuer":field(store.doc(get(c.element,"doc_id")),"issuer"),"not_original_evidence":True}}
             for eid,c in local.items()]}
+        if integrated:
+            lookup,aliases=catalog.aliases()
+            payload['finding_contract']='source_ids_v2'
+            for item in payload['elements']:
+                item['source_spans']={aliases[sid]:text for sid,text in spans[item['id']].items()}
+                item['value_anchors']=[{'id':aliases[v['id']],'text':v['text'],
+                    'span_id':aliases[v['span_id']]} for v in catalog.values(item['id'])]
+            binding_catalogs[id(local)]=(catalog,lookup)
+            if ctx:ctx.save(f'source_aliases_verify_{len(binding_catalogs)}',{'anchors':lookup,
+                'elements':{eid:get(c.element,'element_id') for eid,c in local.items()}})
         return [batch,local,spans,payload,min(2400,256+160*len(batch)),None]
     work=[build(batch) for batch in batches]
     # At most one split recovery for schema failures, then stop repeated failures.
@@ -137,7 +164,7 @@ def verify_elements(llm,store,plan,query,middle,settings,*,ctx=None):
             report["bounded_candidates_not_verified"]+=sum(len(w[0]) for w in work[batch_index-1:])
             break
         if raw is None:
-            raw=_call_many(llm,ctx,"verify",VERIFY_SYSTEM,[payload],limit)[0]
+            raw=_call_many(llm,ctx,"verify",VERIFY_SYSTEM+(ID_FINDING_SYSTEM if integrated else ""),[payload],limit)[0]
         if isinstance(raw,BudgetExceeded):
             report["omitted_fragments"]+=sum(len(w[0]) for w in work[batch_index-1:])
             report["limitations"].append("Evidence verification budget exhausted")
@@ -165,9 +192,16 @@ def verify_elements(llm,store,plan,query,middle,settings,*,ctx=None):
             # round (budget still reserved in order). The factual path stays sequential: it stops at the first kept batch.
             prefetched=True
             rest=[w for w in work[batch_index:] if w[5] is None]
-            for item,result in zip(rest,_call_many(llm,ctx,"verify",VERIFY_SYSTEM,[w[3] for w in rest],[w[4] for w in rest]) if rest else []):
+            for item,result in zip(rest,_call_many(llm,ctx,"verify",VERIFY_SYSTEM+(ID_FINDING_SYSTEM if integrated else ""),[w[3] for w in rest],[w[4] for w in rest]) if rest else []):
                 item[5]=result
         for row in raw["keep"]:
+            if integrated and isinstance(row,dict):
+                _,lookup=binding_catalogs[id(local)];row=dict(row)
+                for label in ('support_span_ids','value_ids','qualification_ids'):
+                    if isinstance(row.get(label),list):
+                        row[label]=[lookup.get(s,s) if isinstance(s,str) else s for s in row[label]]
+                for label in ('experiment_id','method_id'):
+                    if isinstance(row.get(label),str):row[label]=lookup.get(row[label],row[label])
             if not isinstance(row,dict) or not isinstance(row.get("id"),str) or row["id"] not in local:
                 report["unknown_ids_ignored"]+=1
                 continue
@@ -188,15 +222,42 @@ def verify_elements(llm,store,plan,query,middle,settings,*,ctx=None):
             aids=[a for a in raw_aspects if isinstance(a,str) and a in aspects and a in candidate.aspect_ids] if isinstance(raw_aspects,list) else []
             if not aids:
                 continue
+            binding=None;dependencies=[]
+            if integrated:
+                catalog,_=binding_catalogs[id(local)]
+                selected=row.get('support_span_ids',[])
+                # Legacy quote-only adapters can still bind exact source sentence IDs.
+                if not selected:selected=[a for a in catalog.by_evidence[row['id']] if catalog.anchors[a].text in quotes]
+                binding={'anchor_ids':selected,'obligation_ids':aids,
+                    'role':'QUALIFICATION' if row.get('relevance')=='qualification' else 'FINDING'}
+                for binding_key in ('value_ids','experiment_id','method_id','metric','mode','qualification_ids'):
+                    if binding_key in row:binding[binding_key]=row[binding_key]
+                quals=row.get('qualification_ids',[])
+                for sid in quals if isinstance(quals,list) else []:
+                    if not isinstance(sid,str) or sid not in catalog.anchors:continue
+                    anchor=catalog.anchors[sid]
+                    if anchor.kind=='value' or anchor.doc_id!=get(candidate.element,'doc_id'):continue
+                    owner=catalog.owners[sid];other=local[owner]
+                    if owner==row['id']:continue
+                    oid=get(other.element,'element_id')
+                    dependencies.append(oid)
+                    if oid not in kept:
+                        kept[oid]=Evidence(other.element,aids,'','source_qualification',other.ce_score,
+                            [anchor.text],relevance='qualification')
+                    else:kept[oid].quotes=list(dict.fromkeys(kept[oid].quotes+[anchor.text]))
             key=get(candidate.element,"element_id")
             if key in kept:
                 kept[key].aspect_ids=list(dict.fromkeys(kept[key].aspect_ids+aids));report["duplicates_merged"]+=1
+                kept[key].quotes=list(dict.fromkeys(kept[key].quotes+quotes))
+                if binding:kept[key].findings.append(binding)
+                kept[key].dependencies=list(dict.fromkeys(kept[key].dependencies+dependencies))
             else:
                 fact=row.get("fact_value")
                 if not (fast and isinstance(fact,str) and 0<len(fact)<=80 and re.search(r"\d",fact)
                         and any(quote_valid(q,fact) for q in quotes)):
                     fact=None
-                kept[key]=Evidence(candidate.element,aids,"","llm",candidate.ce_score,quotes,fact_value=fact,relevance="qualification" if row.get("relevance")=="qualification" else "direct")
+                kept[key]=Evidence(candidate.element,aids,"","llm",candidate.ce_score,quotes,fact_value=fact,relevance="qualification" if row.get("relevance")=="qualification" else "direct",
+                    findings=[binding] if binding else [],dependencies=dependencies)
     report["elements_kept"]=len(kept)
     if report["omitted_fragments"] and not kept and not report["failed_batches"]:
         # Budget stop is not provider failure: answer no_answer (HTTP 200) with the limitation, not a 504.

@@ -39,6 +39,7 @@ class QuerySettings:
     max_output_tokens: int = 32000
     answer_output_tokens: int = 8000
     analytical_writer_mode: str = "extractive"
+    ledger_extraction_mode: str = "integrated"
     ledger_output_tokens: int = 8000
     ledger_quote_chars: int = 30000
     analytical_answer_chars: int = 8000
@@ -62,7 +63,7 @@ def budget(settings, intent, key):
 
 
 def from_environment():
-    return QuerySettings(analytical_writer_mode=os.getenv("KB_ANALYTICAL_WRITER","extractive"),metadata_navigation_enabled=os.getenv("KB_METADATA_NAVIGATION","1")!="0",page_selection_mode=os.getenv("KB_PAGE_SELECTION","local"),artifact_dir=Path(os.getenv("KB_RUN_DIR", "artifacts/runs")),
+    return QuerySettings(ledger_extraction_mode=os.getenv("KB_LEDGER_EXTRACTION","integrated"),analytical_writer_mode=os.getenv("KB_ANALYTICAL_WRITER","extractive"),metadata_navigation_enabled=os.getenv("KB_METADATA_NAVIGATION","1")!="0",page_selection_mode=os.getenv("KB_PAGE_SELECTION","local"),artifact_dir=Path(os.getenv("KB_RUN_DIR", "artifacts/runs")),
                          strict_observability=os.getenv("KB_REQUIRE_LANGFUSE", "1") != "0",
                          query_deadline_s=float(os.getenv("KB_QUERY_DEADLINE_S", "120")))
 
@@ -74,7 +75,7 @@ class SharedQuerySettings:
         self._query=from_environment()
 
     def __getattr__(self,name):
-        if name in ("strict_observability","query_deadline_s","artifact_dir","page_selection_mode","metadata_navigation_enabled","analytical_writer_mode"):
+        if name in ("strict_observability","query_deadline_s","artifact_dir","page_selection_mode","metadata_navigation_enabled","analytical_writer_mode","ledger_extraction_mode"):
             return getattr(self._query,name)
         if hasattr(self._shared,name):
             return getattr(self._shared,name)

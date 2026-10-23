@@ -1,0 +1,48 @@
+{
+  "scope": "offline contract replay of all actual extraction rows from the full-document ledger failure; not an accuracy benchmark",
+  "paid_calls": 0,
+  "cost_usd": 0,
+  "saved_record_count": 20,
+  "previous_accepted": 13,
+  "previous_rejections": [
+    {
+      "row": 0,
+      "reason": "non_exact_value"
+    },
+    {
+      "row": 1,
+      "reason": "non_exact_value"
+    },
+    {
+      "row": 2,
+      "reason": "non_exact_value"
+    },
+    {
+      "row": 3,
+      "reason": "non_exact_value"
+    },
+    {
+      "row": 4,
+      "reason": "non_exact_value"
+    },
+    {
+      "row": 5,
+      "reason": "non_exact_value"
+    },
+    {
+      "row": 6,
+      "reason": "non_exact_value"
+    }
+  ],
+  "compatibility_adapter_accepted": 20,
+  "id_contract_accepted": 20,
+  "id_contract_rejections": [],
+  "all_raw_quotes_exact": true,
+  "all_values_copied_from_raw_anchors": true,
+  "recovered_formatting_failures": 7,
+  "input_sha256": "202d55a3c5cf1615995fc9f7e3dd7b05b7c08d9cdb6b8a2dffe3b21460300236",
+  "tests": {
+    "passed": 217,
+    "slow_deselected": 7
+  }
+}

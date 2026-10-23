@@ -76,20 +76,35 @@ def select_portfolio(evidence,plan,settings,cap=None):
                 if len(get(ev.element,"text"))<len(get(old.element,"text")):
                     unique[key]=ev
         pool=unkeyed+list(unique.values())
+    integrated=plan.intent!='factoid' and value(settings,'analytical_writer_mode')=='ledger' and value(settings,'ledger_extraction_mode')=='integrated'
+    by_element={get(e.element,'element_id'):e for e in pool}
+    def bundle(e,remaining):
+        if not integrated:return [e]
+        out=[];seen=set();pending=[e]
+        while pending:
+            item=pending.pop();eid=get(item.element,'element_id')
+            if eid in seen:continue
+            seen.add(eid)
+            if item in remaining:out.append(item)
+            for dep in item.dependencies:
+                if dep not in by_element:return []
+                pending.append(by_element[dep])
+        return out
+    def source_cost(e):return estimate_tokens(get(e.element,'text'))+estimate_tokens(get(e.element,'section',''))+256
     remaining=pool;selected=[];coverage={a.aspect_id:0 for a in plan.aspects};used=0
     while remaining and len(selected)<maxcount:
-        eligible=[e for e in remaining if used+estimate_tokens(get(e.element,"text"))+estimate_tokens(get(e.element,"section",""))+256<=cap]
+        eligible=[e for e in remaining if bundle(e,remaining) and used+sum(source_cost(d) for d in bundle(e,remaining))<=cap and len(selected)+len(bundle(e,remaining))<=maxcount]
         if not eligible:
             break
         def merit(e):
-            gain=sum(1.0/(1+coverage.get(a,0)) for a in e.aspect_ids)
-            cost=max(1,estimate_tokens(get(e.element,"text")))
+            group=bundle(e,remaining)
+            gain=sum(1.0/(1+coverage.get(a,0)) for d in group for a in d.aspect_ids)
+            cost=max(1,sum(source_cost(d) for d in group) if integrated else estimate_tokens(get(e.element,"text")))
             return (gain/(cost**0.35),e.ce_score if e.ce_score is not None else -1e20,get(e.element,"element_id"))
         chosen=max(eligible,key=merit)
-        selected.append(chosen);remaining.remove(chosen)
-        used+=estimate_tokens(get(chosen.element,"text"))+estimate_tokens(get(chosen.element,"section",""))+256
-        for a in chosen.aspect_ids:
-            coverage[a]=coverage.get(a,0)+1
+        for item in bundle(chosen,remaining):
+            selected.append(item);remaining.remove(item);used+=source_cost(item)
+            for a in item.aspect_ids:coverage[a]=coverage.get(a,0)+1
     return selected,{"selected":len(selected),"omitted":len(remaining),"redundant_removed":redundant,"input_budget_units":used,
                      "obligation_evidence_counts":coverage,"token_budget_method":"conservative_utf8_bytes"}
 

@@ -63,3 +63,5 @@ Latest analytical routing/coverage repair and measured limits: [repair benchmark
 Experimental relational findings and guarded synthesis: [ledger trial](docs/diagnostics/ledger-trial/REPORT.md). Opt in with `KB_ANALYTICAL_WRITER=ledger`; default remains extractive.
 
 Latest **full-pipeline ledger benchmark**: [report](docs/diagnostics/ledger-full/REPORT.md). Analytical recall regressed; ledger remains off by default.
+
+Ledger source-ID repair: [implementation and zero-cost replay](docs/SOURCE_ID_LEDGER_FIX.md). Integrated mode removes the separate extraction call; fresh accuracy is not yet measured.

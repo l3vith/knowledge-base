@@ -37,3 +37,7 @@ The guarded saved-evidence trial improved precision/recall from 20.00% / 34.04% 
 ## Fresh full-pipeline follow-up supersedes the isolated improvement
 
 The full run scored 56.25% analytical precision / 15.22% recall at 102.51s. Seven formatted value strings failed exact-source validation, dropping key accuracy and timing findings. This is a recall regression against the default. The default remains extractive; do not promote the ledger based on the earlier frozen-evidence result. [Full report](diagnostics/ledger-full/REPORT.md).
+
+## Source-ID contract supersedes the free-text ledger path
+
+The integrated ledger now selects immutable source IDs inside existing verification calls and renders source-owned text from selected IDs. This replaces free-text value extraction and free synthesis in that mode. The seven formatting failures were recovered in offline replay (20/20 retained), with 217 tests passing and no paid calls. These are contract/regression checks, not new accuracy scores. See [the current implementation](SOURCE_ID_LEDGER_FIX.md).

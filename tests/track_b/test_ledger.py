@@ -3,7 +3,13 @@ import pytest
 from kb.query.ledger import parse_records, select_records, cell_key, generate_ledger_answer, numeric_tokens
 from kb.query.answer import generate_answer, verify_answer
 from kb.query.types import Aspect, QueryPlan, Evidence
-from .helpers import MemoryStore, FakeLLM, settings
+from .helpers import MemoryStore, FakeLLM, settings as base_settings
+
+
+def settings(tmp_path,**kwargs):
+    # Historical separate-extraction adapter remains an explicit ablation.
+    kwargs.setdefault('ledger_extraction_mode','separate')
+    return base_settings(tmp_path,**kwargs)
 
 
 def fixture():
@@ -28,8 +34,9 @@ def test_observed_cells_preserve_both_methods_without_cartesian_invention():
 def test_fabricated_quantity_cannot_enter_ledger():
     ev,plan,rows=fixture();rows[0]['values']=['300 calls']
     records,audit=parse_records({'records':rows},ev,plan,[])
-    assert [r.record_id for r in records]==['L2']
-    assert audit['rejections'][0]['reason']=='non_exact_value'
+    assert {r.record_id for r in records}=={'L1','L2'}
+    assert '300 calls' not in records[0].values and '200 calls' in records[0].values
+    assert audit['warnings'][0]['reason']=='invalid_optional_values_rebound_to_source'
 
 
 def test_unanchored_experiment_becomes_unknown_and_cannot_join_methods():

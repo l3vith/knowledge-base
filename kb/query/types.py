@@ -53,6 +53,7 @@ class Evidence:
     dependencies: list[str] = field(default_factory=list)
     fact_value: str | None = None
     relevance: str = "direct"
+    findings: list[dict[str, Any]] = field(default_factory=list)
 
 
 @dataclass(frozen=True)

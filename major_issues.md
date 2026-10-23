@@ -1,5 +1,7 @@
 # Major issues: Smart Knowledge Base repair handoff
 
+**Current implementation update:** the ledger now uses immutable source IDs, integrated source verification, dependency-aware selection and source-owned rendering. Offline replay retains all 20 previous records, recovering the seven formatting rejections; 217 tests pass. No new live accuracy score is claimed. Overall default remains extractive. [Source-ID repair](docs/SOURCE_ID_LEDGER_FIX.md).
+
 **Fresh full-pipeline ledger warning:** analytical precision/recall 56.25% / 15.22% at 102.51s. This supersedes the earlier frozen-evidence improvement as evidence for rollout. Seven exact-value rejections caused by Markdown punctuation reformatting dropped key findings. Ledger remains off by default. [Latest full report](docs/diagnostics/ledger-full/REPORT.md).
 
 **Latest default-mode coverage-repair result:** factual answer precision/recall 100% / 66.67% at 19.06s; analytical 20% / 34.04% at 66.48s, partial. See [the latest measured report](docs/diagnostics/coverage-repair/REPORT.md). Broad metadata narrowing, missing topic checks and decimal display artifacts were addressed, but analytical omissions and over-inclusion remain unresolved. The first repair over-selected and took 139.11s; the bounded follow-up is the current implementation. Judge inconsistencies are flagged separately; official scores are unchanged. Do not claim all quality issues solved or submission readiness.
