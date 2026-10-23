@@ -312,3 +312,10 @@ Source-derived metadata is now collected during ingestion and can be backfilled 
 An offline comparison using identical saved plans on the same one-document cases reduced factual candidate elements from 56 to 42 and retained its previously cited source. After teammate integration, analytical candidate count remained 86 with or without metadata and all 18 previously cited sources remained available (the earlier comparison used 89). This is candidate retention, not a fresh answer-quality evaluation. No paid API calls were made.
 
 **Still open:** analytical answer over-inclusion and precision, high sequential model latency, writer-context omissions, full-corpus/held-out evaluation and the deployment/accounting gaps described above. Metadata alone has not demonstrated those issues solved. Generic topic matches do not narrow searches, specific section focus retains independent fallback sources, and table/figure dependency expansion is capped to avoid increasing irrelevant context.
+
+
+## Analytical routing and coverage repair
+
+Broad analytical searches no longer narrow to metadata-only ranges; literal requested topics receive independent source matches. The extractive writer receives a checklist of topic phrases copied from the original question, and the existing final verifier checks topic coverage separately from claim support. Missing/duplicate/invalid coverage checks cannot prove completeness. General background is filtered separately from direct findings and necessary qualifications. Source numeric Markdown artifacts are repaired for display while raw quotation validation remains exact.
+
+These are implementation changes, not proof of a metric improvement. Read [the repair notes](docs/ANALYTICAL_COVERAGE_REPAIR.md) and the subsequent benchmark report for measured limits. The official evaluator is unchanged; a separate zero-call audit flags inconsistent labels without rewriting scores.

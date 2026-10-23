@@ -21,7 +21,7 @@ def navigation_hints(store,plan,query,doc,pool,ranked,settings):
     selected=[];scores={};covered=set();direct=[]
     context_words=words(get(store.doc(doc),'title',''))
     for aspect in plan.aspects:
-        qwords=words(aspect.text+' '+' '.join(aspect.keywords))
+        qwords=words(query) & words(aspect.text+' '+' '.join(aspect.keywords))
         scored=[]
         for entry in entries:
             if entry.get('origin') not in ('pdf_outline','source_heading','printed_heading_match',
@@ -38,7 +38,7 @@ def navigation_hints(store,plan,query,doc,pool,ranked,settings):
         for score,entry in scored[:value(settings,'metadata_ranges_per_aspect')]:
             candidates=[p for p in allowed if entry['start_page']<=p<=entry['end_page']]
             if not candidates:continue
-            specific=bool(words(entry.get('title','')) & qwords - context_words - words(aspect.entity or ''))
+            specific=bool((words(entry.get('title','')) & qwords) - context_words - words(aspect.entity or ''))
             candidates.sort(key=lambda p:(priority.get(p,10**9),p))
             pages=list(dict.fromkeys(candidates[:value(settings,'metadata_pages_per_range')]+[entry['start_page']]))
             pages=[p for p in pages if p in allowed]
@@ -68,8 +68,12 @@ def navigation_hints(store,plan,query,doc,pool,ranked,settings):
         if re.search(r'\btable\b',query,re.I) and features.get('table_count'):feature_score+=.3
         if features.get('navigation_page') and not re.search(r'\b(contents|index|page)\b',query,re.I):feature_score-=1.
         if feature_score:scores[str(page)]=max(-1.,min(2.,scores.get(str(page),0)+feature_score))
+    # Broad analytical requests must retain independent full-source searches.
+    narrow_request=(plan.intent=='factoid' or (len(plan.aspects)==1 and len(words(query))<=6
+                    and not re.search(r'\b(compare|versus|explain|analy[sz]e|evidence|limitations|controls)\b',query,re.I)))
+    report['focus_policy']='specific_request_only' if narrow_request else 'broad_query_boost_only'
     report.update(covered_aspects=sorted(covered),preferred_pages=list(dict.fromkeys(selected)),page_scores=scores,
-                  direct_pages=list(dict.fromkeys(direct)),focused=bool(covered) and len(covered)==len(plan.aspects) and plan.intent!='exhaustive',
+                  direct_pages=list(dict.fromkeys(direct)),focused=narrow_request and bool(covered) and len(covered)==len(plan.aspects) and plan.intent!='exhaustive',
                   unresolved_reference_count=nav.get('stats',{}).get('unresolved_printed_references',0))
     return report
 

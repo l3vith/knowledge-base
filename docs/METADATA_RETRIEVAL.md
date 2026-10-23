@@ -23,7 +23,7 @@ Native bookmarks whose titles cannot be corroborated on the target source page r
 
 ## Query behavior
 
-The existing document identity/period guard runs first. For each allowed document, source sections/captions are matched to the original query obligations. Generic overlap with the document title or entity cannot trigger focus. A non-exhaustive query is focused only when every obligation has a specific validated structural match.
+The existing document identity/period guard runs first. For each allowed document, source sections/captions are matched to the original query obligations. Generic overlap with the document title or entity cannot trigger focus. Only factual or short single-topic requests can focus on validated ranges. Broad analytical requests use metadata as ranking hints while retaining independent source searches. Planner-added keywords absent from the original query cannot create specific navigation matches.
 
 At most two ranges per obligation contribute two ranked pages plus each range start. Explicit table/figure/section or page references can prioritize a target before the global page cap. Existing lexical/vector rankings remain available. Local page survey retains three independent outside pages when focused; scoped source FTS retains up to eight independent outside element hits. Exhaustive queries keep their broader selection behavior within existing resource caps. These fallbacks reduce, but cannot eliminate, the risk of missed evidence.
 

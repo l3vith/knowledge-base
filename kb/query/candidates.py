@@ -4,6 +4,7 @@ from .settings import value, budget
 from .types import Candidate
 from .utils import get, terms, rrf
 from .metadata import navigation_hints, element_metadata_score
+from .requirements import requested_topics
 
 
 def _query_vectors(embedder,texts):
@@ -47,6 +48,14 @@ def candidate_pages(store, plan, query, embedder, settings):
             hits=store.search_pages(aspect.keywords+terms(aspect.text),[doc],value(settings,"lexical_net_pages_per_aspect"))
             net.update(p for d,p,s in hits if d==doc)
             slot_lists.append([(d,p) for d,p,s in hits if d==doc])
+        topic_hits={}
+        # Literal user-requested axes get independent source matches so one combined
+        # obligation's popular terms cannot crowd out cost, timing or qualifications.
+        for topic in requested_topics(query,plan.intent):
+            hits=store.search_pages(terms(topic['text']),[doc],2)
+            pages=[p for d,p,s in hits if d==doc]
+            net.update(pages);topic_hits[topic['id']]=pages
+            slot_lists.append([(doc,p) for p in pages])
         lexical[doc]=net
         source=store.search_pages(terms(query),[doc],cap)
         dense=_dense(store,embedder,[query]+[a.text for a in plan.aspects],[doc],cap,"pages",dense_cache)
@@ -60,7 +69,7 @@ def candidate_pages(store, plan, query, embedder, settings):
         selected=list(dict.fromkeys(metadata_pages+sorted(net)+ordered))[:cap]
 
         pools[doc]=selected
-        report["documents"][doc]={"available":len(all_pages),"mode":"all" if len(selected)==len(all_pages) else "bounded", "ranked_pages":selected}
+        report["documents"][doc]={"available":len(all_pages),"mode":"all" if len(selected)==len(all_pages) else "bounded", "ranked_pages":selected,"requested_topic_hits":topic_hits}
     # Global fair cap: lexical obligation hits first, then round-robin across documents.
     selected=[]; seen=set()
     for rank in range(max([len(x) for x in slot_lists] or [0])):

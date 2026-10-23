@@ -154,7 +154,7 @@ def answer_query(collection,query,*,store,generation_id,settings,llm,embedder=No
                 ctx.save("writer_context",evidence_block_for_artifact(numbered,cards))
             with ctx.stage(STEP_NAMES[8],DESCRIPTIONS[8],{"claims":len(draft.claims)}) as out:
                 current_stage=8
-                draft,report=verify_answer(ctx.llm,draft,numbered,settings,ctx=ctx);out.update(report)
+                draft,report=verify_answer(ctx.llm,draft,numbered,settings,ctx=ctx,query=query);out.update(report)
             with ctx.stage(STEP_NAMES[9],DESCRIPTIONS[9],{"accepted_claims":len(draft.claims)}) as out:
                 current_stage=9
                 answer,report=render_verified(draft,numbered,cards);out.update(report)
@@ -165,6 +165,7 @@ def answer_query(collection,query,*,store,generation_id,settings,llm,embedder=No
                     if cited:
                         chunk["evidence_role"]="claim_support"
             coverage=_coverage(plan,numbered,draft.claims,limits+draft.limitations,counts)
+            coverage["requested_topics"]=draft.requested_topics
             unresolved=any(a["status"]!="supported" for a in coverage["aspects"])
             if draft.claims:
                 status="partial" if coverage["limitations"] or unresolved or draft.status=="partial" else "answered"

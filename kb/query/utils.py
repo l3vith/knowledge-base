@@ -125,5 +125,6 @@ def answer_spans(text, kind="text"):
 
 
 def display_source(text):
-    """Formatting only: repair an italicised thousands comma; raw quotes stay exact."""
-    return re.sub(r"(?<=\d)\s*_,_\s*(?=\d{3}(?:\D|$))",",",text).strip()
+    """Display-only repair of numeric Markdown punctuation; quotes remain untouched."""
+    text=re.sub(r"(?<=\d)\s*_,_\s*(?=\d{3}(?:\D|$))",",",text)
+    return re.sub(r"(?<=\d)\s*_\._\s*(?=\d)",".",text).strip()

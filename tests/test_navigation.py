@@ -223,3 +223,26 @@ def test_metadata_can_be_disabled_for_ablation(tmp_path):
     plan=QueryPlan('analytical',[Aspect('a1','table 2',['table'])],['d'])
     h=navigation_hints(store,plan,'table 2','d',[1],[1],query_settings(tmp_path,metadata_navigation_enabled=False))
     assert not h['available'] and not h['direct_pages']
+
+
+def test_broad_analytical_query_never_narrows_to_metadata_ranges(tmp_path):
+    from tests.track_b.helpers import MemoryStore
+    store=MemoryStore({'d':['# Accuracy\nAccuracy result.', '# Speed\nSpeed result.']})
+    store.navigation=lambda d:{'version':1,'sections':[
+        {'title':'Accuracy','start_page':1,'end_page':1,'origin':'source_heading','confidence':.9},
+        {'title':'Speed','start_page':2,'end_page':2,'origin':'source_heading','confidence':.9}]}
+    plan=QueryPlan('analytical',[Aspect('a1','accuracy and speed',['accuracy','speed'])],['d'])
+    hints=navigation_hints(store,plan,'Compare accuracy and speed, build cost, controls and limitations before production use',
+                           'd',[1,2],[1,2],query_settings(tmp_path))
+    assert hints['matches'] and not hints['focused']
+    assert hints['focus_policy']=='broad_query_boost_only'
+
+
+def test_planner_expansion_cannot_create_specific_metadata_focus(tmp_path):
+    from tests.track_b.helpers import MemoryStore
+    store=MemoryStore({'d':['# Numerical instability\nGeneral theory.']})
+    store.navigation=lambda d:{'version':1,'sections':[
+        {'title':'Numerical instability','start_page':1,'end_page':1,'origin':'source_heading','confidence':.9}]}
+    plan=QueryPlan('analytical',[Aspect('a1','production controls',['numerical instability'])],['d'])
+    hints=navigation_hints(store,plan,'production controls','d',[1],[1],query_settings(tmp_path))
+    assert not hints['matches'] and not hints['focused']

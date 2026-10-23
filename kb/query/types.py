@@ -52,6 +52,7 @@ class Evidence:
     quotes: list[str] = field(default_factory=list)
     dependencies: list[str] = field(default_factory=list)
     fact_value: str | None = None
+    relevance: str = "direct"
 
 
 @dataclass(frozen=True)
@@ -78,6 +79,7 @@ class Claim:
     quotes: list[dict[str, str]] = field(default_factory=list)
     calculation: dict[str, Any] | None = None
     verification: str = "pending"
+    requirement_ids: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -85,3 +87,4 @@ class AnswerDraft:
     claims: list[Claim]
     status: str
     limitations: list[str] = field(default_factory=list)
+    requested_topics: list[dict[str, Any]] = field(default_factory=list)
