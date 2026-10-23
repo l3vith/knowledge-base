@@ -163,12 +163,16 @@ class OpenCodeLLM(LLM):
 
     def _complete(self, system, user, name, model, max_tokens, json_mode):
         s = self.settings
+        self.last_usage=None
+        self.last_response=None
         key = ResponseCache.key(model, json_mode, max_tokens, system, user) if self.cache else None
         if self.cache:
             hit = self.cache.get(key)
             if hit is not None:
                 try:
                     out = parse_json_content(hit) if json_mode else hit
+                    self.last_usage={"input_tokens":0,"output_tokens":0,"cost_usd":0.0}
+                    self.last_response={"content":hit,"finish_reason":"cache_hit","output_limit":max_tokens}
                     with self._lock:
                         self.usage.cache_hits += 1
                     return out
@@ -181,6 +185,8 @@ class OpenCodeLLM(LLM):
             raise LLMError(f"{name}: spend cap KB_BUDGET_USD={s.budget_usd} reached ({spent_usd(s):.4f} USD recorded)")
         payload = {"model": model, "temperature": 0, "max_tokens": max_tokens,
                    "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}]}
+        if model.startswith("deepseek-"):
+            payload.update(thinking={"type":"disabled"},reasoning_effort="low")
         if json_mode:
             payload["response_format"] = {"type": "json_object"}
         headers = {"Authorization": f"Bearer {s.opencode_api_key}", "Content-Type": "application/json"}
@@ -190,7 +196,8 @@ class OpenCodeLLM(LLM):
                 retry_after = None
                 try:
                     with _semaphore(s.llm_concurrency):
-                        resp = requests.post(s.opencode_base_url, headers=headers, json=payload, timeout=s.llm_timeout_s)
+                        remaining=min(s.llm_timeout_s,max(0.001,getattr(self,"deadline",time.monotonic()+s.llm_timeout_s)-time.monotonic()))
+                        resp = requests.post(s.opencode_base_url, headers=headers, json=payload, timeout=remaining)
                     if resp.status_code == 429 or resp.status_code >= 500:
                         retry_after = resp.headers.get("Retry-After")
                         raise LLMError(f"HTTP {resp.status_code}")
@@ -201,6 +208,8 @@ class OpenCodeLLM(LLM):
                     self._account(in_tok, out_tok)
                     content = data["choices"][0]["message"].get("content")
                     cost = self._cost(in_tok, out_tok)
+                    self.last_usage={"input_tokens":in_tok,"output_tokens":out_tok,"cost_usd":cost["total"] if cost else None}
+                    self.last_response={"content":content,"finish_reason":data["choices"][0].get("finish_reason"),"output_limit":max_tokens}
                     _record_spend(s, name, model, in_tok, out_tok, cost["total"] if cost else None)
                     gen.update(output=clip(content or "", 4000), usage_details={"input": in_tok, "output": out_tok},
                                **({"cost_details": cost} if cost else {}))
@@ -294,8 +303,13 @@ def _dry_json_payload(name: str, p: dict) -> dict:
         return {"pages": [{"page_no": c["page_no"], "aspects": aspect_ids, "strength": "medium"} for c in p.get("cards", [])
                           if hit(" ".join([c.get("summary", ""), " ".join(c.get("topics", []))]))]}
     if name == "verify":
-        return {"keep": [{"id": e["id"], "aspects": aspect_ids, "note": "dryrun lexical overlap", "quotes": [quote(e["text"])]}
-                         for e in p.get("elements", []) if hit(e.get("text")) and quote(e.get("text"))]}
+        kept=[]
+        for e in p.get("elements",[]):
+            spans=e.get("source_spans")
+            text="".join(spans.values()) if isinstance(spans,dict) else e.get("text","")
+            if hit(text) and quote(text):
+                kept.append({"id":e["id"],"aspects":aspect_ids,**({"support_span_ids":list(spans)} if spans else {"quotes":[quote(text)],"note":"dryrun lexical overlap"})})
+        return {"keep":kept}
     if name == "answer":
         ev = [e for e in p.get("evidence", []) if quote(e.get("content"))][:8]
         ob = [o["id"] for o in p.get("obligations", [])]

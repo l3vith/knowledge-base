@@ -54,7 +54,7 @@ def fragment(element, start, end):
     base = get(element, "char_start", 0)
     if start == 0 and end == len(text):
         return element
-    return SourceFragment(parent + ":span:" + id_for(start, end, text[start:end]),
+    return SourceFragment(parent + ":span:" + id_for(base + start, base + end, text[start:end]),
                           get(element, "doc_id"), int(get(element, "page_no", get(element, "physical_page", 1))),
                           int(get(element, "idx", 0)), get(element, "kind", "text"),
                           get(element, "section", ""), text[start:end], get(element, "flags", []),

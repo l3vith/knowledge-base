@@ -44,7 +44,8 @@ def legacy_bind(collection_name):
     from kb.llm import get_llm
     from kb.query.settings import SharedQuerySettings
     # Shared client: KB_BUDGET_USD cap + spend ledger, disk response cache and KB_LLM_MODE=dryrun apply to queries too.
-    llm=get_llm(settings)
+    from kb.query.provider import SharedQueryClient
+    llm=SharedQueryClient(get_llm(settings))
     store=Store.open(directory)
     try:
         return BoundServices(store,generation,SharedQuerySettings(settings),llm,get_embedder(settings),get_reranker(settings),close_store=True)

@@ -20,3 +20,26 @@ Irrelevant returned writer context is penalized by context precision. Additional
 ## Completion evidence
 
 Each item requires code, meaningful tests and a result artifact. Performance targets are hypotheses: eliminate the survey call on eligible factual queries, verify fewer source candidates, return one sufficient passage for duplicate scalar support, and complete the analytical path with valid compact verification. No speed or quality target is achieved until a live rerun measures it. Preserve demo credits and stop at the spending cap.
+
+
+## Implementation status (24 October)
+
+Implemented the compact source-span protocol (source text is sent once), eight-element batches, one split recovery, fail-fast repeated failures, and retention of successful evidence. Eligible single-document fact requests skip the card survey and verify up to eight initial and eight reserve candidates. Verified duplicate numeric values are merged only within the same qualified document/obligation, retaining conflicting values, different units and dependencies. All writer context and required citations remain visible.
+
+Private diagnostics now retain raw answer content, finish reason, requested output limit, elapsed time and known billed usage on JSON failure. Known failed-call usage is charged once and releases unused token reservations. Source fragment offsets remain absolute through nested slicing. Scoped dense search uses finite-checked float64 accumulation instead of the locally warning-prone BLAS operation.
+
+Integrated teammate main through `724c969`, including their ingestion cache, deployment, shared response cache and spend ledger. The query adapter retains these shared features but limits each transport call to one attempt; schema recovery remains in the query ledger. Dry-run verification understands the same compact spans.
+
+### Provider issue discovered during validation
+
+The first compact live responses had **null answer content and `finish_reason=length`**, exhausting 1,536 and 896 completion tokens. This confirms output exhaustion, rather than an ordinary escaping error. Disabling thinking with the upstream toggle alone was ineffective through this gateway; sending the upstream `reasoning_effort=none` setting was rejected. The installed OpenCode model catalogue advertises `low`, `high`, `max`. Production now uses **low** for DeepSeek and reserves at least 4,096 output tokens per query call, including reasoning; reservations are released against actual usage.
+
+The [DeepSeek API reference](https://api-docs.deepseek.com/api/create-chat-completion) documents thinking/reasoning controls, but gateway capability metadata takes precedence for accepted values. No alternate or expensive model was used.
+
+A final **live source-verification probe succeeded** using the compact protocol and `low`: 3.28 seconds, 442 input / 367 output tokens, `finish_reason=stop`, exact source-span ID and source-backed value. This verifies transport and compact evidence selection, **not** the full revised two-question benchmark or analytical answer quality.
+
+The full post-fix benchmark remains unverified. Failed transport checks, an interrupted request and the successful probe share the same cumulative **$0.05 ceiling**; unknown/rejected requests retain conservative reservations. Known reported-token/catalog cost was **$0.009370812**, with a conservative cumulative admission ledger of **$0.0484573**. Unknown actual charge is not represented as zero. Further paid testing stopped at this ceiling. Original benchmark and evaluator files remain unchanged.
+
+Next validation: reuse the indexed collection, run the original factual and analytical requests through the final `low` transport, then compare latency, returned context, answer support and untouched official metrics. The earlier 82.75-second result is a baseline, not evidence of the final system's speed. Do not claim a quality or speed improvement until this run completes.
+
+Offline validation: **129 passed, 7 slow tests deselected**. New regressions cover bounded/reserve retrieval, compact span IDs, one split recovery, partial evidence, factual survey skipping, conflicting values/units/dependencies, nested source identity, strict finite scoped vector search, raw failure diagnostics, billed usage, shared single-attempt calls and compact dry-run support. `git diff --check` passed.

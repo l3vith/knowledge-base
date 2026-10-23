@@ -32,6 +32,8 @@ class OpenCodeJSONClient:
         self.last_response = None
         payload = {"model": self.model, "messages": [{"role":"system","content":system},{"role":"user","content":user}],
                    "temperature":0, "max_tokens":max_tokens, "response_format":{"type":"json_object"}}
+        if self.model.startswith("deepseek-"):
+            payload.update(thinking={"type":"disabled"},reasoning_effort="low")
         # One transport attempt per call; retries must go through the request ledger.
         remaining = max(0.0, self.deadline-time.monotonic()) if self.deadline is not None else self.timeout
         acquired = _PROVIDER_GATE.acquire(timeout=min(self.timeout, remaining))
@@ -60,7 +62,10 @@ class OpenCodeJSONClient:
         self.last_response={"content":choice.get("message",{}).get("content"),
                             "finish_reason":choice.get("finish_reason"),"output_limit":max_tokens}
         try:
-            content = body["choices"][0]["message"]["content"].strip()
+            content = body["choices"][0]["message"]["content"]
+            if not isinstance(content,str):
+                raise ValueError("missing answer content")
+            content=content.strip()
             if content.startswith("```json\n") and content.endswith("\n```"):
                 content = content[8:-4]
             result = json.loads(content)
@@ -69,3 +74,49 @@ class OpenCodeJSONClient:
             return result
         except (KeyError,IndexError,TypeError,ValueError) as exc:
             raise QueryError("MODEL_SCHEMA", "Model returned invalid JSON", 503) from exc
+
+
+class SharedQueryClient:
+    """Keep shared cache/spend accounting, with one deadline-bound attempt per query call."""
+    def __init__(self, llm):
+        self.llm=llm
+        self.model=llm.settings.effective_answer_model()
+
+    def scoped(self):
+        from dataclasses import replace
+        clone=self.llm.scoped()
+        clone.settings=replace(clone.settings,llm_max_retries=1)
+        return SharedQueryClient(clone)
+
+    @property
+    def usage(self):
+        from dataclasses import asdict
+        return asdict(self.llm.usage)
+
+    @property
+    def last_usage(self):
+        return getattr(self.llm,"last_usage",None)
+
+    @last_usage.setter
+    def last_usage(self,v):
+        self.llm.last_usage=v
+
+    @property
+    def last_response(self):
+        return getattr(self.llm,"last_response",None)
+
+    @last_response.setter
+    def last_response(self,v):
+        self.llm.last_response=v
+
+    def set_request_deadline(self,deadline):
+        self.llm.deadline=deadline
+
+    def complete_json(self,system,user,*,name,max_tokens):
+        try:
+            return self.llm.complete_json(system,user,name=name,model=self.model,max_tokens=max_tokens)
+        except Exception as exc:
+            from kb.llm import LLMError
+            if isinstance(exc,LLMError) and self.last_response is not None:
+                raise QueryError("MODEL_SCHEMA","Model returned invalid or truncated JSON",503) from exc
+            raise

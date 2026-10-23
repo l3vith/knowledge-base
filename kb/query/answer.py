@@ -37,7 +37,7 @@ def select_portfolio(evidence,plan,settings):
             if not ev.fact_value or ev.dependencies:
                 unkeyed.append(ev);continue
             key=(get(ev.element,"doc_id"),tuple(sorted(ev.aspect_ids)),
-                 re.sub(r"[\s,_]","",ev.fact_value).casefold())
+                 re.sub(r"(?<=\d),(?=\d{3}(?:\D|$))","",re.sub(r"[\s_]","",ev.fact_value)).casefold())
             old=unique.get(key)
             if old is None:
                 unique[key]=ev

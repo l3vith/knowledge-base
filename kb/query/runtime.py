@@ -57,6 +57,10 @@ class QueryRuntime:
 
     def call(self, name, system, payload, max_tokens=4000):
         self.check()
+        # This gateway exposes DeepSeek reasoning variants; hidden reasoning consumes
+        # completion tokens even when the upstream thinking toggle is ignored.
+        if str(getattr(self.llm,"model","")).startswith("deepseek-"):
+            max_tokens=max(max_tokens,4096)
         user = compact(payload)
         predicted = estimate_tokens(system) + estimate_tokens(user)
         if self.calls >= value(self.settings, "max_llm_calls"):

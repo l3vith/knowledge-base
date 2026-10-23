@@ -128,3 +128,12 @@ def test_dense_scoped_search_finite_under_strict_fp():
         index.search(np.full((1,384),np.nan),['d'],1)
     with pytest.raises(ValueError,match='dimensions'):
         index.search(np.ones((1,3)),['d'],1)
+
+
+def test_repeated_nested_fragments_keep_distinct_source_offsets():
+    el=MemoryStore({'d':['same block '*100]}).elements[0]
+    a=fragment(fragment(el,0,100),0,20)
+    b=fragment(fragment(el,110,210),0,20)
+    assert a.text==b.text
+    assert a.element_id!=b.element_id
+    assert (a.char_start,b.char_start)==(0,110)
