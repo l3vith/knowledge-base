@@ -64,4 +64,4 @@ Experimental relational findings and guarded synthesis: [ledger trial](docs/diag
 
 Latest **full-pipeline ledger benchmark**: [report](docs/diagnostics/ledger-full/REPORT.md). Analytical recall regressed; ledger remains off by default.
 
-Ledger source-ID repair: [implementation and zero-cost replay](docs/SOURCE_ID_LEDGER_FIX.md). Integrated mode removes the separate extraction call; fresh accuracy is not yet measured.
+Ledger source-ID repair: [implementation and zero-cost replay](docs/SOURCE_ID_LEDGER_FIX.md). Integrated mode removes the separate extraction call. [Fresh benchmark](docs/diagnostics/source-id-full/REPORT.md): zero source-ID rejections, 74.19s analytical latency; answer quality remains unresolved and judge matching is contradictory.

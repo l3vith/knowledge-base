@@ -40,3 +40,7 @@ Portable replay evidence: [diagnostic counts](diagnostics/source-id-fix/replay.j
 ## Remaining limits
 
 A model can still omit relevant source IDs, assign an uncertain relationship, or classify background as relevant. Unknown scope cannot establish a verified comparison. Source-only rendering does not invent normative recommendations absent from the collection. Observed/selected ledger coverage is not exhaustive source recall or gold-cell recall. Schema-size/token behavior and live end-to-end quality need measurement before enabling the ledger by default.
+
+## Fresh live benchmark
+
+[Full query benchmark](diagnostics/source-id-full/REPORT.md): all 52 ledger records accepted with no validation warnings/rejections; no separate extraction call; analytical query 74.19s. Official analytical precision/recall were 0% / 100%, with all reference points matched and all answer points marked extra. This contradictory score is preserved and cannot establish an accuracy gain. The answer still exceeds useful length and leaves controls/monitoring unresolved. Total queries plus judging cost $0.02138573 computed. Default remains extractive.

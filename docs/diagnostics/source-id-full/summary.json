@@ -1,0 +1,147 @@
+{
+  "git_commit": "58cf205db9aa23496ce4d46b5287c439fb6e4f05",
+  "status": "completed",
+  "scope": "single-document development smoke, two public questions; not held-out accuracy",
+  "model": "qwen3.8-flash",
+  "benchmark_transport": "parallel-safe shared ledger, $0.05 cap including in-flight reservations",
+  "answer_style": "integrated immutable source-ID findings and source-owned rendering; factual extractive",
+  "ledger_extraction_mode": "integrated",
+  "query_deadline_s": 180,
+  "judge_output_limit": 2000,
+  "evaluator": "unchanged official point decomposition",
+  "thinking": "disabled",
+  "page_selection": "local",
+  "document": "2012.07440v3.pdf",
+  "question_ids": [
+    "C31",
+    "C18"
+  ],
+  "hard_cost_cap_usd": 0.05,
+  "pricing_per_million_tokens": {
+    "input": 0.15,
+    "output": 0.47,
+    "cache_read": 0.016,
+    "cache_write": 0.2
+  },
+  "source_sha256": "dfbea8f46eb77a10d21bde81e6986d65856ae35ba9752c722f6fb176dc225dc3",
+  "indexing": {
+    "reused_existing_collection": true,
+    "paid_calls": 0
+  },
+  "generation_id": "gen_20261023203832_bf9db041",
+  "total_cost_usd": 0.02138573,
+  "cost_upper_bound_usd": 0.026184830000000003,
+  "protected_inputs_unchanged": true,
+  "total_paid_calls": 28,
+  "results": [
+    {
+      "id": "C31",
+      "status": "answered",
+      "latency_seconds": 17.58102941600373,
+      "returned_chunks": 1,
+      "query_calls": 4,
+      "query_cost_usd": 0.0008648999999999999,
+      "langfuse_trace_id": "6860f41497e0754ba7c0e3fddc81cf30",
+      "retrieved_pages": [
+        15
+      ],
+      "gold_page_field_names": [
+        "section_name",
+        "content",
+        "metadata"
+      ],
+      "judge_audit": {
+        "official_scores_unchanged": true,
+        "flags": [],
+        "interpretation": "Flags require review; they do not compute corrected scores or prove semantic equivalence."
+      },
+      "judge_seconds": 11.173208416992566,
+      "judge_cost_usd": 0.00025514000000000016,
+      "official_metrics": {
+        "answer_precision": 0.5,
+        "answer_recall": 0.4,
+        "context_precision": 1.0,
+        "context_recall": 1.0
+      },
+      "limitations": []
+    },
+    {
+      "id": "C18",
+      "status": "partial",
+      "latency_seconds": 74.18945691699628,
+      "returned_chunks": 52,
+      "query_calls": 16,
+      "query_cost_usd": 0.01580345,
+      "langfuse_trace_id": "27b27cc8d28958c41837384b55de08a8",
+      "retrieved_pages": [
+        1,
+        2,
+        3,
+        5,
+        7,
+        9,
+        10,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23
+      ],
+      "gold_page_field_names": [
+        "section_name",
+        "content",
+        "metadata"
+      ],
+      "judge_audit": {
+        "official_scores_unchanged": true,
+        "flags": [
+          {
+            "kind": "all_answer_points_extra_despite_benchmark_matches",
+            "matched_benchmark_count": 48,
+            "extra_answer_count": 77
+          }
+        ],
+        "interpretation": "Flags require review; they do not compute corrected scores or prove semantic equivalence."
+      },
+      "judge_seconds": 68.80084066698328,
+      "judge_cost_usd": 0.004462239999999999,
+      "official_metrics": {
+        "answer_precision": 0.0,
+        "answer_recall": 1.0,
+        "context_precision": 0.9615384615384616,
+        "context_recall": 1.0204081632653061
+      },
+      "limitations": [
+        "32 selected findings omitted by source-output budget",
+        "5 invalid finding selections repaired or limited",
+        "1 unsupported or uncertain claims removed",
+        "Requested topics not fully supported by final claims: conceptual soundness, ongoing monitoring, outside its original purpose, controls",
+        "33 selected ledger records absent after final semantic verification"
+      ]
+    }
+  ],
+  "source_id_validation": {
+    "accepted": 52,
+    "rejections": [],
+    "warnings": [],
+    "contract": "source_ids_v2"
+  },
+  "analytical_answer_characters": 7939,
+  "analytical_trace_steps": 10,
+  "paid_call_stages": {
+    "plan": 2,
+    "verify": 14,
+    "answer": 2,
+    "answer_verify": 2,
+    "official_judge": 8
+  },
+  "thinking_blocks": 0,
+  "paid_calls": 28,
+  "source_output_characters": 7905
+}

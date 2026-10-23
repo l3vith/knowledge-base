@@ -1,6 +1,6 @@
 # Major issues: Smart Knowledge Base repair handoff
 
-**Current implementation update:** the ledger now uses immutable source IDs, integrated source verification, dependency-aware selection and source-owned rendering. Offline replay retains all 20 previous records, recovering the seven formatting rejections; 217 tests pass. No new live accuracy score is claimed. Overall default remains extractive. [Source-ID repair](docs/SOURCE_ID_LEDGER_FIX.md).
+**Current implementation update:** the ledger now uses immutable source IDs, integrated source verification, dependency-aware selection and source-owned rendering. Offline replay retains all 20 previous records, recovering the seven formatting rejections; 217 tests pass. Fresh source-ID benchmark retained 52/52 records without rejection and took 74.19s analytically. Official analytical scores are 0% precision / 100% recall, with contradictory judge matching; output still omits requested controls and is too long. Overall default remains extractive. [Fresh report](docs/diagnostics/source-id-full/REPORT.md). [Source-ID repair](docs/SOURCE_ID_LEDGER_FIX.md).
 
 **Fresh full-pipeline ledger warning:** analytical precision/recall 56.25% / 15.22% at 102.51s. This supersedes the earlier frozen-evidence improvement as evidence for rollout. Seven exact-value rejections caused by Markdown punctuation reformatting dropped key findings. Ledger remains off by default. [Latest full report](docs/diagnostics/ledger-full/REPORT.md).
 
