@@ -98,8 +98,8 @@ class FakeLLM:
         if name=="verify":
             return {"keep":[{"id":e["id"],"aspects":["a1"],"support_span_ids":list(e["source_spans"]),"note":"source support"} for e in p["elements"]]}
         if name=="answer":
-            return {"status":"answered","claims":[{"id":f"c{i+1}","text":e["content"],"evidence_ids":[e["id"]],
-                       "aspect_ids":e["obligation_ids"],"quotes":[{"evidence_id":e["id"],"quote":e["content"]}]} for i,e in enumerate(p["evidence"])]}
+            return {"status":"answered","selections":[{"obligation_id":e["obligation_ids"][0],
+                    "evidence_id":e["id"],"span_ids":list(e["source_spans"])} for e in p["evidence"]]}
         if name=="answer_verify":
             return {"verdicts":[{"claim_id":c["claim_id"],"verdict":"supported"} for c in p["claims"]]}
         raise AssertionError(name)

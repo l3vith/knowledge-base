@@ -47,7 +47,7 @@ def test_writer_visible_unused_context_is_returned(tmp_path):
     store=MemoryStore({"a":["Capital ratio was 14 percent.\n\nCapital buffer was 3 percent."]})
     def respond(n,p):
         result=FakeLLM.default(n,p)
-        if n=="answer": result["claims"]=result["claims"][:1]
+        if n=="answer": result["selections"]=result["selections"][:1]
         return result
     result=run(tmp_path,store,FakeLLM(respond))
     assert len(result["chunks"])==2

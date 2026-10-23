@@ -1,6 +1,6 @@
 # Major issues: Smart Knowledge Base repair handoff
 
-This is a self-contained handoff for the next agent. **Do not treat the latest benchmark as a successful analytical answer.** The pipeline stopped crashing on its token budget, but the analytical response contains no accepted claims and scores zero on answer quality. The factual response is useful but still misses the required official answer metrics.
+This is a self-contained handoff for the next agent. The benchmark details below are the historical Qwen baseline at `909ae3d`; subsequent source-selection repairs are described in the implementation update at the end. **Do not treat the latest benchmark as a successful analytical answer.** The pipeline stopped crashing on its token budget, but the analytical response contains no accepted claims and scores zero on answer quality. The factual response is useful but still misses the required official answer metrics.
 
 ## 1. Project, current branch and scope
 
@@ -226,8 +226,8 @@ from tests.track_b.helpers import FakeLLM, MemoryStore, settings
 def responder(name, payload):
     result = FakeLLM.default(name, payload)
     if name == "answer":
-        for claim in result["claims"]:
-            claim["aspect_ids"] = []
+        for selection in result["selections"]:
+            selection["obligation_id"] = ""
     return result
 
 with TemporaryDirectory() as temporary:
@@ -287,3 +287,10 @@ Protect these original hashes:
 A repair is not complete because tests pass or the response is nonempty. Required evidence is supported/cited claims that survive the validator, accurate handling of unsupported subrequests, improved measured quality/latency and no regression in the factual case. The formal goal remains all four official metrics at least **0.95**, with no guarantee from this handoff that the target will be achieved.
 
 **Non-negotiable constraints:** no benchmark-answer hardcoding, no source corpus substitution, no hidden-set access, no runtime gold/web lookup, no alteration of the official evaluator, no citation stripping or hidden writer context to game metrics, no model training/fine-tuning assumption, no silent expensive fallback, and no leaked credentials. Keep collection isolation, document/page provenance, required Langfuse tracing, exact source support, bounded execution and truthful incomplete/error status. Use the actual Smart Knowledge Base statement/compliance file rather than rules from the other hackathon tracks.
+
+
+## Implementation update: extractive source selection
+
+The answer writer now requests `selections` with one nonempty `obligation_id`, one valid `evidence_id`, and consecutive source sentence/span IDs. The application reconstructs exact support and source wording, with only a narrowly defined display cleanup for italicized thousands commas. It does not accept generated/paraphrased text as a source statement. Literal legacy adapters remain supported but paraphrases are rejected. Source support and final semantic verification remain active. Per-selection rejection reasons are saved privately. Empty accepted-claim output now distinguishes source-validation failure from retrieval absence.
+
+The supplied evaluator notebook and its point decomposition remain unchanged so new scores are comparable. These repairs address implementation causes; a live rerun is needed to establish the resulting quality. The historical diagnostics above remain unmodified evidence of the original failure.

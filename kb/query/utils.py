@@ -111,3 +111,19 @@ def narrow_factoid(plan, query):
     return (plan.intent == "factoid" and len(plan.doc_ids) == 1 and len(plan.aspects) == 1
             and not plan.limitations and plan.answerable
             and not re.search(r"\b(compare|comparison|versus|all|every|list|explain|why|across|differences|analy[sz]e)\b", query, re.I))
+
+
+def answer_spans(text, kind="text"):
+    """Exact, consecutive source sentences for extractive answers; tables stay intact."""
+    if kind == "table":
+        return {"S1":text} if text.strip() else {}
+    # Do not split decimals. Preserve footnote markup and every source character.
+    boundaries=[m.end() for m in re.finditer(r"[.!?](?:<sup>.*?</sup>)?\s+(?=[A-Z0-9])|\n\s*\n",text)]
+    starts=[0]+boundaries
+    ends=boundaries+[len(text)]
+    return {f"S{i+1}":text[a:b] for i,(a,b) in enumerate(zip(starts,ends)) if text[a:b].strip()}
+
+
+def display_source(text):
+    """Formatting only: repair an italicised thousands comma; raw quotes stay exact."""
+    return re.sub(r"(?<=\d)\s*_,_\s*(?=\d{3}(?:\D|$))",",",text).strip()
