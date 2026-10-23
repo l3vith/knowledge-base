@@ -1,6 +1,13 @@
-"""The only door to the LLM: retries, JSON parsing, usage/cost accounting, Langfuse generations."""
+"""The only door to the LLM: retries, JSON parsing, usage/cost accounting, Langfuse generations.
+
+Credit savers: a disk response cache (identical prompt -> no second payment) and a dry-run mode
+(KB_LLM_MODE=dryrun) that answers with cheap heuristics in the prompts' formats and records ESTIMATED tokens/cost.
+"""
+import hashlib
 import json
 import random
+import re
+import sqlite3
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -10,6 +17,7 @@ from typing import Callable
 import requests
 
 from kb.config import Settings
+from kb.textutil import tokens
 from kb.tracing import clip, lf_generation
 
 
@@ -23,6 +31,33 @@ class Usage:
     input_tokens: int = 0
     output_tokens: int = 0
     cost_usd: float | None = 0.0
+    cache_hits: int = 0
+
+
+class ResponseCache:
+    """sqlite map sha256(model, json_mode, max_tokens, system, user) -> raw content. Temperature is 0, so reuse is safe."""
+
+    _locks: dict[str, threading.Lock] = {}
+
+    def __init__(self, settings: Settings):
+        self.path = settings.llm_cache_path()
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        self._lock = ResponseCache._locks.setdefault(str(self.path), threading.Lock())
+        with self._lock, sqlite3.connect(self.path) as c:
+            c.execute("CREATE TABLE IF NOT EXISTS responses(key TEXT PRIMARY KEY, name TEXT, content TEXT, ts REAL)")
+
+    @staticmethod
+    def key(model: str, json_mode: bool, max_tokens: int, system: str, user: str) -> str:
+        return hashlib.sha256(json.dumps([model, json_mode, max_tokens, system, user]).encode("utf-8")).hexdigest()
+
+    def get(self, key: str) -> str | None:
+        with self._lock, sqlite3.connect(self.path) as c:
+            row = c.execute("SELECT content FROM responses WHERE key = ?", (key,)).fetchone()
+        return row[0] if row else None
+
+    def put(self, key: str, name: str, content: str) -> None:
+        with self._lock, sqlite3.connect(self.path) as c:
+            c.execute("INSERT OR REPLACE INTO responses VALUES (?,?,?,?)", (key, name, content, time.time()))
 
 
 def parse_json_content(text: str) -> dict:
@@ -78,6 +113,37 @@ class LLM:
 
 _semaphores: dict[int, threading.BoundedSemaphore] = {}
 _sem_lock = threading.Lock()
+_ledger_lock = threading.Lock()
+_ledger_totals: dict[str, float] = {}
+
+
+def spent_usd(settings: Settings) -> float:
+    """Total recorded spend in the ledger file (read once per process, then tracked in memory)."""
+    # ponytail: per-process running total; concurrent processes each see the file total at their start
+    path = settings.ledger_path()
+    key = str(path.resolve())
+    with _ledger_lock:
+        if key not in _ledger_totals:
+            total = 0.0
+            if path.is_file():
+                for line in path.read_text(encoding="utf-8").splitlines():
+                    try:
+                        total += float(json.loads(line).get("cost_usd") or 0)
+                    except ValueError:
+                        continue
+            _ledger_totals[key] = total
+        return _ledger_totals[key]
+
+
+def _record_spend(settings: Settings, name: str, model: str, in_tok: int, out_tok: int, cost: float | None) -> None:
+    path = settings.ledger_path()
+    spent_usd(settings)  # make sure the running total is initialised from the file
+    with _ledger_lock:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with open(path, "a", encoding="utf-8") as f:
+            f.write(json.dumps({"ts": time.time(), "name": name, "model": model, "input_tokens": in_tok,
+                                "output_tokens": out_tok, "cost_usd": cost}) + "\n")
+        _ledger_totals[str(path.resolve())] += cost or 0.0
 
 
 def _semaphore(n: int) -> threading.BoundedSemaphore:
@@ -88,11 +154,31 @@ def _semaphore(n: int) -> threading.BoundedSemaphore:
 
 
 class OpenCodeLLM(LLM):
+    def __init__(self, settings: Settings):
+        super().__init__(settings)
+        self.cache = ResponseCache(settings) if settings.llm_cache else None
+
     def scoped(self) -> "OpenCodeLLM":
         return OpenCodeLLM(self.settings)
 
     def _complete(self, system, user, name, model, max_tokens, json_mode):
         s = self.settings
+        key = ResponseCache.key(model, json_mode, max_tokens, system, user) if self.cache else None
+        if self.cache:
+            hit = self.cache.get(key)
+            if hit is not None:
+                try:
+                    out = parse_json_content(hit) if json_mode else hit
+                    with self._lock:
+                        self.usage.cache_hits += 1
+                    return out
+                except ValueError:
+                    pass  # corrupt entry: fall through to a live call
+        if s.budget_usd is not None and (s.price_input_per_m is None or s.price_output_per_m is None):
+            raise LLMError(f"{name}: KB_BUDGET_USD is set but PRICE_INPUT_PER_M/PRICE_OUTPUT_PER_M are blank, "
+                           "so the cap cannot be enforced; set the prices")
+        if s.budget_usd is not None and spent_usd(s) >= s.budget_usd:
+            raise LLMError(f"{name}: spend cap KB_BUDGET_USD={s.budget_usd} reached ({spent_usd(s):.4f} USD recorded)")
         payload = {"model": model, "temperature": 0, "max_tokens": max_tokens,
                    "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}]}
         if json_mode:
@@ -115,11 +201,15 @@ class OpenCodeLLM(LLM):
                     self._account(in_tok, out_tok)
                     content = data["choices"][0]["message"].get("content")
                     cost = self._cost(in_tok, out_tok)
+                    _record_spend(s, name, model, in_tok, out_tok, cost["total"] if cost else None)
                     gen.update(output=clip(content or "", 4000), usage_details={"input": in_tok, "output": out_tok},
                                **({"cost_details": cost} if cost else {}))
                     if not content:
                         raise LLMError(f"empty content, finish_reason={data['choices'][0].get('finish_reason')}")
-                    return parse_json_content(content) if json_mode else content
+                    out = parse_json_content(content) if json_mode else content
+                    if self.cache:
+                        self.cache.put(key, name, content)
+                    return out
                 except (requests.RequestException, LLMError, ValueError, KeyError, IndexError) as e:
                     last_error = e
                     gen.update(level="ERROR", status_message=str(e)[:300])
@@ -173,5 +263,86 @@ def parallel_map(fn: Callable, items: list, max_workers: int) -> list:
         return list(pool.map(safe, items))
 
 
+_DRY_OUTPUT_TOKENS = {"doc_card": 350, "page_card": 700, "plan": 450, "survey": 300, "verify": 450, "answer": 1800, "answer_verify": 300}
+
+
+def _between(text: str, start: str, end: str | None) -> str:
+    i = text.rfind(start) if end is None else text.find(start)
+    if i < 0:
+        return ""
+    rest = text[i + len(start):]
+    j = rest.find(end) if end else -1
+    return (rest[:j] if j >= 0 else rest).strip()
+
+
+def _dry_json_payload(name: str, p: dict) -> dict:
+    """Dry-run answers for the query track's JSON payloads (kb/query: plan, survey, verify, answer, answer_verify)."""
+    query = p.get("query", "")
+    q = set(tokens(query))
+    aspect_ids = re.findall(r"^(\S+):", p.get("aspects", ""), re.M) or ["a1"]
+
+    def hit(text: str) -> bool:
+        return len(q & set(tokens(text or ""))) >= max(2, min(5, len(q) // 5))
+
+    def quote(text: str) -> str:
+        return (text or "").strip()[:200].strip()
+
+    if name == "plan":
+        return {"intent": "analytical", "notes": "dryrun", "documents": [],
+                "aspects": [{"text": query, "keywords": tokens(query)[:8], "entity": None, "period": None, "scope": None}]}
+    if name == "survey":
+        return {"pages": [{"page_no": c["page_no"], "aspects": aspect_ids, "strength": "medium"} for c in p.get("cards", [])
+                          if hit(" ".join([c.get("summary", ""), " ".join(c.get("topics", []))]))]}
+    if name == "verify":
+        return {"keep": [{"id": e["id"], "aspects": aspect_ids, "note": "dryrun lexical overlap", "quotes": [quote(e["text"])]}
+                         for e in p.get("elements", []) if hit(e.get("text")) and quote(e.get("text"))]}
+    if name == "answer":
+        ev = [e for e in p.get("evidence", []) if quote(e.get("content"))][:8]
+        ob = [o["id"] for o in p.get("obligations", [])]
+        return {"status": "answered" if ev else "no_answer", "limitations": ["dryrun answer"],
+                "claims": [{"id": f"c{i}", "text": quote(e["content"]), "evidence_ids": [e["id"]], "aspect_ids": ob,
+                            "quotes": [{"evidence_id": e["id"], "quote": quote(e["content"])}], "calculation": None}
+                           for i, e in enumerate(ev, 1)]}
+    if name == "answer_verify":
+        return {"verdicts": [{"claim_id": c["claim_id"], "verdict": "supported", "reason": "dryrun"} for c in p.get("claims", [])]}
+    return {}
+
+
+def _dry_responder(name: str, system: str, user: str):
+    """Heuristic stand-in for each prompt. Card calls fail on purpose so ingestion uses its deterministic fallbacks."""
+    if name in ("doc_card", "page_card"):
+        raise LLMError("dryrun: cards use deterministic fallbacks")
+    if user.startswith("{"):
+        return _dry_json_payload(name, json.loads(user))
+    if name == "plan":
+        query = _between(user, "Question: ", None)
+        return {"intent": "analytical", "answerable": True, "notes": "dryrun",
+                "aspects": [{"id": "a1", "text": query, "keywords": tokens(query)[:8]}], "documents": []}
+    if name == "survey":
+        return {"pages": []}
+    query = set(tokens(_between(user, "Question: ", "\n\n")))
+    blocks = re.findall(r"\[E(\d+)\][^\n]*\n(.*?)(?=\n\[E\d+\]|\Z)", user, re.S)
+    if name == "verify":
+        need = max(2, len(query) // 5)
+        return {"keep": [{"id": f"E{n}", "aspects": ["a1"], "note": "dryrun lexical overlap"}
+                         for n, text in blocks if len(query & set(tokens(text))) >= need]}
+    if name == "answer":
+        lines = [f"- {' '.join(text.split())[:160]} [E{n}]" for n, text in blocks[:8]]
+        return "Dry-run answer built from the top evidence.\n" + "\n".join(lines) + "\nSTATUS: answered"
+    return {}
+
+
+class DryRunLLM(LLM):
+    """KB_LLM_MODE=dryrun: no network, no spend; usage holds ESTIMATED tokens (chars/4 in, nominal out) and cost."""
+
+    def scoped(self) -> "DryRunLLM":
+        return DryRunLLM(self.settings)
+
+    def _complete(self, system, user, name, model, max_tokens, json_mode):
+        self._account((len(system) + len(user)) // 4, min(max_tokens, _DRY_OUTPUT_TOKENS.get(name, 300)))
+        out = _dry_responder(name, system, user)
+        return out
+
+
 def get_llm(settings: Settings) -> LLM:
-    return OpenCodeLLM(settings)
+    return DryRunLLM(settings) if settings.llm_mode == "dryrun" else OpenCodeLLM(settings)

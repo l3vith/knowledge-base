@@ -26,6 +26,12 @@ The tracks never import each other's code. Track B sees storage only through `St
 5. **Env vars**, needed only for real runs, never in tests: `OPENCODE_API_KEY`, `OPENCODE_BASE_URL` (default `https://opencode.ai/inference/openai/v1/chat/completions`), `LLM_MODEL` (default `deepseek-v4.1-flash`), `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`, `LANGFUSE_HOST`. Never commit keys.
 6. Never edit `Train/Train/Evaluation/Evaluation.ipynb`. Never put benchmark questions, answers or training file names into `kb/`.
 
+## LLM budget: $10 total for everything, including the judges' hidden-set run
+- **Keys:** put them in `.env` at the repo root (copy `.env.example`). Set `KB_BUDGET_USD`; the code refuses LLM calls once `data/spend.jsonl` reaches it.
+- **Budget plan:** ~$1.5 for one real training ingestion (cached afterwards), ~$2.5 for development query/eval runs, **$5 reserved for the hidden test**, $1 buffer.
+- **Develop on small question subsets** (5–15 questions), never all 100 repeatedly. The evaluation judge spends from the same key.
+- **Tests never spend:** they use `FakeLLM` and never read `.env` (see `tests/conftest.py`).
+
 ## Integration points (agree now, so nothing blocks later)
 - **`/query` response shape:** ARCHITECTURE.md §5.2. M10 produces it and M11 consumes it.
 - **Trace step names (9, fixed order):** `query_planning, routing_guard, candidate_pages, page_survey, element_retrieval, element_triage, element_verification, answer_generation, citation_render`.

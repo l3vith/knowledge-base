@@ -61,7 +61,10 @@ class QueryRuntime:
         predicted = estimate_tokens(system) + estimate_tokens(user)
         if self.calls >= value(self.settings, "max_llm_calls"):
             raise BudgetExceeded("Model call budget exhausted")
-        if self.estimated_input + predicted > value(self.settings, "max_input_tokens"):
+        # Early stages may not starve the later ones: plan/survey/verify each stop at a cumulative share of the budget.
+        # ponytail: fixed shares; make them per-intent settings if dev evaluation shows a better split.
+        share = {"plan": 0.25, "survey": 0.5, "verify": 0.85}.get(name, 1.0)
+        if self.estimated_input + predicted > share * value(self.settings, "max_input_tokens"):
             raise BudgetExceeded("Conservative input budget exhausted")
         final_reserve = 0 if name in ("answer", "answer_verify") else value(self.settings, "answer_output_tokens") + 2000
         if self.reserved_output + max_tokens + final_reserve > value(self.settings, "max_output_tokens"):

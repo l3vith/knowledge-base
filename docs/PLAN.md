@@ -72,11 +72,16 @@
 
 ```python
 # kb/config.py
+# Cost-aware (whole project shares a $10 OpenCode budget, including the judges' hidden-set run):
 DEFAULT_BUDGETS = {
-  "factoid":    {"survey_pages_per_doc": 300,  "survey_cards_total": 600,  "verify_pages": 15,  "verify_chars": 60000,  "max_evidence": 40},
-  "analytical": {"survey_pages_per_doc": 1000, "survey_cards_total": 2000, "verify_pages": 80,  "verify_chars": 240000, "max_evidence": 250},
-  "exhaustive": {"survey_pages_per_doc": 2000, "survey_cards_total": 3000, "verify_pages": 200, "verify_chars": 480000, "max_evidence": 450},
+  "factoid":    {"survey_pages_per_doc": 300,  "survey_cards_total": 400,  "verify_pages": 12,  "verify_chars": 40000,  "max_evidence": 40},
+  "analytical": {"survey_pages_per_doc": 600,  "survey_cards_total": 1000, "verify_pages": 50,  "verify_chars": 120000, "max_evidence": 200},
+  "exhaustive": {"survey_pages_per_doc": 1500, "survey_cards_total": 1800, "verify_pages": 120, "verify_chars": 240000, "max_evidence": 400},
 }
+# Implemented extras (M0, lead): .env at the repo root is loaded by get_settings() (never overrides real env vars);
+# KB_BUDGET_USD hard spend cap — OpenCodeLLM refuses calls once data/spend.jsonl totals reach it (raises LLMError,
+# so every stage degrades gracefully); KB_PARSE_LAYOUT (default off: classic markdown, ~3.8x faster);
+# KB_CACHE / KB_CACHE_DIR content-hash ingestion cache; page_card_pages_per_call=8, page_card_chars_per_page=1800.
 @dataclass(frozen=True)
 class Settings:
     opencode_api_key: str = ""                 # env OPENCODE_API_KEY

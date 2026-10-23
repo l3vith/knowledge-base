@@ -1,4 +1,5 @@
 """M4: document cards, page cards, identifiers and sibling groups."""
+import math
 import re
 import string
 from collections import Counter
@@ -147,8 +148,44 @@ def build_doc_card(llm: LLM, doc: ParsedDoc, settings: Settings) -> DocCard:
                        jurisdiction="", topics=[], summary=opening.strip()[:600])
 
 
+_FIGURE_LINE = re.compile(r"[A-Za-z].*\d|\d.*[A-Za-z]")
+_ENTITY = re.compile(r"\b(?:[A-Z][a-zA-Z&.]+(?:\s+(?:of|and|for|&)?\s*[A-Z][a-zA-Z&.]+){1,4})\b")
+_WORD = re.compile(r"[A-Za-z][A-Za-z-]{2,}")
+
+
+def extractive_page_cards(doc: ParsedDoc, sections: dict[int, str]) -> list[PageCard]:
+    """Zero-cost page cards from the page text: lead sentences, tf-idf topics, capitalised entities, figure lines."""
+    page_words = [[w.lower() for w in _WORD.findall(p.markdown)] for p in doc.pages]
+    df = Counter(w for words in page_words for w in set(words))
+    n = max(1, len(doc.pages))
+    out = []
+    for p, words in zip(doc.pages, page_words):
+        text = p.markdown.strip()
+        if len(text) < 30:
+            out.append(PageCard(doc.doc_id, p.page_no, sections.get(p.page_no, ""), BLANK_PAGE_SUMMARY, [], [], []))
+            continue
+        prose = " ".join(ln.strip(" #*_") for ln in text.splitlines()
+                         if ln.strip() and not ln.lstrip().startswith("|") and len(ln.split()) >= 4)
+        summary = " ".join((prose or " ".join(text.split())).split()[:45])
+        tf = Counter(words)
+        topics = [w for w, _ in sorted(tf.items(), key=lambda kv: -kv[1] * math.log(n / df[kv[0]] + 1))[:6]]
+        entities = [e for e, _ in Counter(_ENTITY.findall(text)).most_common(5)]
+        figures = []
+        for ln in text.splitlines():
+            ln = " ".join(ln.replace("|", " ").split())
+            if 6 <= len(ln) <= 110 and _FIGURE_LINE.search(ln) and ln not in figures:
+                figures.append(ln)
+            if len(figures) == 6:
+                break
+        out.append(PageCard(doc.doc_id, p.page_no, sections.get(p.page_no, ""), summary, topics, entities, figures))
+    return out
+
+
 def build_page_cards(llm: LLM, doc: ParsedDoc, card: DocCard, sections: dict[int, str],
                      settings: Settings) -> list[PageCard]:
+    if settings.page_cards_mode == "extractive":
+        return extractive_page_cards(doc, sections)
+
     def fallback(p) -> PageCard:
         return PageCard(doc.doc_id, p.page_no, sections.get(p.page_no, ""), p.markdown.strip()[:300], [], [], [])
 

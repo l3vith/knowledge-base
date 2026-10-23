@@ -48,6 +48,8 @@ def get_embedder(settings) -> Embedder:
 
 
 def get_reranker(settings) -> Reranker | None:
+    if not getattr(settings, "use_reranker", True):
+        return None  # KB_RERANKER=0: saves ~100 MB RAM on small hosts; triage then sends everything to the LLM band
     key = ("rerank", settings.rerank_model)
     with _cache_lock:
         if key not in _cache:

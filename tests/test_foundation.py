@@ -77,6 +77,59 @@ def test_empty_content_retries_then_raises(monkeypatch, settings):
     assert len(calls) == settings.llm_max_retries == 3
 
 
+def test_spend_cap_blocks_calls_and_ledger_records(monkeypatch, tmp_path):
+    calls = _patch_post(monkeypatch, ['{"a": 1}'])
+    s = get_settings(data_dir=tmp_path, budget_usd=2.0, llm_cache=False)
+    llm = OpenCodeLLM(s)
+    llm.complete_json("s", "u", name="plan")          # costs 1.50 (1M in + 1M out)
+    ledger = (tmp_path / "spend.jsonl").read_text().splitlines()
+    assert len(ledger) == 1 and '"cost_usd": 1.5' in ledger[0]
+    llm.complete_json("s", "u", name="plan")          # 1.50 < 2.0 -> allowed, total 3.0
+    with pytest.raises(LLMError, match="spend cap"):
+        llm.complete_json("s", "u", name="plan")      # 3.0 >= 2.0 -> blocked before any HTTP call
+    assert len(calls) == 2
+
+
+def test_response_cache_never_pays_twice(monkeypatch, tmp_path):
+    calls = _patch_post(monkeypatch, ['{"a": 1}'])
+    s = get_settings(data_dir=tmp_path)
+    assert OpenCodeLLM(s).complete_json("s", "u", name="plan") == {"a": 1}
+    llm = OpenCodeLLM(s)                       # new instance, same disk cache
+    assert llm.complete_json("s", "u", name="plan") == {"a": 1}
+    assert len(calls) == 1 and llm.usage.cache_hits == 1 and llm.usage.calls == 0
+    llm.complete_json("s", "different prompt", name="plan")
+    assert len(calls) == 2
+
+
+def test_dryrun_llm_formats_and_estimates(tmp_path):
+    from kb.llm import DryRunLLM, get_llm
+
+    s = get_settings(data_dir=tmp_path, llm_mode="dryrun")
+    llm = get_llm(s)
+    assert isinstance(llm, DryRunLLM)
+    plan = llm.complete_json("sys", "Rules...\nCatalogue:\n{}\n\nQuestion: What is the capital ratio of Alpha Bank?", name="plan")
+    assert plan["aspects"][0]["keywords"][:2] == ["what", "is"] and plan["documents"] == []
+    user = ("Question: capital ratio Alpha Bank\n\nAspects:\na1: x\n\nElements:\n"
+            "[E1] f.pdf p.3 (text)\nAlpha Bank capital ratio was 14.2%.\n[E2] f.pdf p.4 (text)\nWeather report.")
+    assert llm.complete_json("s", user, name="verify") == {"keep": [{"id": "E1", "aspects": ["a1"], "note": "dryrun lexical overlap"}]}
+    with pytest.raises(LLMError):
+        llm.complete_json("s", "x", name="doc_card")
+    assert llm.usage.calls == 3 and llm.usage.input_tokens > 0 and llm.usage.cost_usd > 0
+
+
+def test_load_dotenv_does_not_override(monkeypatch, tmp_path):
+    from kb.config import load_dotenv
+
+    env = tmp_path / ".env"
+    env.write_text('# comment\nKB_TEST_A="from_file"\nKB_TEST_B=from_file\n', encoding="utf-8")
+    monkeypatch.setenv("KB_TEST_B", "already_set")
+    monkeypatch.delenv("KB_TEST_A", raising=False)
+    load_dotenv(env)
+    import os
+    assert os.environ["KB_TEST_A"] == "from_file" and os.environ["KB_TEST_B"] == "already_set"
+    monkeypatch.delenv("KB_TEST_A")
+
+
 def test_parallel_map_order_and_errors():
     out = parallel_map(lambda x: 1 / x, [1, 0, 2], max_workers=3)
     assert out[0] == 1 and isinstance(out[1], ZeroDivisionError) and out[2] == 0.5
@@ -147,3 +200,33 @@ def test_api_exact_routes_and_error_shape():
     assert {(r.path, method) for r in app.routes for method in r.methods} == {("/index", "POST"), ("/query", "POST")}
     body = CollectionNotFound("x").to_body("req_1")
     assert body["error"]["code"] == "COLLECTION_NOT_FOUND" and isinstance(KBError("A", "b", 400), Exception)
+
+
+def test_budget_without_prices_blocks_calls(monkeypatch, tmp_path):
+    calls = _patch_post(monkeypatch, ['{"a": 1}'])
+    s = get_settings(data_dir=tmp_path, budget_usd=1.0, price_input_per_m=None, llm_cache=False)
+    with pytest.raises(LLMError, match="cap cannot be enforced"):
+        OpenCodeLLM(s).complete_json("s", "u", name="plan")
+    assert calls == []
+
+
+def test_dryrun_answers_query_track_json_payloads(tmp_path):
+    import json
+
+    from kb.llm import get_llm
+
+    llm = get_llm(get_settings(data_dir=tmp_path, llm_mode="dryrun"))
+    q, aspects = "Alpha Bank capital ratio", "a1: capital ratio | entity=None period=None scope=None"
+    survey = llm.complete_json("s", json.dumps({"query": q, "aspects": aspects, "cards": [
+        {"page_no": 3, "summary": "Alpha Bank capital ratio was 14.2%", "topics": []},
+        {"page_no": 4, "summary": "Weather", "topics": []}]}), name="survey")
+    assert survey == {"pages": [{"page_no": 3, "aspects": ["a1"], "strength": "medium"}]}
+    text = "Alpha Bank capital ratio was 14.2% in FY2025."
+    keep = llm.complete_json("s", json.dumps({"query": q, "aspects": aspects, "elements": [{"id": "E1", "text": text}]}),
+                             name="verify")["keep"]
+    assert keep[0]["id"] == "E1" and keep[0]["quotes"][0] in text
+    ans = llm.complete_json("s", json.dumps({"query": q, "obligations": [{"id": "a1"}],
+                                             "evidence": [{"id": "E1", "content": text}]}), name="answer")
+    assert ans["status"] == "answered" and ans["claims"][0]["quotes"][0]["quote"] in text
+    check = llm.complete_json("s", json.dumps({"claims": [{"claim_id": "c1"}]}), name="answer_verify")
+    assert check["verdicts"][0]["verdict"] == "supported"

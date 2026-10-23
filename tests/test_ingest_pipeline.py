@@ -36,7 +36,7 @@ def _pdf_bytes(tmp_path, pages, name="a.pdf"):
 
 @pytest.fixture
 def s1(settings):
-    return replace(settings, parse_workers=1)
+    return replace(settings, parse_workers=1, page_cards_mode="llm")
 
 
 def test_safe_extract_rejects_traversal(tmp_path, s1):
@@ -100,11 +100,55 @@ def test_failed_reindex_keeps_old_generation(tmp_path, s1):
         def embed(self, texts):
             raise RuntimeError("embedder down")
 
-    with pytest.raises(RuntimeError):
-        index_collection(z, "c1", settings=s1, llm=FakeLLM(card_responder), embedder=Boom(), use_ocr=False)
+    with pytest.raises(RuntimeError):  # cache off, otherwise cached vectors would skip the embedder entirely
+        index_collection(z, "c1", settings=replace(s1, use_cache=False), llm=FakeLLM(card_responder),
+                         embedder=Boom(), use_ocr=False)
     gen_id, gen_dir = Registry(s1).active_dir("c1")
     assert gen_id == first["generation_id"]
     assert [d.name for d in (gen_dir.parent).iterdir()] == [gen_id]  # failed staging was discarded
+
+
+def test_reindex_hits_cache_and_skips_parse_llm_embed(tmp_path, s1, monkeypatch):
+    import kb.ingest.pipeline as pl
+
+    z = _zip(tmp_path, {"a.pdf": _pdf_bytes(tmp_path, ["Alpha bank capital ratio was 14.2 percent in FY2025.",
+                                                       "Liquidity coverage ratio stayed above the minimum."])})
+    first = index_collection(z, "c1", settings=s1, llm=FakeLLM(card_responder), embedder=HashEmbedder(), use_ocr=False)
+    assert first["cache_hits"] == {"parse": 0, "cards": 0, "embeddings": 0}
+
+    def no_parse(*a, **k):
+        raise AssertionError("parse_pages must not run on a cache hit")
+
+    class NoEmbed:
+        def embed(self, texts):
+            raise AssertionError("embedder must not run on a cache hit")
+
+    monkeypatch.setattr(pl, "parse_pages", no_parse)
+    llm = FakeLLM(card_responder)
+    second = index_collection(z, "c2", settings=s1, llm=llm, embedder=NoEmbed(), use_ocr=False)
+    assert second["cache_hits"] == {"parse": 1, "cards": 1, "embeddings": 1}
+    assert llm.calls == [] and second["elements"] == first["elements"]
+    store = Store.open(Registry(s1).active_dir("c2")[1])
+    try:
+        assert store.search_pages(["liquidity"], None, 1)[0][1] == 2
+        assert store.docs()[0].period_year == 2025
+    finally:
+        store.close()
+
+
+def test_failed_llm_cards_are_not_cached(tmp_path, s1):
+    from kb.llm import LLMError
+
+    z = _zip(tmp_path, {"a.pdf": _pdf_bytes(tmp_path, ["Alpha bank capital ratio was 14.2 percent in FY2025."])})
+
+    def failing(name, system, user):
+        raise LLMError("no key")
+
+    index_collection(z, "c1", settings=s1, llm=FakeLLM(failing), embedder=HashEmbedder(), use_ocr=False)
+    llm = FakeLLM(card_responder)
+    out = index_collection(z, "c2", settings=s1, llm=llm, embedder=HashEmbedder(), use_ocr=False)
+    assert out["cache_hits"]["parse"] == 1 and out["cache_hits"]["cards"] == 0 and out["cache_hits"]["embeddings"] == 0
+    assert any(c[0] == "doc_card" for c in llm.calls)  # cards rebuilt with the working LLM
 
 
 def test_bad_name(tmp_path, s1):

@@ -44,12 +44,16 @@ def _clean(md: str) -> str:
 
 
 def _markdown(doc, idx: list[int], settings: Settings, name: str, drop_margins: bool) -> dict[int, str]:
-    """{1-based page: markdown} for 0-based page indexes idx; plain text if the layout parser raises."""
+    """{1-based page: markdown} for 0-based page indexes idx; plain text if the markdown parser raises."""
     try:
+        # Classic markdown by default: the layout AI renders + runs ONNX per page and measured ~3.8x slower
+        # under 6 workers (65 vs 162-182 ms/page). header/footer/use_ocr kwargs are ignored by the classic path.
+        pymupdf4llm.use_layout(settings.parse_layout)
         chunks = pymupdf4llm.to_markdown(
             doc, pages=idx, page_chunks=True, show_progress=False, write_images=False, embed_images=False,
             use_ocr=False, ocr_dpi=settings.ocr_dpi, header=not drop_margins, footer=not drop_margins)
-        return {int(c["metadata"]["page_number"]): c.get("text") or "" for c in chunks}
+        # layout mode names the 1-based page "page_number"; classic mode names it "page" (also 1-based, verified)
+        return {int(c["metadata"].get("page_number") or c["metadata"]["page"]): c.get("text") or "" for c in chunks}
     except Exception as e:
         log.warning("to_markdown failed for %s (%d pages from p%d): %s; using plain text", name, len(idx), idx[0] + 1, e)
         return {i + 1: doc[i].get_text("text") for i in idx}
