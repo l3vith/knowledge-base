@@ -1,0 +1,10 @@
+.venv/
+data/
+runs/
+__pycache__/
+*.pyc
+.env
+.pytest_cache/
+*.zip
+Train/
+Problem Statement 1/
