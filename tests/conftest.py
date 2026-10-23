@@ -14,4 +14,4 @@ from kb.config import get_settings  # noqa: E402
 
 @pytest.fixture
 def settings(tmp_path):
-    return get_settings(data_dir=tmp_path / "data", opencode_api_key="test", llm_concurrency=4, llm_model="deepseek-v4.1-flash", price_input_per_m=0.30, price_output_per_m=1.20)
+    return get_settings(data_dir=tmp_path / "data", opencode_api_key="test", llm_concurrency=4, llm_model="qwen3.8-flash", price_input_per_m=0.15, price_output_per_m=0.47)

@@ -47,11 +47,13 @@ Set `KB_METADATA_NAVIGATION=0` to disable query navigation, metadata boosts and 
 
 ## Validation and measured limits
 
-The non-slow suite passes 160 tests, with seven slow model tests deselected. Coverage includes hierarchy, Arabic/Roman contents/index resolution, bad offsets, actual PDF labels/links, explicit late-page selection, low-confidence hints, source dependencies, legacy cards and atomic source/vector-preserving enrichment.
+The non-slow suite passes 164 tests, with seven slow model tests deselected. Coverage includes hierarchy, Arabic/Roman contents/index resolution, bad offsets, actual PDF labels/links, explicit late-page selection, low-confidence hints, source dependencies, legacy cards and atomic source/vector-preserving enrichment.
 
 A local comparison on the existing 24-page collection reused identical saved public query plans and real cached embedding/reranking models. It made no LLM calls and spent no API credits:
 
 - Factual C31: candidate elements 56 → 42 (25% fewer), retaining the one previously cited source.
-- Analytical C18: candidate elements 89 → 89, retaining all 18 previously cited sources.
+- Analytical C18: candidate elements 86 → 86, retaining all 18 previously cited sources.
+
+After integrating the teammate’s relevance-order and budget changes, both metadata variants use 86 analytical candidates (the earlier comparison used 89).
 
 These are retrieval-work and prior-citation-retention checks, not a new end-to-end latency benchmark, recall over all relevant source passages, or official answer-accuracy result. Timings from one local pass are diagnostic only. Analytical precision/latency and writer-context omissions still require further work. The original official benchmark and evaluator are unchanged. Portable measured counts are in [the diagnostic summary](diagnostics/metadata-navigation/summary.json).

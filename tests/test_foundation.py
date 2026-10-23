@@ -58,8 +58,8 @@ def test_opencode_strips_fences_and_costs(monkeypatch, settings):
     calls = _patch_post(monkeypatch, ['```json\n{"a": 1}\n```'])
     llm = OpenCodeLLM(settings)
     assert llm.complete_json("s", "u", name="plan") == {"a": 1}
-    assert calls[0]["response_format"] == {"type": "json_object"} and calls[0]["temperature"] == 0
-    assert abs(llm.usage.cost_usd - 1.50) < 1e-9
+    assert calls[0]["thinking"] == {"type": "disabled"} and calls[0]["temperature"] == 0
+    assert abs(llm.usage.cost_usd - 0.62) < 1e-9  # 1M in x $0.15 + 1M out x $0.47
 
 
 def test_unknown_price_gives_null_cost(monkeypatch, tmp_path):
@@ -230,3 +230,24 @@ def test_dryrun_answers_query_track_json_payloads(tmp_path):
     assert ans["status"] == "answered" and ans["claims"][0]["quotes"][0]["quote"] in text
     check = llm.complete_json("s", json.dumps({"claims": [{"claim_id": "c1"}]}), name="answer_verify")
     assert check["verdicts"][0]["verdict"] == "supported"
+
+
+def test_only_qwen_without_thinking_is_ever_sent(settings):
+    from kb.model_api import request_spec
+    _, _, payload = request_spec(settings.opencode_base_url, "qwen3.8-flash", "s", "u", 10)
+    assert payload["thinking"] == {"type": "disabled"}
+    with pytest.raises(ValueError, match="refused"):
+        request_spec(settings.opencode_base_url, "deepseek-v4.1-flash", "s", "u", 10)
+    with pytest.raises(ValueError, match="refused"):
+        get_settings(llm_model="qwen3.8-max")
+
+
+def test_cli_login_used_when_no_key(monkeypatch, settings):
+    import json, subprocess
+    from kb import opencode_auth
+    export = [{"integrationID": "opencode", "active": True, "value": {"type": "oauth", "access": "tok",
+               "expires": 4102444800000, "metadata": {"orgID": "org1"}}}]
+    monkeypatch.setattr(opencode_auth, "_cached", None)
+    monkeypatch.setattr(opencode_auth.shutil, "which", lambda n: "opencode")
+    monkeypatch.setattr(opencode_auth.subprocess, "run", lambda *a, **k: subprocess.CompletedProcess(a, 0, json.dumps(export), ""))
+    assert opencode_auth.cli_headers() == {"Authorization": "Bearer tok", "x-org-id": "org1"}

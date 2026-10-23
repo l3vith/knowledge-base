@@ -33,14 +33,16 @@ class QuerySettings:
     max_evidence: int = 450
     query_deadline_s: float = 120
     max_llm_calls: int = 24
-    max_input_tokens: int = 200000
-    max_output_tokens: int = 24000
-    answer_output_tokens: int = 6000
+    # UTF-8 bytes, not tokens (~4 bytes/token): 480 KB is ~120k input tokens, about $0.036 at $0.30/M.
+    # Sized from training: gold answers cite a median of 81 chunks, so the writer must see ~60-90 of ours.
+    max_input_tokens: int = 480000
+    max_output_tokens: int = 32000
+    answer_output_tokens: int = 8000
     artifact_dir: Path = Path("artifacts/runs")
     strict_observability: bool = True
-    raw_token_budget_factoid: int = 4000
-    raw_token_budget_analytical: int = 16000
-    raw_token_budget_exhaustive: int = 48000
+    raw_token_budget_factoid: int = 12000
+    raw_token_budget_analytical: int = 64000
+    raw_token_budget_exhaustive: int = 96000
 
 
 def value(settings, name, default=None):

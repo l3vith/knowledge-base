@@ -11,6 +11,18 @@
 - `/index` is blocking, but indexing runs in a worker thread. If the caller's HTTP client gives up, indexing still finishes and promotes the collection.
 - Server setup: `pip install -r requirements.txt`, `python scripts/prefetch_models.py`, put the keys in `.env`, then the `startCommand` from `render.yaml`. Leave `KB_RERANKER` and `KB_PARSE_WORKERS` at their defaults if the server has ≥ 2 GB RAM.
 
+### Organiser-server checklist (in order)
+1. `git clone` the repo, then `pip install -r requirements.txt` and `python scripts/prefetch_models.py`. The models are downloaded once, so the hidden run doesn't download anything.
+2. Authenticate OpenCode on the server: either run `opencode auth login` there (with `OPENCODE_API_KEY` left empty, the app reads the CLI login in memory via `opencode auth export`), or set `OPENCODE_API_KEY`. Every call is locked to `qwen3.8-flash` with thinking disabled, and any other model name refuses to start. Then create `.env` with `LLM_MODEL=qwen3.8-flash`, the Langfuse keys and `LANGFUSE_BASE_URL`, `PRICE_INPUT_PER_M`/`PRICE_OUTPUT_PER_M`, and `KB_BUDGET_USD` set to the credit left for the hidden run. Keep `KB_REQUIRE_LANGFUSE=1`, since every query must be traced.
+3. Measure ingestion at $0 (the command above) and state the result × 1.5 as the tentative ingestion time.
+4. Start the server reachable from outside: `python scripts/serve.py --host 0.0.0.0 --port 8000` (it loads `.env`). Keep it running with `nohup`/`tmux` or a service.
+5. From another machine, verify the contract (one real query ≈ $0.04):
+   ```bash
+   python scripts/smoke_http.py --url http://SERVER:8000 --zip one_doc.zip --collection smoke --query "Which rating agency rates the company?"
+   ```
+   It checks `/index`, `/query`, chunk document + page, the 4-key trace, the citations and the Langfuse trace id, and that `/health`, `/docs` and `/openapi.json` return 404.
+6. Submit the URL. Don't re-index or restart during judging: the active generation and caches live in `data/`.
+
 **Render, Atlas and Vercel below are only a public demo or backup for `/query`. They are not the judged endpoint.**
 
 ## Measured on the dev PC (16 logical cores), 2026-10-24

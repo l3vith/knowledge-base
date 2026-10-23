@@ -31,7 +31,11 @@ def main() -> None:
 
     settings = get_settings()
     if not settings.opencode_api_key and settings.llm_mode != "dryrun":
-        sys.exit("OPENCODE_API_KEY is not set (use KB_LLM_MODE=dryrun for a $0 timing run)")
+        from kb.opencode_auth import CLIAuthError, cli_headers
+        try:
+            cli_headers()  # no key: use the logged-in opencode CLI
+        except CLIAuthError as exc:
+            sys.exit(f"{exc} (or set OPENCODE_API_KEY; KB_LLM_MODE=dryrun runs at $0)")
     src = Path(args.src)
     with tempfile.TemporaryDirectory() as tmp:
         if src.is_dir():

@@ -48,3 +48,20 @@ The evaluation command reads credentials from process environment; it never edit
 The unified plan describes a stricter compiler than the original Track A implementation currently provides. Before claiming full submission readiness, address at least these known gaps: short SHA-1 source identities instead of full SHA-256; generated metadata without field-level source anchors; repeated-header/boilerplate recovery and full source searchability; deletion of extracted source originals after indexing; incomplete OCR being allowed to finish with warnings; mandatory all-page LLM card generation and its ingestion cost; and reader-safe retention beyond the existing limited old-generation cleanup. Metadata routing cannot assume these provenance upgrades already exist.
 
 The existing shared LLM client/ingestion pricing and tracing behavior also need the unified audit's unknown-usage, verified-price and visible-export guarantees. Query processing uses its own stricter client; that does not repair ingestion accounting automatically. Pin exact model artifacts/revisions, measure complete cold ingestion on the actual organizer server, confirm event-window eligibility, run live OpenCode/dev evaluation, freeze once, inspect holdout once, export all required query traces and prepare the max 2–3-page write-up. No hidden data access or training is enabled by this track.
+
+## Integration changes by Person 1 (2026-10-24)
+Measured with `KB_LLM_MODE=dryrun` on 11 training questions; all tests pass.
+- **Relevance order.** `candidate_pages` keeps pools in BM25+dense relevance order (it used to sort them by page number), and `survey_pages` reads the best batch of every document first. Before, the budget ran out on the first pages of the first document.
+- **Budgets** (`kb/query/settings.py`, `runtime.py`):
+  - `max_input_tokens` 200k → 480k bytes, with stage shares plan 0.1 / survey 0.3 / verify 0.72.
+  - Writer context 16 KB → 64 KB (analytical), capped at half of what the budget has left.
+  - `answer_output_tokens` 6000 → 8000.
+  - Result: returned chunks rose from 293 to 1,019 against 897 gold (gold median is 81 chunks per question). Estimated cost ≈ $0.04 per query.
+- **Deadline.** The survey stops at 35 % of the query deadline and verification at 65 %. The answer stages are never cut.
+- **Parallel calls.** `QueryRuntime.call_many` reserves budget in order, then runs the survey and verify batches concurrently, each with its own client. `call()` is now `call_many` with a single payload.
+- **Merged with your span-ID verifier (`bcef5b7`).** The first verification batch runs alone as a canary. Once it passes the schema check, the rest go out as one concurrent round. The factual fast path stays sequential. The split retry and stop-after-failure still apply; results already paid for are kept. Earlier stages now leave 2 model calls for the answer and claim check. Your DeepSeek 4,096-token floor, usage reset and raw-response artifacts are kept.
+- **Local `.env`:** with `LLM_MODEL=deepseek-…` the 4,096-token floor limits verification to 5 batches. Use `qwen3.8-flash` as in `.env.example`.
+- **Answer text.** No more "Coverage limitations: …" appendix in the answer (the judge scores every sentence as a claim). They remain in `coverage` and the trace.
+- **No more 504 on budget stops.** Verification that runs out of budget with nothing kept now returns `no_answer` (HTTP 200) with a budget-specific answer text. A planner budget stop falls back to the query itself.
+- **Claim check.** `answer_verify` now gets only the evidence the claims cite.
+- **Cross-encoder speed.** `kb/embed.py` batches pairs of similar length: 23 → 74 pairs/s, identical scores.

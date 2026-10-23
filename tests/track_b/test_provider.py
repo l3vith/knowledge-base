@@ -23,7 +23,7 @@ class Client:
 def test_failed_json_still_accounts_billed_usage(tmp_path,monkeypatch):
     body={"usage":{"prompt_tokens":123,"completion_tokens":17},"choices":[{"message":{"content":"prefix {\"x\":1} suffix"}}]}
     monkeypatch.setattr("kb.query.provider.httpx.Client",lambda **kwargs:Client(body))
-    runtime=QueryRuntime(settings(tmp_path),OpenCodeJSONClient(model="test-model",key="test-key"),LocalSink())
+    runtime=QueryRuntime(settings(tmp_path),OpenCodeJSONClient(model="qwen3.8-flash",key="test-key"),LocalSink())
     with pytest.raises(QueryError,match="invalid JSON"):
         runtime.call("plan","system",{},100)
     assert runtime.usage()["input_tokens"]==123
@@ -42,7 +42,7 @@ def test_raw_failure_diagnostics_and_reservation_release(tmp_path,monkeypatch):
     body={"usage":{"prompt_tokens":31,"completion_tokens":23},
           "choices":[{"finish_reason":"length","message":{"content":None}}]}
     monkeypatch.setattr("kb.query.provider.httpx.Client",lambda **kwargs:Client(body))
-    runtime=QueryRuntime(settings(tmp_path),OpenCodeJSONClient(model="test-model",key="test-key"),LocalSink())
+    runtime=QueryRuntime(settings(tmp_path),OpenCodeJSONClient(model="qwen3.8-flash",key="test-key"),LocalSink())
     with pytest.raises(QueryError):
         runtime.call("verify","system",{},500)
     raw=json.loads((runtime.path/'call_1_raw_response.json').read_text(encoding='utf-8'))
@@ -67,13 +67,13 @@ def test_shared_query_client_preserves_cache_spend_and_one_attempt(tmp_path,monk
         return SharedResponse()
     monkeypatch.setattr('kb.llm.requests.post',post)
     shared=get_settings(data_dir=tmp_path/'data',llm_cache=False,llm_max_retries=3,
-                        llm_model="deepseek-v4.1-flash",opencode_api_key='fake',price_input_per_m=0.3,price_output_per_m=1.2)
+                        llm_model="qwen3.8-flash",opencode_api_key='fake',price_input_per_m=0.15,price_output_per_m=0.47)
     client=SharedQueryClient(OpenCodeLLM(shared)).scoped()
     runtime=QueryRuntime(settings(tmp_path),client,LocalSink())
     with pytest.raises(QueryError,match='invalid or truncated'):
         runtime.call('verify','system',{},500)
     assert len(calls)==1
-    assert calls[0]['json']['reasoning_effort']=='low'
+    assert calls[0]['json']['thinking']=={'type':'disabled'} and calls[0]['json']['model']=='qwen3.8-flash'
     assert runtime.usage()['input_tokens']==31
     assert spent_usd(shared)>0
     assert runtime.events[0]['response_artifact']=='call_1_raw_response'
@@ -137,7 +137,7 @@ def test_shared_qwen_wire_format_and_zero_cost_cache(tmp_path,monkeypatch):
 def test_final_check_is_reserved_during_drafting(tmp_path):
     from .helpers import FakeLLM
     from kb.query.errors import BudgetExceeded
-    runtime=QueryRuntime(settings(tmp_path),FakeLLM(),LocalSink())
+    runtime=QueryRuntime(settings(tmp_path,max_output_tokens=24000),FakeLLM(),LocalSink())
     runtime.reserved_output=18001
     with pytest.raises(BudgetExceeded,match='Output reservation'):
         runtime.call('answer','system',{},4000)
@@ -150,7 +150,7 @@ def test_reasoning_floor_included_in_all_future_reserves(tmp_path):
     from .helpers import FakeLLM
     from kb.query.errors import BudgetExceeded
     llm=FakeLLM()
-    runtime=QueryRuntime(settings(tmp_path),llm,LocalSink())
+    runtime=QueryRuntime(settings(tmp_path,max_output_tokens=24000),llm,LocalSink())
     runtime.llm.model='deepseek-v4.1-flash'
     runtime.reserved_output=10000
     with pytest.raises(BudgetExceeded,match='Output reservation'):

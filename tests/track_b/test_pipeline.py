@@ -73,7 +73,10 @@ def test_deadline_checked_before_model_call(tmp_path):
 
 
 def test_budget_does_not_silently_become_corpus_absence(tmp_path):
-    with pytest.raises(BudgetExceeded): run(tmp_path,max_llm_calls=1)
+    from kb.query.pipeline import BUDGET_TEXT
+    result=run(tmp_path,max_llm_calls=1)  # a normal response (HTTP 200), not a 504 that scores zero
+    assert result["status"]=="no_answer" and result["answer"]==BUDGET_TEXT
+    assert "No evidence verified before the verification budget was exhausted" in result["coverage"]["limitations"]
 
 
 def test_same_source_in_two_collections_keeps_generation(tmp_path):
@@ -82,3 +85,30 @@ def test_same_source_in_two_collections_keeps_generation(tmp_path):
     b=answer_query("two","capital",store=store,generation_id="generation_two",settings=settings(tmp_path),llm=FakeLLM(),sink=LocalSink())
     assert a["generation_id"]=="generation_one" and b["generation_id"]=="generation_two"
     assert a["request_id"]!=b["request_id"]
+
+
+def test_survey_reads_most_relevant_pages_first(tmp_path):
+    # 30 filler pages, the only relevant one last: page order would survey it last and lose it to the budget.
+    from kb.query.candidates import candidate_pages
+    from kb.query.screen import survey_pages
+    from kb.query.types import QueryPlan,Aspect
+    store=MemoryStore({"a":["Unrelated filler text."]*29+["Capital ratio was 14 percent."]})
+    plan=QueryPlan("analytical",[Aspect("a1","capital ratio",["capital","ratio"])],["a"])
+    pool,lexical,_=candidate_pages(store,plan,"capital ratio",None,settings(tmp_path))
+    assert pool["a"][0]==30
+    seen=[]
+    def responder(name,p):
+        seen.extend(c["page_no"] for c in p["cards"]);return {"pages":[]}
+    survey_pages(FakeLLM(responder),store,plan,"capital ratio",pool,{},settings(tmp_path,survey_batch_cards=5))
+    assert seen[0]==30
+
+
+def test_call_many_runs_concurrently_and_keeps_budget_order(tmp_path):
+    import time
+    def slow(name,p):
+        time.sleep(0.3);return {"ok":p["i"]}
+    runtime=QueryRuntime(settings(tmp_path,max_llm_calls=5),FakeLLM(slow),LocalSink())  # 2 kept back for answer + check
+    t=time.monotonic();out=runtime.call_many("verify","system",[{"i":i} for i in range(4)],100)
+    assert time.monotonic()-t<0.8  # three 0.3 s calls at once, not 0.9 s in a row
+    assert out[:3]==[{"ok":0},{"ok":1},{"ok":2}] and isinstance(out[3],BudgetExceeded)
+    assert [e["call"] for e in runtime.events]==[1,2,3] and runtime.calls==3
