@@ -1,5 +1,7 @@
 # Major issues: Smart Knowledge Base repair handoff
 
+**Fresh full-pipeline ledger warning:** analytical precision/recall 56.25% / 15.22% at 102.51s. This supersedes the earlier frozen-evidence improvement as evidence for rollout. Seven exact-value rejections caused by Markdown punctuation reformatting dropped key findings. Ledger remains off by default. [Latest full report](docs/diagnostics/ledger-full/REPORT.md).
+
 **Latest default-mode coverage-repair result:** factual answer precision/recall 100% / 66.67% at 19.06s; analytical 20% / 34.04% at 66.48s, partial. See [the latest measured report](docs/diagnostics/coverage-repair/REPORT.md). Broad metadata narrowing, missing topic checks and decimal display artifacts were addressed, but analytical omissions and over-inclusion remain unresolved. The first repair over-selected and took 139.11s; the bounded follow-up is the current implementation. Judge inconsistencies are flagged separately; official scores are unchanged. Do not claim all quality issues solved or submission readiness.
 
 **Historical extractive-repair status (superseded by the update below):** factual scores are now 100% on this one case; analytical output now contains 18 verified claims, but its precision is only 25.93%. Sections describing zero claims/66.7% factual scores are historical baseline evidence. Read the final “Latest live repair result” section and its report first; analytical over-inclusion, latency and deployment/accounting gaps remain open.

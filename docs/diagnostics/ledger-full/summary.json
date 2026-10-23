@@ -1,0 +1,545 @@
+{
+  "git_commit": "4914234458c41f2f15c1352c27dc977e672a27b4",
+  "scope": "single-document development smoke, two public questions; not held-out accuracy",
+  "model": "qwen3.8-flash",
+  "thinking": "disabled",
+  "document": "2012.07440v3.pdf",
+  "question_ids": [
+    "C31",
+    "C18"
+  ],
+  "hard_cost_cap_usd": 0.05,
+  "query_deadline_s": 180,
+  "indexing": {
+    "reused_existing_collection": true,
+    "paid_calls": 0
+  },
+  "generation_id": "gen_20261023203832_bf9db041",
+  "total_cost_usd": 0.01536447,
+  "cost_upper_bound_usd": 0.01844757,
+  "protected_inputs_unchanged": true,
+  "status": "completed",
+  "run_type": "fresh complete query pipeline on existing index; no saved-plan/evidence replay",
+  "analytical_writer_mode": "ledger",
+  "judge_output_limit": 2000,
+  "results": [
+    {
+      "id": "C31",
+      "query": "How many Monte Carlo paths did the rough Bergomi pricing routine use to generate prices in the Chebyshev-tensor calibration study?",
+      "status": "answered",
+      "answer": "It is a Monte Carlo based pricing routine; 60,000 paths were used to generate the prices in our tests. [2012.07440v3.pdf p15]",
+      "latency_seconds": 18.54410587498569,
+      "returned_chunks": 1,
+      "query_calls": 4,
+      "query_cost_usd": 0.0008669099999999999,
+      "judge_cost_usd": 0.0002316699999999999,
+      "coverage": {
+        "aspects": [
+          {
+            "id": "a1",
+            "text": "Number of Monte Carlo paths used in the rough Bergomi pricing routine for Chebyshev-tensor calibration",
+            "entity": "Rough Bergomi model",
+            "period": null,
+            "evidence_ids": [
+              "E1"
+            ],
+            "claim_ids": [
+              "c1"
+            ],
+            "status": "supported"
+          }
+        ],
+        "obligations": [
+          {
+            "id": "a1",
+            "text": "Number of Monte Carlo paths used in the rough Bergomi pricing routine for Chebyshev-tensor calibration",
+            "entity": "Rough Bergomi model",
+            "period": null,
+            "evidence_ids": [
+              "E1"
+            ],
+            "claim_ids": [
+              "c1"
+            ],
+            "status": "supported"
+          }
+        ],
+        "limitations": [],
+        "counts": {
+          "candidate_pages": 24,
+          "cards_surveyed": 0,
+          "raw_candidate_pages": 5,
+          "elements_retrieved": 42,
+          "raw_fragments_verified": 8
+        },
+        "completeness_proven": false,
+        "requested_topics": []
+      },
+      "judge_audit": {
+        "official_scores_unchanged": true,
+        "flags": [
+          {
+            "kind": "citation_present_but_judge_marks_missing",
+            "benchmark_id": "bp3"
+          }
+        ],
+        "interpretation": "Flags require review; they do not compute corrected scores or prove semantic equivalence."
+      },
+      "official_metrics": {
+        "answer_precision": 1.0,
+        "answer_recall": 0.6666666666666666,
+        "context_precision": 1.0,
+        "context_recall": 1.0
+      },
+      "accepted_claims": 1,
+      "trace_steps": [
+        "query_planning",
+        "routing_guard",
+        "candidate_pages",
+        "page_survey",
+        "element_retrieval",
+        "element_triage",
+        "element_verification",
+        "answer_generation",
+        "answer_verification",
+        "citation_render"
+      ]
+    },
+    {
+      "id": "C18",
+      "query": "Bank supervisors' model-risk expectations stress conceptual soundness, ongoing monitoring, outcomes analysis and care when a model is used outside its original purpose. Apply that lens to a desk that wants to calibrate a rough-volatility model daily by replacing its slow Monte Carlo pricer with a fast polynomial surrogate built offline: what evidence does the research offer on accuracy, speed and build cost, and what controls and limitations would you insist on before production use?",
+      "status": "partial",
+      "answer": "This, however, still represents a reduction in building cost of 75%, 50% and 98%, with respect to [13], [14] and [2], respectively. [2012.07440v3.pdf p21]\n\nOnce these 10,000 values were obtained, it took the Rank Adaptive Algorithm under 5 minutes to obtain a TT-format Chebyshev Tensor — in Matlab. [2012.07440v3.pdf p18]\n\nIt took the Rank Adaptive Algorithm under 8 minutes to obtain a TT-format Chebyshev Tensor — in Matlab. [2012.07440v3.pdf p20]\n\nHowever, outside of it, there is no guarantee. [2012.07440v3.pdf p14]\n\nChebyshev Tensors do not extrapolate. [2012.07440v3.pdf p23]\n\nIn principle, the tensor built should work well for many weeks or monthts in the future. [2012.07440v3.pdf p18]\n\nPerhaps one should consider building a new one once market conditions change substantially. [2012.07440v3.pdf p18]\n\nThe choice of what tensor _X_ to try at each iteration is driven by the loss on the training set; the verification of whether the algorithm has converged is done using both training loss and testing loss. [2012.07440v3.pdf p12]\n\nThe greater the dimension, the less effective it is. [2012.07440v3.pdf p23]\n\nThe maximum dimension tested was 13. [2012.07440v3.pdf p23]\n\nWe do not know what will be the maximum dimension for which the presented technique would work. [2012.07440v3.pdf p23]\n\nWhen it is not, the pricing function is used. [2012.07440v3.pdf p15]\n\nTherefore, one is restricted to either optimisation routines that admit domain constraints — such as the ones considered in this paper — or calibrations that use a combination of Chebyshev Tensors and pricing model. [2012.07440v3.pdf p23]",
+      "latency_seconds": 102.51109858299606,
+      "returned_chunks": 49,
+      "query_calls": 18,
+      "query_cost_usd": 0.01139064,
+      "judge_cost_usd": 0.0028752499999999993,
+      "coverage": {
+        "aspects": [
+          {
+            "id": "a1",
+            "text": "Evidence on accuracy, speed, and build cost of replacing Monte Carlo pricer with polynomial surrogate (Chebyshev Tensors) for Rough Bergomi model calibration.",
+            "entity": "Rough Bergomi Volatility Model",
+            "period": "August 2020",
+            "evidence_ids": [
+              "E1",
+              "E2",
+              "E3",
+              "E5",
+              "E6",
+              "E8",
+              "E10",
+              "E11",
+              "E13",
+              "E15",
+              "E17",
+              "E18",
+              "E19",
+              "E20",
+              "E21",
+              "E22",
+              "E23",
+              "E24",
+              "E25",
+              "E26",
+              "E27",
+              "E28",
+              "E29",
+              "E30",
+              "E31",
+              "E32",
+              "E33",
+              "E34",
+              "E35",
+              "E36",
+              "E37",
+              "E38",
+              "E39",
+              "E40",
+              "E41",
+              "E42",
+              "E43",
+              "E44",
+              "E45",
+              "E46",
+              "E47",
+              "E48",
+              "E49"
+            ],
+            "claim_ids": [
+              "c1",
+              "c2",
+              "c3"
+            ],
+            "status": "supported"
+          },
+          {
+            "id": "a2",
+            "text": "Controls and limitations required before production use, specifically regarding conceptual soundness, ongoing monitoring, outcomes analysis, and usage outside original purpose.",
+            "entity": "Bank Supervisors' Expectations",
+            "period": "Current/General",
+            "evidence_ids": [
+              "E1",
+              "E2",
+              "E4",
+              "E7",
+              "E9",
+              "E12",
+              "E14",
+              "E16"
+            ],
+            "claim_ids": [
+              "c4",
+              "c5",
+              "c6",
+              "c7",
+              "c8",
+              "c9",
+              "c10",
+              "c11",
+              "c12",
+              "c13"
+            ],
+            "status": "supported"
+          }
+        ],
+        "obligations": [
+          {
+            "id": "a1",
+            "text": "Evidence on accuracy, speed, and build cost of replacing Monte Carlo pricer with polynomial surrogate (Chebyshev Tensors) for Rough Bergomi model calibration.",
+            "entity": "Rough Bergomi Volatility Model",
+            "period": "August 2020",
+            "evidence_ids": [
+              "E1",
+              "E2",
+              "E3",
+              "E5",
+              "E6",
+              "E8",
+              "E10",
+              "E11",
+              "E13",
+              "E15",
+              "E17",
+              "E18",
+              "E19",
+              "E20",
+              "E21",
+              "E22",
+              "E23",
+              "E24",
+              "E25",
+              "E26",
+              "E27",
+              "E28",
+              "E29",
+              "E30",
+              "E31",
+              "E32",
+              "E33",
+              "E34",
+              "E35",
+              "E36",
+              "E37",
+              "E38",
+              "E39",
+              "E40",
+              "E41",
+              "E42",
+              "E43",
+              "E44",
+              "E45",
+              "E46",
+              "E47",
+              "E48",
+              "E49"
+            ],
+            "claim_ids": [
+              "c1",
+              "c2",
+              "c3"
+            ],
+            "status": "supported"
+          },
+          {
+            "id": "a2",
+            "text": "Controls and limitations required before production use, specifically regarding conceptual soundness, ongoing monitoring, outcomes analysis, and usage outside original purpose.",
+            "entity": "Bank Supervisors' Expectations",
+            "period": "Current/General",
+            "evidence_ids": [
+              "E1",
+              "E2",
+              "E4",
+              "E7",
+              "E9",
+              "E12",
+              "E14",
+              "E16"
+            ],
+            "claim_ids": [
+              "c4",
+              "c5",
+              "c6",
+              "c7",
+              "c8",
+              "c9",
+              "c10",
+              "c11",
+              "c12",
+              "c13"
+            ],
+            "status": "supported"
+          }
+        ],
+        "limitations": [
+          "7 ledger records rejected for invalid source anchors/schema",
+          "5 synthesized claims rejected for invalid IDs or output budget",
+          "The source ledger provides specific build times and cost reductions but lacks explicit quantitative metrics for 'accuracy' (e.g., error rates) or 'speed' (e.g., runtime per evaluation) of the surrogate itself during daily calibration, only addressing the offline build phase.",
+          "No specific evidence is provided regarding the exact controls required for 'daily' recalibration frequency versus the reported 'weeks or months' validity period.",
+          "Requested topics not fully supported by final claims: conceptual soundness, ongoing monitoring, outcomes analysis, accuracy, speed, controls"
+        ],
+        "counts": {
+          "candidate_pages": 24,
+          "cards_surveyed": 0,
+          "raw_candidate_pages": 13,
+          "elements_retrieved": 107,
+          "raw_fragments_verified": 107
+        },
+        "completeness_proven": false,
+        "requested_topics": [
+          {
+            "id": "R1",
+            "text": "conceptual soundness",
+            "query_start": 49,
+            "query_end": 69,
+            "status": "unresolved",
+            "claim_ids": [
+              "c4",
+              "c5"
+            ]
+          },
+          {
+            "id": "R2",
+            "text": "ongoing monitoring",
+            "query_start": 71,
+            "query_end": 89,
+            "status": "unresolved",
+            "claim_ids": [
+              "c6",
+              "c7"
+            ]
+          },
+          {
+            "id": "R3",
+            "text": "outcomes analysis",
+            "query_start": 91,
+            "query_end": 108,
+            "status": "unresolved",
+            "claim_ids": [
+              "c8"
+            ]
+          },
+          {
+            "id": "R4",
+            "text": "outside its original purpose",
+            "query_start": 139,
+            "query_end": 167,
+            "status": "supported",
+            "claim_ids": [
+              "c4",
+              "c5",
+              "c12",
+              "c13"
+            ]
+          },
+          {
+            "id": "R5",
+            "text": "accuracy",
+            "query_start": 380,
+            "query_end": 388,
+            "status": "unresolved",
+            "claim_ids": []
+          },
+          {
+            "id": "R6",
+            "text": "speed",
+            "query_start": 390,
+            "query_end": 395,
+            "status": "unresolved",
+            "claim_ids": []
+          },
+          {
+            "id": "R7",
+            "text": "build cost",
+            "query_start": 400,
+            "query_end": 410,
+            "status": "supported",
+            "claim_ids": [
+              "c1",
+              "c2",
+              "c3"
+            ]
+          },
+          {
+            "id": "R8",
+            "text": "controls",
+            "query_start": 421,
+            "query_end": 429,
+            "status": "unresolved",
+            "claim_ids": [
+              "c12",
+              "c13"
+            ]
+          },
+          {
+            "id": "R9",
+            "text": "limitations",
+            "query_start": 434,
+            "query_end": 445,
+            "status": "supported",
+            "claim_ids": [
+              "c9",
+              "c10",
+              "c11"
+            ]
+          }
+        ]
+      },
+      "judge_audit": {
+        "official_scores_unchanged": true,
+        "flags": [],
+        "interpretation": "Flags require review; they do not compute corrected scores or prove semantic equivalence."
+      },
+      "official_metrics": {
+        "answer_precision": 0.5625,
+        "answer_recall": 0.15217391304347827,
+        "context_precision": 0.9591836734693877,
+        "context_recall": 0.9591836734693877
+      },
+      "accepted_claims": 13,
+      "trace_steps": [
+        "query_planning",
+        "routing_guard",
+        "candidate_pages",
+        "page_survey",
+        "element_retrieval",
+        "element_triage",
+        "element_verification",
+        "answer_generation",
+        "answer_verification",
+        "citation_render"
+      ],
+      "ledger_validation": {
+        "accepted": 13,
+        "rejections": [
+          {
+            "row": 0,
+            "reason": "non_exact_value"
+          },
+          {
+            "row": 1,
+            "reason": "non_exact_value"
+          },
+          {
+            "row": 2,
+            "reason": "non_exact_value"
+          },
+          {
+            "row": 3,
+            "reason": "non_exact_value"
+          },
+          {
+            "row": 4,
+            "reason": "non_exact_value"
+          },
+          {
+            "row": 5,
+            "reason": "non_exact_value"
+          },
+          {
+            "row": 6,
+            "reason": "non_exact_value"
+          }
+        ],
+        "warnings": [
+          {
+            "record_id": "R8",
+            "field": "experiment",
+            "reason": "unanchored_scope_reset_unknown"
+          },
+          {
+            "record_id": "R9",
+            "field": "experiment",
+            "reason": "unanchored_scope_reset_unknown"
+          },
+          {
+            "record_id": "R10",
+            "field": "experiment",
+            "reason": "unanchored_scope_reset_unknown"
+          },
+          {
+            "record_id": "R10",
+            "field": "method",
+            "reason": "unanchored_scope_reset_unknown"
+          },
+          {
+            "record_id": "R11",
+            "field": "method",
+            "reason": "unanchored_scope_reset_unknown"
+          },
+          {
+            "record_id": "R13",
+            "field": "method",
+            "reason": "unanchored_scope_reset_unknown"
+          },
+          {
+            "record_id": "R14",
+            "field": "method",
+            "reason": "unanchored_scope_reset_unknown"
+          },
+          {
+            "record_id": "R15",
+            "field": "method",
+            "reason": "unanchored_scope_reset_unknown"
+          },
+          {
+            "record_id": "R16",
+            "field": "method",
+            "reason": "unanchored_scope_reset_unknown"
+          },
+          {
+            "record_id": "R17",
+            "field": "method",
+            "reason": "unanchored_scope_reset_unknown"
+          },
+          {
+            "record_id": "R18",
+            "field": "method",
+            "reason": "unanchored_scope_reset_unknown"
+          },
+          {
+            "record_id": "R19",
+            "field": "method",
+            "reason": "unanchored_scope_reset_unknown"
+          },
+          {
+            "record_id": "R20",
+            "field": "method",
+            "reason": "unanchored_scope_reset_unknown"
+          }
+        ]
+      },
+      "ledger_matrix": {
+        "observed_cells": 13,
+        "selected_cells": 13,
+        "selected_records": 13,
+        "omitted_records": 0,
+        "quote_chars": 1301,
+        "missing_cells": [],
+        "warning": "Coverage is relative to extracted records, never gold or exhaustive source recall."
+      }
+    }
+  ],
+  "thinking_blocks": 0
+}

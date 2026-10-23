@@ -33,3 +33,7 @@ The live trial has a $0.03 hard ceiling including judging and uses only Qwen3.8 
 ## Measured result and decision
 
 The guarded saved-evidence trial improved precision/recall from 20.00% / 34.04% to 54.55% / 45.65%. The first unrestricted synthesis trial regressed recall and exposed unsafe merges; it was not promoted. Most guarded claims use short exact-source fallbacks when scope is unknown. See [the full measured report](diagnostics/ledger-trial/REPORT.md). Default remains extractive pending end-to-end and broader validation.
+
+## Fresh full-pipeline follow-up supersedes the isolated improvement
+
+The full run scored 56.25% analytical precision / 15.22% recall at 102.51s. Seven formatted value strings failed exact-source validation, dropping key accuracy and timing findings. This is a recall regression against the default. The default remains extractive; do not promote the ledger based on the earlier frozen-evidence result. [Full report](diagnostics/ledger-full/REPORT.md).
