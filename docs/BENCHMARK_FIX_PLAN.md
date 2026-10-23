@@ -28,7 +28,7 @@ Implemented the compact source-span protocol (source text is sent once), eight-e
 
 Private diagnostics now retain raw answer content, finish reason, requested output limit, elapsed time and known billed usage on JSON failure. Known failed-call usage is charged once and releases unused token reservations. Source fragment offsets remain absolute through nested slicing. Scoped dense search uses finite-checked float64 accumulation instead of the locally warning-prone BLAS operation.
 
-Integrated teammate main through `724c969`, including their ingestion cache, deployment, shared response cache and spend ledger. The query adapter retains these shared features but limits each transport call to one attempt; schema recovery remains in the query ledger. Dry-run verification understands the same compact spans.
+Integrated teammate main through `db0f7d6`, including their ingestion cache, deployment, shared response cache and spend ledger. The query adapter retains these shared features but limits each transport call to one attempt; schema recovery remains in the query ledger. Dry-run verification understands the same compact spans.
 
 ### Provider issue discovered during validation
 
@@ -42,4 +42,4 @@ The full post-fix benchmark remains unverified. Failed transport checks, an inte
 
 Next validation: reuse the indexed collection, run the original factual and analytical requests through the final `low` transport, then compare latency, returned context, answer support and untouched official metrics. The earlier 82.75-second result is a baseline, not evidence of the final system's speed. Do not claim a quality or speed improvement until this run completes.
 
-Offline validation: **129 passed, 7 slow tests deselected**. New regressions cover bounded/reserve retrieval, compact span IDs, one split recovery, partial evidence, factual survey skipping, conflicting values/units/dependencies, nested source identity, strict finite scoped vector search, raw failure diagnostics, billed usage, shared single-attempt calls and compact dry-run support. `git diff --check` passed.
+Offline validation: **130 passed, 7 slow tests deselected**. New regressions cover bounded/reserve retrieval, compact span IDs, one split recovery, partial evidence, factual survey skipping, conflicting values/units/dependencies, nested source identity, strict finite scoped vector search, raw failure diagnostics, billed usage, shared single-attempt calls and compact dry-run support. `git diff --check` passed.

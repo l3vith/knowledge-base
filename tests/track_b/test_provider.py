@@ -45,7 +45,7 @@ def test_raw_failure_diagnostics_and_reservation_release(tmp_path,monkeypatch):
     runtime=QueryRuntime(settings(tmp_path),OpenCodeJSONClient(model="test-model",key="test-key"),LocalSink())
     with pytest.raises(QueryError):
         runtime.call("verify","system",{},500)
-    raw=json.loads((runtime.path/'call_1_raw_response.json').read_text())
+    raw=json.loads((runtime.path/'call_1_raw_response.json').read_text(encoding='utf-8'))
     assert raw=={'content':None,'finish_reason':'length','output_limit':500}
     assert runtime.reserved_output==23
     assert runtime.usage()['output_tokens']==23
