@@ -51,7 +51,7 @@ def test_extract_identifiers():
 
 
 def test_page_cards_batching_blank_and_fallback(settings):
-    settings = replace(settings, page_card_pages_per_call=3)
+    settings = replace(settings, page_card_pages_per_call=3, page_cards_mode="llm")
     texts = [f"Page {i} discusses loan loss provisioning in detail for the year." for i in range(1, 6)]
     texts[1] = "  "
     doc = _doc(texts)
@@ -108,3 +108,27 @@ def test_identifiers_on_real_federal_register_docs():
     assert "FR Doc. 2026–05959" in found["91fr14952.pdf"]
     assert "FR Doc. 2026–05961" in found["91fr14908.pdf"]
     assert "FR Doc. 2026–05961" not in found["91fr14952.pdf"]
+
+
+def test_extractive_page_cards_need_no_llm(settings):
+    from dataclasses import replace as _replace
+
+    from kb.ingest.cards import build_page_cards as _bpc
+    from kb.llm import FakeLLM as _Fake
+    from kb.models import PageText as _PT, ParsedDoc as _PD
+
+    doc = _PD("d1", "f.pdf", 3, [
+        _PT(1, "Gross NPA ratio rose to 3.1% in FY2025 as Alpha Bank Limited recognised stressed loans.", False, []),
+        _PT(2, "", False, []),
+        _PT(3, "| Item | FY26 |\n|---|---|\n| Total borrowings | 4,053.90 |\nLenders recalled all facilities of the company.",
+            False, [])], [], {})
+
+    def boom(n, s, u):
+        raise AssertionError("no LLM in extractive mode")
+
+    llm = _Fake(boom)
+    cards = _bpc(llm, doc, None, {1: "Asset quality"}, _replace(settings, page_cards_mode="extractive"))
+    assert [c.page_no for c in cards] == [1, 2, 3] and llm.calls == []
+    assert cards[0].summary.startswith("Gross NPA ratio rose") and cards[0].section == "Asset quality"
+    assert cards[1].summary == "(blank or image-only page)"
+    assert any("4,053.90" in f for f in cards[2].figures) and "Alpha Bank Limited" in cards[0].entities
