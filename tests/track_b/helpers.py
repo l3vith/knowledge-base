@@ -96,7 +96,7 @@ class FakeLLM:
         if name=="survey":
             return {"pages":[{"page_no":c["page_no"],"aspects":["a1"],"strength":"high"} for c in p["cards"]]}
         if name=="verify":
-            return {"keep":[{"id":e["id"],"aspects":["a1"],"quotes":[e["text"]],"note":"source support"} for e in p["elements"]]}
+            return {"keep":[{"id":e["id"],"aspects":["a1"],"support_span_ids":list(e["source_spans"]),"note":"source support"} for e in p["elements"]]}
         if name=="answer":
             return {"status":"answered","claims":[{"id":f"c{i+1}","text":e["content"],"evidence_ids":[e["id"]],
                        "aspect_ids":e["obligation_ids"],"quotes":[{"evidence_id":e["id"],"quote":e["content"]}]} for i,e in enumerate(p["evidence"])]}

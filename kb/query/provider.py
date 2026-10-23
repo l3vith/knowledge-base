@@ -16,6 +16,7 @@ class OpenCodeJSONClient:
         self.key = key or os.getenv("OPENCODE_API_KEY", "")
         self.timeout = timeout
         self.last_usage = None
+        self.last_response = None
         self.deadline = None
         if not self.key or not self.model:
             raise QueryError("PROVIDER_UNAVAILABLE", "Configure OPENCODE_API_KEY and OPENCODE_MODEL", 503)
@@ -28,6 +29,7 @@ class OpenCodeJSONClient:
 
     def complete_json(self, system, user, *, name, max_tokens=4000):
         self.last_usage = None
+        self.last_response = None
         payload = {"model": self.model, "messages": [{"role":"system","content":system},{"role":"user","content":user}],
                    "temperature":0, "max_tokens":max_tokens, "response_format":{"type":"json_object"}}
         # One transport attempt per call; retries must go through the request ledger.
@@ -54,6 +56,9 @@ class OpenCodeJSONClient:
         if not isinstance(usage,dict):
             usage={}
         self.last_usage = {"input_tokens":usage.get("prompt_tokens"),"output_tokens":usage.get("completion_tokens"),"cost_usd":None}
+        choice=(body.get("choices") or [{}])[0]
+        self.last_response={"content":choice.get("message",{}).get("content"),
+                            "finish_reason":choice.get("finish_reason"),"output_limit":max_tokens}
         try:
             content = body["choices"][0]["message"]["content"].strip()
             if content.startswith("```json\n") and content.endswith("\n```"):

@@ -50,6 +50,7 @@ class Evidence:
     ce_score: float | None = None
     quotes: list[str] = field(default_factory=list)
     dependencies: list[str] = field(default_factory=list)
+    fact_value: str | None = None
 
 
 @dataclass(frozen=True)

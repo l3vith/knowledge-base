@@ -36,7 +36,7 @@ def test_long_tail_never_marked_verified_without_visibility(tmp_path):
     candidate=Candidate(store.elements[0],["a1"],["hybrid"])
     p=QueryPlan("analytical",[Aspect("a1","capital",["capital"])],["a"])
     llm=FakeLLM();evidence,report=verify_elements(llm,store,p,"capital",[candidate],settings(tmp_path,verify_chars_per_call=100,verify_chars_total=180))
-    visible=[e["text"] for name,payload in llm.calls if name=="verify" for e in payload["elements"]]
+    visible=["".join(e["source_spans"].values()) for name,payload in llm.calls if name=="verify" for e in payload["elements"]]
     assert all(ev.element.text in visible for ev in evidence)
     assert all("TAIL UNIQUE" not in ev.element.text for ev in evidence)
     assert report["omitted_fragments"]>0

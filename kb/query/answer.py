@@ -6,7 +6,7 @@ from .errors import BudgetExceeded, QueryError
 from .plan import _call,field
 from .settings import value, budget
 from .types import Claim, AnswerDraft
-from .utils import get, estimate_tokens, compact, quote_valid
+from .utils import get, estimate_tokens, compact, quote_valid, narrow_factoid
 
 ABSTAIN_TEXT = "No supporting information was found within the searched collection scope."
 ANSWER_SYSTEM = """Answer the query only from supplied exact source evidence, never outside knowledge.
@@ -27,7 +27,26 @@ A shared topic or a quoted number alone is insufficient support for a more speci
 def select_portfolio(evidence,plan,settings):
     cap=value(settings,"raw_token_budget_"+plan.intent)
     maxcount=budget(settings,plan.intent,"max_evidence")
-    remaining=list(evidence);selected=[];coverage={a.aspect_id:0 for a in plan.aspects};used=0
+    # Deduplicate only exact source-backed values within one qualified obligation/document.
+    # No cross-document/period collapse, no collapsing conflicting values or dependencies.
+    redundant=0
+    pool=list(evidence)
+    if narrow_factoid(plan,plan.aspects[0].text):
+        unique={};unkeyed=[]
+        for ev in pool:
+            if not ev.fact_value or ev.dependencies:
+                unkeyed.append(ev);continue
+            key=(get(ev.element,"doc_id"),tuple(sorted(ev.aspect_ids)),
+                 re.sub(r"[\s,_]","",ev.fact_value).casefold())
+            old=unique.get(key)
+            if old is None:
+                unique[key]=ev
+            else:
+                redundant+=1
+                if len(get(ev.element,"text"))<len(get(old.element,"text")):
+                    unique[key]=ev
+        pool=unkeyed+list(unique.values())
+    remaining=pool;selected=[];coverage={a.aspect_id:0 for a in plan.aspects};used=0
     while remaining and len(selected)<maxcount:
         eligible=[e for e in remaining if used+estimate_tokens(get(e.element,"text"))+estimate_tokens(get(e.element,"section",""))+256<=cap]
         if not eligible:
@@ -41,7 +60,7 @@ def select_portfolio(evidence,plan,settings):
         used+=estimate_tokens(get(chosen.element,"text"))+estimate_tokens(get(chosen.element,"section",""))+256
         for a in chosen.aspect_ids:
             coverage[a]=coverage.get(a,0)+1
-    return selected,{"selected":len(selected),"omitted":len(remaining),"input_budget_units":used,
+    return selected,{"selected":len(selected),"omitted":len(remaining),"redundant_removed":redundant,"input_budget_units":used,
                      "obligation_evidence_counts":coverage,"token_budget_method":"conservative_utf8_bytes"}
 
 

@@ -55,7 +55,15 @@ class _Vectors:
             return []
         rows = np.concatenate(groups)
         q = np.atleast_2d(np.asarray(query_vecs, dtype=np.float32))
-        scores = (self.vecs[rows] @ q.T).max(axis=1)
+        if q.ndim != 2 or self.vecs.ndim != 2 or q.shape[1] != self.vecs.shape[1] or not len(q):
+            raise ValueError("query vector dimensions do not match the index")
+        vectors=self.vecs[rows]
+        if not np.isfinite(q).all() or not np.isfinite(vectors).all():
+            raise ValueError("dense search requires finite vectors")
+        # Avoid the observed macOS BLAS floating-point flag failures on finite inputs.
+        scores = np.einsum("ij,kj->ik",vectors,q,dtype=np.float64,optimize=False).max(axis=1)
+        if not np.isfinite(scores).all():
+            raise ValueError("dense search produced non-finite scores")
         top = np.argsort(-scores, kind="stable")[:limit]
         return [(self.keys[rows[i]], float(scores[i])) for i in top]
 

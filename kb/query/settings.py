@@ -17,6 +17,9 @@ class QuerySettings:
     element_hits_per_aspect: int = 40
     escape_pages: int = 20
     max_ce_pairs: int = 400
+    verify_batch_elements: int = 8
+    factoid_initial_elements: int = 8
+    factoid_reserve_elements: int = 8
     verify_chars_per_call: int = 12000
     verify_chars_total: int = 192000
     max_evidence: int = 450

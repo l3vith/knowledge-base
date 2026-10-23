@@ -50,14 +50,15 @@ def id_for(*parts):
 def fragment(element, start, end):
     from .types import SourceFragment
     text = get(element, "text", "")
-    parent = get(element, "element_id")
+    parent = get(element, "parent_element_id") or get(element, "element_id")
+    base = get(element, "char_start", 0)
     if start == 0 and end == len(text):
         return element
     return SourceFragment(parent + ":span:" + id_for(start, end, text[start:end]),
                           get(element, "doc_id"), int(get(element, "page_no", get(element, "physical_page", 1))),
                           int(get(element, "idx", 0)), get(element, "kind", "text"),
                           get(element, "section", ""), text[start:end], get(element, "flags", []),
-                          parent, start, end)
+                          parent, base + start, base + end)
 
 
 def source_fragments(element, max_bytes):
@@ -87,3 +88,26 @@ def rrf(*rankings, k=60):
                 scores[key] = scores.get(key, 0.0) + 1.0/(k+rank)
                 seen.add(key)
     return sorted(scores, key=lambda key: (-scores[key], str(key)))
+
+
+def support_spans(text, max_chars=700):
+    """Deterministic contiguous source spans, including whitespace; no model offsets."""
+    spans = {}
+    start = 0
+    while start < len(text):
+        end = min(len(text), start + max_chars)
+        if end < len(text):
+            boundaries = list(re.finditer(r"[.!?]\s+|\n", text[start:end]))
+            usable = [m.end() for m in boundaries if m.end() >= (end-start)//2]
+            if usable:
+                end = start + usable[-1]
+        spans[f"S{len(spans)+1}"] = text[start:end]
+        start = end
+    return spans
+
+
+def narrow_factoid(plan, query):
+    """Only a single scoped, non-enumerative factual obligation can skip card survey."""
+    return (plan.intent == "factoid" and len(plan.doc_ids) == 1 and len(plan.aspects) == 1
+            and not plan.limitations and plan.answerable
+            and not re.search(r"\b(compare|comparison|versus|all|every|list|explain|why|across|differences|analy[sz]e)\b", query, re.I))

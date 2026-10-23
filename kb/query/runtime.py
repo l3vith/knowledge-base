@@ -75,6 +75,10 @@ class QueryRuntime:
         start = time.monotonic()
         before = plain(getattr(self.llm, "usage", {}))
         charged = False
+        if hasattr(self.llm,"last_usage"):
+            self.llm.last_usage=None
+        if hasattr(self.llm,"last_response"):
+            self.llm.last_response=None
         try:
             with self.sink.span(name, as_type="generation", input=payload,
                                 model=getattr(self.llm, "model", None)) as span:
@@ -109,10 +113,15 @@ class QueryRuntime:
             attempt.update(status="failed", usage=failed_usage)
             if not charged and failed_usage:
                 self._charge(failed_usage)
+                if isinstance(failed_usage.get("output_tokens"),int):
+                    self.reserved_output+=failed_usage["output_tokens"]-max_tokens
             elif not charged:
                 self.unknown_usage = self.unknown_cost = True
             raise
         finally:
+            diagnostics=getattr(self.llm,"last_response",None)
+            if diagnostics is not None:
+                attempt["response_artifact"]=self.save(f"call_{self.calls}_raw_response",diagnostics)
             attempt["latency_ms"] = round((time.monotonic()-start)*1000, 3)
             self.events.append(attempt)
             self.save("attempts", self.events)

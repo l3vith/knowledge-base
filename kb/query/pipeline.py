@@ -10,8 +10,8 @@ from .runtime import QueryRuntime
 from .screen import survey_pages, verify_elements
 from .settings import value, QuerySettings
 from .triage import element_triage
-from .types import QueryPlan, Aspect, Evidence, AnswerDraft
-from .utils import get, terms, plain, id_for
+from .types import QueryPlan, Aspect, Evidence, AnswerDraft, SurveyPick
+from .utils import get, terms, plain, id_for, narrow_factoid
 
 STEP_NAMES=["query_planning","routing_guard","candidate_pages","page_survey","element_retrieval",
             "element_triage","element_verification","answer_generation","answer_verification","citation_render"]
@@ -95,6 +95,13 @@ def answer_query(collection,query,*,store,generation_id,settings,llm,embedder=No
                 current_stage=3
                 if mode=="baseline":
                     picks=[];out.update(skipped=True,reason="baseline control")
+                elif narrow_factoid(plan,query):
+                    picks=[SurveyPick(d,p,[a.aspect_id for a in plan.aspects],"lexical")
+                           for d,pages in lexical.items() for p in sorted(pages)]
+                    out.update(skipped=True,reason="single-document single-obligation factual path",
+                               picked_pages=len(picks),cards_surveyed=0)
+                    counts["cards_surveyed"]=0
+                    counts["raw_candidate_pages"]=len(picks)+len(escape)
                 else:
                     picks,report=survey_pages(ctx.llm,store,plan,query,pool,lexical,settings,ctx=ctx)
                     out.update(report,picked_pages=len(picks));limits.extend(report["limitations"])
