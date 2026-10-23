@@ -82,7 +82,7 @@ def test_spend_cap_blocks_calls_and_ledger_records(monkeypatch, tmp_path):
     s = get_settings(data_dir=tmp_path, budget_usd=2.0, llm_cache=False)
     llm = OpenCodeLLM(s)
     llm.complete_json("s", "u", name="plan")          # costs 1.50 (1M in + 1M out)
-    ledger = (tmp_path / "spend.jsonl").read_text().splitlines()
+    ledger = (tmp_path / "spend.jsonl").read_text(encoding="utf-8").splitlines()
     assert len(ledger) == 1 and '"cost_usd": 1.5' in ledger[0]
     llm.complete_json("s", "u", name="plan")          # 1.50 < 2.0 -> allowed, total 3.0
     with pytest.raises(LLMError, match="spend cap"):

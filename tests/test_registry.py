@@ -14,7 +14,7 @@ def _promote_one(reg, name="c1"):
     assert staging.name == f"{gen_id}.staging" and staging.is_dir()
     s = Store.create(staging)
     s.close()
-    (staging / "manifest.json").write_text("{}")
+    (staging / "manifest.json").write_text("{}", encoding="utf-8")
     return gen_id, reg.promote(name, gen_id, staging)
 
 
@@ -30,7 +30,7 @@ def test_registry_promote_and_active(settings):
         assert (final / "manifest.json").is_file()
     gens = sorted(p.name for p in (settings.collection_dir("c1") / "generations").iterdir())
     assert gens == sorted(ids[1:])  # active + previous only
-    assert json.loads((settings.collection_dir("c1") / "active.json").read_text())["generation_id"] == ids[2]
+    assert json.loads((settings.collection_dir("c1") / "active.json").read_text(encoding="utf-8"))["generation_id"] == ids[2]
     assert ids[0].startswith("gen_") and len(ids[0]) == len("gen_20261023120000_abcdef12")
 
 
@@ -49,7 +49,7 @@ def test_registry_stale_lock_taken_over(settings):
     reg = Registry(settings)
     lock = settings.collection_dir("c1") / ".lock"
     lock.parent.mkdir(parents=True)
-    lock.write_text("{}")
+    lock.write_text("{}", encoding="utf-8")
     old = time.time() - 7 * 3600
     os.utime(lock, (old, old))
     with reg.indexing_lock("c1"):
