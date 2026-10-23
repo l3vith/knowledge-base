@@ -9,7 +9,7 @@ import httpx
 
 
 def load_local_env(path):
-    for line in Path(path).read_text().splitlines():
+    for line in Path(path).read_text(encoding="utf-8").splitlines():
         line=line.strip()
         if not line or line.startswith("#"):
             continue
@@ -46,7 +46,7 @@ def check(env_file=None):
     result={"authentication":"passed","trace_id":trace_id,"remote_trace_received":received,"base_url":base,
             "trace_url":client.get_trace_url(trace_id=trace_id),"model_inference":"not_run"}
     path=Path("artifacts/checks/langfuse-connectivity.json");path.parent.mkdir(parents=True,exist_ok=True)
-    path.write_text(json.dumps(result,indent=2)+"\n")
+    path.write_text(json.dumps(result,indent=2)+"\n",encoding="utf-8")
     client.shutdown()
     return result
 

@@ -33,7 +33,7 @@ class QueryRuntime:
 
     def save(self, name, data):
         path = self.path / (name + ".json")
-        path.write_text(json.dumps(plain(data), ensure_ascii=False, indent=2)+"\n")
+        path.write_text(json.dumps(plain(data), ensure_ascii=False, indent=2)+"\n", encoding="utf-8")
         path.chmod(0o600)
         return name
 

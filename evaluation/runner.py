@@ -12,7 +12,7 @@ def digest(path):
 
 
 def load_benchmark(path):
-    rows=[json.loads(line) for line in Path(path).read_text().splitlines() if line.strip()]
+    rows=[json.loads(line) for line in Path(path).read_text(encoding="utf-8").splitlines() if line.strip()]
     ids=[r["id"] for r in rows]
     if len(ids)!=len(set(ids)):
         raise ValueError("duplicate benchmark IDs")
@@ -37,19 +37,19 @@ def capture(rows,*,api,collection,out,source_hash,timeout=180,query_fn=None,run_
     config={"dataset_sha256":source_hash,"ids":[r["id"] for r in rows],"api":api.rstrip("/"),"collection":collection,"schema":"track-b-2.0","run_metadata":run_metadata or {}}
     manifest={"config":config,"generation_id":None,"system_config_sha256":None,"created_unix":time.time()}
     if manifest_path.exists():
-        manifest=json.loads(manifest_path.read_text())
+        manifest=json.loads(manifest_path.read_text(encoding="utf-8"))
         if manifest["config"]!=config:
             raise ValueError("resume manifest differs: use a new output path")
     elif out.exists() and out.stat().st_size:
         raise ValueError("cannot resume unmanifested output")
-    manifest_path.write_text(json.dumps(manifest,indent=2)+"\n")
+    manifest_path.write_text(json.dumps(manifest,indent=2)+"\n",encoding="utf-8")
     done=set()
     if out.exists():
-        records=[json.loads(s) for s in out.read_text().splitlines() if s.strip()]
+        records=[json.loads(s) for s in out.read_text(encoding="utf-8").splitlines() if s.strip()]
         done={r["id"] for r in records}
         if len(done)!=len(records):
             raise ValueError("duplicate rows in existing run")
-    with httpx.Client(timeout=timeout) as client, out.open("a") as target:
+    with httpx.Client(timeout=timeout) as client, out.open("a", encoding="utf-8") as target:
         for row in rows:
             if row["id"] in done:
                 continue
@@ -83,5 +83,5 @@ def capture(rows,*,api,collection,out,source_hash,timeout=180,query_fn=None,run_
                               ai_answer="",retrieved_chunks=[])
             record["capture_latency_ms"]=round((time.monotonic()-start)*1000,3)
             target.write(json.dumps(record,ensure_ascii=False)+"\n");target.flush()
-            manifest_path.write_text(json.dumps(manifest,indent=2)+"\n")
+            manifest_path.write_text(json.dumps(manifest,indent=2)+"\n",encoding="utf-8")
     return manifest

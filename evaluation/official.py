@@ -51,7 +51,7 @@ def evaluate_file(run_path,api_key=None,notebook=None,expected_hash=EXPECTED_EVA
     ns=load_notebook_namespace(notebook,expected_hash,{"OPENCODE_API_KEY":key})
     client=ns["OpenCodeClient"](api_key=key,model=ns["OPENCODE_MODEL"],base_url=ns["OPENCODE_BASE_URL"])
     evaluator=ns["RAGMetricsEvaluator"](client)
-    rows=[json.loads(s) for s in Path(run_path).read_text().splitlines() if s.strip()]
+    rows=[json.loads(s) for s in Path(run_path).read_text(encoding="utf-8").splitlines() if s.strip()]
     scored=[];errors=[]
     for row in rows:
         if row.get("error"):
@@ -69,5 +69,5 @@ def evaluate_file(run_path,api_key=None,notebook=None,expected_hash=EXPECTED_EVA
              "warning":"Failure-as-zero aggregate is separately labeled; official formulas are unchanged.",
              "evaluator_sha256":expected_hash,"executed_definition_cells":ns["_executed_cells"]}
     result={"summary":summary,"per_question":scored,"errors":errors}
-    Path(str(run_path)+".scores.json").write_text(json.dumps(result,ensure_ascii=False,indent=2)+"\n")
+    Path(str(run_path)+".scores.json").write_text(json.dumps(result,ensure_ascii=False,indent=2)+"\n",encoding="utf-8")
     return result
