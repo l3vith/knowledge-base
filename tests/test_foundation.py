@@ -200,3 +200,33 @@ def test_api_exact_routes_and_error_shape():
     assert {(r.path, method) for r in app.routes for method in r.methods} == {("/index", "POST"), ("/query", "POST")}
     body = CollectionNotFound("x").to_body("req_1")
     assert body["error"]["code"] == "COLLECTION_NOT_FOUND" and isinstance(KBError("A", "b", 400), Exception)
+
+
+def test_budget_without_prices_blocks_calls(monkeypatch, tmp_path):
+    calls = _patch_post(monkeypatch, ['{"a": 1}'])
+    s = get_settings(data_dir=tmp_path, budget_usd=1.0, price_input_per_m=None, llm_cache=False)
+    with pytest.raises(LLMError, match="cap cannot be enforced"):
+        OpenCodeLLM(s).complete_json("s", "u", name="plan")
+    assert calls == []
+
+
+def test_dryrun_answers_query_track_json_payloads(tmp_path):
+    import json
+
+    from kb.llm import get_llm
+
+    llm = get_llm(get_settings(data_dir=tmp_path, llm_mode="dryrun"))
+    q, aspects = "Alpha Bank capital ratio", "a1: capital ratio | entity=None period=None scope=None"
+    survey = llm.complete_json("s", json.dumps({"query": q, "aspects": aspects, "cards": [
+        {"page_no": 3, "summary": "Alpha Bank capital ratio was 14.2%", "topics": []},
+        {"page_no": 4, "summary": "Weather", "topics": []}]}), name="survey")
+    assert survey == {"pages": [{"page_no": 3, "aspects": ["a1"], "strength": "medium"}]}
+    text = "Alpha Bank capital ratio was 14.2% in FY2025."
+    keep = llm.complete_json("s", json.dumps({"query": q, "aspects": aspects, "elements": [{"id": "E1", "text": text}]}),
+                             name="verify")["keep"]
+    assert keep[0]["id"] == "E1" and keep[0]["quotes"][0] in text
+    ans = llm.complete_json("s", json.dumps({"query": q, "obligations": [{"id": "a1"}],
+                                             "evidence": [{"id": "E1", "content": text}]}), name="answer")
+    assert ans["status"] == "answered" and ans["claims"][0]["quotes"][0]["quote"] in text
+    check = llm.complete_json("s", json.dumps({"claims": [{"claim_id": "c1"}]}), name="answer_verify")
+    assert check["verdicts"][0]["verdict"] == "supported"

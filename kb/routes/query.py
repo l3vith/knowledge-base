@@ -41,10 +41,10 @@ def legacy_bind(collection_name):
         raise QueryError("COLLECTION_NOT_READY","Person 1 storage/foundation must be integrated or app.state.query_services configured",503) from exc
     settings=get_settings()
     generation,directory=Registry(settings).active_dir(collection_name)
-    from kb.query.provider import OpenCodeJSONClient
+    from kb.llm import get_llm
     from kb.query.settings import SharedQuerySettings
-    # Query-owned transport has complete attempt records, strict JSON and unknown-price semantics.
-    llm=OpenCodeJSONClient(model=settings.effective_answer_model(),base_url=settings.opencode_base_url,key=settings.opencode_api_key)
+    # Shared client: KB_BUDGET_USD cap + spend ledger, disk response cache and KB_LLM_MODE=dryrun apply to queries too.
+    llm=get_llm(settings)
     store=Store.open(directory)
     try:
         return BoundServices(store,generation,SharedQuerySettings(settings),llm,get_embedder(settings),get_reranker(settings),close_store=True)
@@ -82,5 +82,9 @@ async def query_route(body: QueryIn,request: Request):
         # Accept Person 1 typed errors structurally without importing its module.
         if hasattr(exc,"http_status") and callable(getattr(exc,"to_body",None)):
             return JSONResponse(status_code=exc.http_status,content=exc.to_body(request_id))
+        from kb.llm import LLMError
+        if isinstance(exc,LLMError):  # provider down, retries exhausted or spend cap reached
+            error=QueryError("PROVIDER_UNAVAILABLE",f"Model unavailable: {exc}",503,True)
+            return JSONResponse(status_code=503,content=error.to_body(request_id))
         error=QueryError("QUERY_FAILED","Query failed; inspect private request artifacts",500)
         return JSONResponse(status_code=500,content=error.to_body(request_id))

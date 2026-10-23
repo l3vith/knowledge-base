@@ -174,6 +174,9 @@ class OpenCodeLLM(LLM):
                     return out
                 except ValueError:
                     pass  # corrupt entry: fall through to a live call
+        if s.budget_usd is not None and (s.price_input_per_m is None or s.price_output_per_m is None):
+            raise LLMError(f"{name}: KB_BUDGET_USD is set but PRICE_INPUT_PER_M/PRICE_OUTPUT_PER_M are blank, "
+                           "so the cap cannot be enforced; set the prices")
         if s.budget_usd is not None and spent_usd(s) >= s.budget_usd:
             raise LLMError(f"{name}: spend cap KB_BUDGET_USD={s.budget_usd} reached ({spent_usd(s):.4f} USD recorded)")
         payload = {"model": model, "temperature": 0, "max_tokens": max_tokens,
@@ -260,7 +263,7 @@ def parallel_map(fn: Callable, items: list, max_workers: int) -> list:
         return list(pool.map(safe, items))
 
 
-_DRY_OUTPUT_TOKENS = {"doc_card": 350, "page_card": 700, "plan": 450, "survey": 300, "verify": 450, "answer": 1800}
+_DRY_OUTPUT_TOKENS = {"doc_card": 350, "page_card": 700, "plan": 450, "survey": 300, "verify": 450, "answer": 1800, "answer_verify": 300}
 
 
 def _between(text: str, start: str, end: str | None) -> str:
@@ -272,10 +275,45 @@ def _between(text: str, start: str, end: str | None) -> str:
     return (rest[:j] if j >= 0 else rest).strip()
 
 
+def _dry_json_payload(name: str, p: dict) -> dict:
+    """Dry-run answers for the query track's JSON payloads (kb/query: plan, survey, verify, answer, answer_verify)."""
+    query = p.get("query", "")
+    q = set(tokens(query))
+    aspect_ids = re.findall(r"^(\S+):", p.get("aspects", ""), re.M) or ["a1"]
+
+    def hit(text: str) -> bool:
+        return len(q & set(tokens(text or ""))) >= max(2, min(5, len(q) // 5))
+
+    def quote(text: str) -> str:
+        return (text or "").strip()[:200].strip()
+
+    if name == "plan":
+        return {"intent": "analytical", "notes": "dryrun", "documents": [],
+                "aspects": [{"text": query, "keywords": tokens(query)[:8], "entity": None, "period": None, "scope": None}]}
+    if name == "survey":
+        return {"pages": [{"page_no": c["page_no"], "aspects": aspect_ids, "strength": "medium"} for c in p.get("cards", [])
+                          if hit(" ".join([c.get("summary", ""), " ".join(c.get("topics", []))]))]}
+    if name == "verify":
+        return {"keep": [{"id": e["id"], "aspects": aspect_ids, "note": "dryrun lexical overlap", "quotes": [quote(e["text"])]}
+                         for e in p.get("elements", []) if hit(e.get("text")) and quote(e.get("text"))]}
+    if name == "answer":
+        ev = [e for e in p.get("evidence", []) if quote(e.get("content"))][:8]
+        ob = [o["id"] for o in p.get("obligations", [])]
+        return {"status": "answered" if ev else "no_answer", "limitations": ["dryrun answer"],
+                "claims": [{"id": f"c{i}", "text": quote(e["content"]), "evidence_ids": [e["id"]], "aspect_ids": ob,
+                            "quotes": [{"evidence_id": e["id"], "quote": quote(e["content"])}], "calculation": None}
+                           for i, e in enumerate(ev, 1)]}
+    if name == "answer_verify":
+        return {"verdicts": [{"claim_id": c["claim_id"], "verdict": "supported", "reason": "dryrun"} for c in p.get("claims", [])]}
+    return {}
+
+
 def _dry_responder(name: str, system: str, user: str):
     """Heuristic stand-in for each prompt. Card calls fail on purpose so ingestion uses its deterministic fallbacks."""
     if name in ("doc_card", "page_card"):
         raise LLMError("dryrun: cards use deterministic fallbacks")
+    if user.startswith("{"):
+        return _dry_json_payload(name, json.loads(user))
     if name == "plan":
         query = _between(user, "Question: ", None)
         return {"intent": "analytical", "answerable": True, "notes": "dryrun",
