@@ -1,7 +1,12 @@
 import pytest
 from kb.query.answer import generate_answer,verify_answer,render_verified,number_evidence,verify_calculation
 from kb.query.types import QueryPlan,Aspect,Evidence
-from .helpers import MemoryStore,FakeLLM,settings
+from .helpers import MemoryStore,FakeLLM,settings as _settings
+
+
+def settings(tmp_path,**kw):
+    # These tests cover the extractive writer; synthesis tests pass analytical_writer_mode="synthesis".
+    return _settings(tmp_path,**{"analytical_writer_mode":"extractive",**kw})
 
 
 def fixture():
@@ -121,3 +126,104 @@ def test_nonconsecutive_span_selection_is_rejected(tmp_path):
     row={'obligation_id':'a1','evidence_id':'E1','span_ids':['S1','S3']}
     draft=generate_answer(FakeLLM(lambda n,p:{'selections':[row]}),'capital',plan,numbered,{},settings(tmp_path))
     assert not draft.claims
+
+
+def test_factoid_answer_keeps_only_the_clause_with_the_verified_value(tmp_path):
+    text=("The implementation of the pricing routine used is based on the one mentioned in [2], available\non github "
+          "and implemented in C++. <sup>5</sup> It is a Monte Carlo based pricing routine; 60 _,_ 000 paths were\n"
+          "used to generate the prices in our tests. Once prices are obtained, these are turned into implied\nvolatilities.")
+    store=MemoryStore({"a":[text]})
+    numbered=number_evidence([Evidence(store.elements[0],["a1"],fact_value="60 _,_ 000 paths")])
+    plan=QueryPlan("factoid",[Aspect("a1","paths",["paths"])],["a"])
+    llm=FakeLLM(lambda n,p:{"status":"answered","selections":[{"obligation_id":"a1","evidence_id":"E1","span_ids":["S1","S2"]}]})
+    draft=generate_answer(llm,"How many Monte Carlo paths were used?",plan,numbered,{"a":store.doc("a")},settings(tmp_path))
+    # The clause naming the query's subject (Monte Carlo routine) stays; the earlier sentence does not.
+    assert [c.text for c in draft.claims]==["It is a Monte Carlo based pricing routine; 60,000 paths were\nused to generate the prices in our tests."]
+    assert draft.claims[0].quotes[0]["quote"] in text
+    draft=generate_answer(llm,"How many paths were used?",plan,numbered,{"a":store.doc("a")},settings(tmp_path))
+    assert [c.text for c in draft.claims]==["60,000 paths were\nused to generate the prices in our tests."]
+
+
+
+def test_long_selection_keeps_the_four_most_numeric_sentences(tmp_path):
+    text="Intro one. Background two. Errors fall within 0.05% and 0.35%. Max error 5%. Build took 5 minutes. Outlook ends."
+    store=MemoryStore({"a":[text]})
+    numbered=number_evidence([Evidence(store.elements[0],["a1"])])
+    plan=QueryPlan("analytical",[Aspect("a1","errors",["error"])],["a"])
+    llm=FakeLLM(lambda n,p:{"status":"answered","selections":[{"obligation_id":"a1","evidence_id":"E1","span_ids":["S1","S2","S3","S4","S5","S6"]}]})
+    draft=generate_answer(llm,"explain the errors",plan,numbered,{"a":store.doc("a")},settings(tmp_path))
+    assert draft.claims[0].text=="Background two. Errors fall within 0.05% and 0.35%. Max error 5%. Build took 5 minutes."
+
+
+def synth(tmp_path,statements,text="Capital was 12 million USD in FY2025. Buffers rose to 3 percent."):
+    store=MemoryStore({"a":[text]})
+    numbered=number_evidence([Evidence(store.elements[0],["a1"])])
+    plan=QueryPlan("analytical",[Aspect("a1","capital",["capital"])],["a"])
+    llm=FakeLLM(lambda n,p:{"status":"answered","sections":[{"heading":"Capital","statements":statements}]} if n=="answer"
+                else FakeLLM.default(n,p))
+    s=settings(tmp_path,analytical_writer_mode="synthesis")
+    draft=generate_answer(llm,"assess capital",plan,numbered,{"a":store.doc("a")},s)
+    checked,report=verify_answer(llm,draft,numbered,s)
+    return draft,checked,report,render_verified(checked,numbered,{"a":store.doc("a")})[0]
+
+
+def test_synthesis_statement_gets_exact_source_quotes_and_a_cited_bullet(tmp_path):
+    draft,checked,_,answer=synth(tmp_path,[{"kind":"finding","text":"Capital was USD 12 million in FY2025.",
+                                             "obligation_ids":["a1"],"cites":[{"evidence_id":"E1","span_ids":["S1"]}]}])
+    assert draft.claims[0].quotes==[{"evidence_id":"E1","quote":"Capital was 12 million USD in FY2025. "}]
+    assert answer=="## Capital\n- Capital was USD 12 million in FY2025. [a.pdf p1]"
+
+
+def test_synthesis_rejects_uncited_or_invented_citations_but_keeps_gaps(tmp_path):
+    draft,checked,report,answer=synth(tmp_path,[
+        {"kind":"finding","text":"Invented fact.","cites":[]},
+        {"kind":"finding","text":"Bad span.","cites":[{"evidence_id":"E1","span_ids":["S9"]}]},
+        {"kind":"inference","text":"Unknown source.","cites":[{"evidence_id":"E7","span_ids":["S1"]}]},
+        {"kind":"gap","text":"The excerpts do not show the 2024 figure.","obligation_ids":["a1"]}])
+    assert [c.kind for c in checked.claims]==["gap"] and report["gaps"]==1
+    assert answer=="## Capital\n- The excerpts do not show the 2024 figure."
+
+
+def test_synthesis_claims_the_checker_rejects_are_removed(tmp_path):
+    store_text="Capital was 12 million USD in FY2025."
+    store=MemoryStore({"a":[store_text]})
+    numbered=number_evidence([Evidence(store.elements[0],["a1"])])
+    plan=QueryPlan("analytical",[Aspect("a1","capital",["capital"])],["a"])
+    def respond(n,p):
+        if n=="answer":
+            return {"status":"answered","sections":[{"heading":"Capital","statements":[
+                {"kind":"finding","text":"Capital was USD 12 million.","cites":[{"evidence_id":"E1","span_ids":["S1"]}]},
+                {"kind":"inference","text":"Capital will double next year.","cites":[{"evidence_id":"E1","span_ids":["S1"]}]}]}]}
+        assert all("kind" in c for c in p["claims"])
+        return {"verdicts":[{"claim_id":"c1","verdict":"supported"},{"claim_id":"c2","verdict":"unsupported"}]}
+    s=settings(tmp_path,analytical_writer_mode="synthesis")
+    draft=generate_answer(FakeLLM(respond),"assess capital",plan,numbered,{"a":store.doc("a")},s)
+    checked,report=verify_answer(FakeLLM(respond),draft,numbered,s)
+    assert [c.text for c in checked.claims]==["Capital was USD 12 million."] and report["rejected"]==1
+
+
+def test_narrow_factoid_stays_extractive_under_synthesis(tmp_path):
+    store=MemoryStore({"a":["Coverage was 178.4% in 2025."]})
+    numbered=number_evidence([Evidence(store.elements[0],["a1"],fact_value="178.4%")])
+    plan=QueryPlan("factoid",[Aspect("a1","coverage",["coverage"])],["a"])
+    llm=FakeLLM(lambda n,p:(_ for _ in ()).throw(AssertionError("synthesis used")) if "max_statements" in p else
+                {"status":"answered","selections":[{"obligation_id":"a1","evidence_id":"E1","span_ids":["S1"]}]})
+    draft=generate_answer(llm,"What was the coverage ratio?",plan,numbered,{"a":store.doc("a")},settings(tmp_path,analytical_writer_mode="synthesis"))
+    assert draft.claims[0].text=="Coverage was 178.4% in 2025."
+
+
+def test_synthesis_writes_each_obligation_group_in_parallel_with_its_own_evidence(tmp_path):
+    store=MemoryStore({"a":["Capital was 12 million USD.","Liquidity was 140 percent."]})
+    numbered=number_evidence([Evidence(store.elements[0],["a1"]),Evidence(store.elements[1],["a2"])])
+    plan=QueryPlan("analytical",[Aspect("a1","capital",["capital"]),Aspect("a2","liquidity",["liquidity"])],["a"])
+    seen=[]
+    def respond(n,p):
+        if n!="answer": return FakeLLM.default(n,p)
+        seen.append(([e["id"] for e in p["evidence"]],p["short_answer"],p["role"]))
+        e=p["evidence"][0]
+        st={"kind":"finding","text":"Same sentence.","cites":[{"evidence_id":e["id"],"span_ids":["S1"]}]}
+        return {"status":"answered","sections":[{"heading":p["obligations"][0]["text"],"statements":[
+            {**st,"text":e["source_spans"]["S1"]},st]}]}
+    draft=generate_answer(FakeLLM(respond),"assess capital and liquidity",plan,numbered,{"a":store.doc("a")},settings(tmp_path,analytical_writer_mode="synthesis"))
+    assert sorted(seen)==[(["E1"],True,"findings"),(["E1","E2"],False,"appraisal"),(["E2"],False,"findings")]
+    assert [c.text for c in draft.claims].count("Same sentence.")==1 and len(draft.claims)==3

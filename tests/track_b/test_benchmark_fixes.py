@@ -50,7 +50,7 @@ def test_schema_failure_splits_once_then_stops(tmp_path):
     with pytest.raises(QueryError,match='absence cannot be inferred'):
         verify_elements(FakeLLM(fail),store,plan(),'trials',
                         [Candidate(e,['a1'],['fts']) for e in store.elements],settings(tmp_path))
-    assert calls==[8,4]
+    assert sorted(calls[:4])==[8,8,8,8] and calls[4:]==[4]  # one parallel round, one split retry, then no new calls
 
 
 def test_recovery_retains_successful_evidence(tmp_path):

@@ -21,7 +21,7 @@ def test_ten_stage_trace_and_source_fidelity(tmp_path):
     assert result["chunks"][0]["content"]==store.elements[0].text
     assert result["status"]=="answered"
     assert result["usage"]["cost_usd"] is None
-    assert result["usage"]["input_tokens"]==400
+    assert result["usage"]["input_tokens"]==400  # plan, verify, extractive answer, claim check
     assert (tmp_path/"runs"/result["request_id"]/"writer_context.json").exists()
 
 
@@ -47,7 +47,8 @@ def test_writer_visible_unused_context_is_returned(tmp_path):
     store=MemoryStore({"a":["Capital ratio was 14 percent.\n\nCapital buffer was 3 percent."]})
     def respond(n,p):
         result=FakeLLM.default(n,p)
-        if n=="answer": result["selections"]=result["selections"][:1]
+        if n=="answer" and "sections" in result: result["sections"][0]["statements"]=result["sections"][0]["statements"][:1]
+        elif n=="answer": result["selections"]=result["selections"][:1]
         return result
     result=run(tmp_path,store,FakeLLM(respond))
     assert len(result["chunks"])==2
@@ -107,8 +108,23 @@ def test_call_many_runs_concurrently_and_keeps_budget_order(tmp_path):
     import time
     def slow(name,p):
         time.sleep(0.3);return {"ok":p["i"]}
-    runtime=QueryRuntime(settings(tmp_path,max_llm_calls=5),FakeLLM(slow),LocalSink())  # 2 kept back for answer + check
+    runtime=QueryRuntime(settings(tmp_path,max_llm_calls=9),FakeLLM(slow),LocalSink())  # 6 kept back for writers + checks
     t=time.monotonic();out=runtime.call_many("verify","system",[{"i":i} for i in range(4)],100)
     assert time.monotonic()-t<0.8  # three 0.3 s calls at once, not 0.9 s in a row
     assert out[:3]==[{"ok":0},{"ok":1},{"ok":2}] and isinstance(out[3],BudgetExceeded)
     assert [e["call"] for e in runtime.events]==[1,2,3] and runtime.calls==3
+
+
+def test_failed_claim_check_batch_removes_only_its_claims(tmp_path):
+    from kb.query.answer import verify_answer
+    from kb.query.types import AnswerDraft,Claim,Evidence
+    store=MemoryStore({"a":["x"]})
+    numbered={"E1":Evidence(store.elements[0],["a1"])}
+    claims=[Claim(f"c{i}","x",["E1"],["a1"],[{"evidence_id":"E1","quote":"x"}]) for i in range(1,13)]
+    def respond(name,p):
+        ids=[c["claim_id"] for c in p["claims"]]
+        if "c1" in ids:
+            raise QueryError("MODEL_SCHEMA","bad",503)
+        return {"verdicts":[{"claim_id":i,"verdict":"supported"} for i in ids]}
+    draft,report=verify_answer(FakeLLM(respond),AnswerDraft(claims,"answered"),numbered,settings(tmp_path))
+    assert report["accepted"]==6 and "1 claim-check batches failed" in draft.limitations

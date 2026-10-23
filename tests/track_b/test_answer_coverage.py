@@ -84,8 +84,26 @@ def test_judge_audit_flags_contradictions_without_rewriting_scores():
         'missing_ids':['bp2'],'extra_ids':['ap1']}}
     result=judge_consistency(metrics,'Accuracy improved. [a.pdf p3]')
     assert {f['kind'] for f in result['flags']}=={
-        'all_answer_points_extra_despite_benchmark_matches','citation_present_but_judge_marks_missing'}
+        'all_answer_points_extra_despite_benchmark_matches','citation_present_but_judge_marks_missing',
+        'citations_in_answer_dropped_by_decomposition'}
     assert metrics['answer_precision']==0
+
+
+def test_judge_audit_flags_bad_ids_and_truncated_responses():
+    metrics={'answer_detail':{'benchmark_points':{'bp1':'A.','bp2':'B.'},'agent_points':{'ap1':'A.'},
+        'matched_ids':['bp1','bp1','bp9'],'missing_ids':[],'extra_ids':['ap7']}}
+    calls=[{'request_sha256':'k1','finish_reason':'length','escalated':True},{'request_sha256':'k2','finish_reason':'stop'}]
+    kinds={f['kind']:f for f in judge_consistency(metrics,'A.',calls)['flags']}
+    assert kinds['unknown_point_ids']['ids']==['bp9','ap7'] and kinds['duplicate_point_ids']['ids']==['bp1']
+    assert kinds['benchmark_points_neither_matched_nor_missing']['ids']==['bp2']
+    assert kinds['judge_response_truncated_at_notebook_limit']['requests']==['k1']
+
+
+def test_dev_checklist_reports_missing_facts():
+    from evaluation.audit import checklist
+    result=checklist('C31','It is a Monte Carlo based pricing routine; 60,000 paths were used.')
+    assert result=={'covered':2,'total':2,'missing':[]}
+    assert checklist('C31','60,000 runs.')['missing']==['60,000 paths','Monte Carlo routine']
 
 
 def test_each_literal_topic_keeps_an_independent_source_page(tmp_path):

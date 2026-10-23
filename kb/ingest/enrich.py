@@ -5,6 +5,7 @@ from pathlib import Path
 import shutil
 import sqlite3
 import time
+from contextlib import closing
 
 from kb.ingest.navigation import build_navigation, VERSION
 from kb.ingest.parse import read_pdf_info, page_source_metadata
@@ -21,7 +22,8 @@ def enrich_collection(collection,settings,source_dir=None):
         source=Store.open(old_path);target=None
         try:
             # SQLite backup includes committed WAL state without mutating the old generation.
-            with sqlite3.connect(staging/DB_NAME) as database:
+            # closing(): sqlite3's own context manager commits but never closes, and an open file blocks the rename on Windows.
+            with closing(sqlite3.connect(staging/DB_NAME)) as database:
                 source._conn.backup(database)
             for path in old_path.iterdir():
                 if path.is_file() and not path.name.startswith(DB_NAME):

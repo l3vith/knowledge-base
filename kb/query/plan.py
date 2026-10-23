@@ -75,10 +75,10 @@ def _call_many(llm,ctx,name,system,payloads,max_tokens):
     """One result or exception per payload; with a runtime the budgeted calls run concurrently."""
     if ctx:
         return ctx.call_many(name,system,payloads,max_tokens)
-    out=[]
-    for payload in payloads:
+    out=[];limits=max_tokens if isinstance(max_tokens,list) else [max_tokens]*len(payloads)
+    for payload,limit in zip(payloads,limits):
         try:
-            out.append(_call(llm,None,name,system,payload,max_tokens))
+            out.append(_call(llm,None,name,system,payload,limit))
         except Exception as exc:
             out.append(exc)
     return out

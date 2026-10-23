@@ -13,6 +13,7 @@ from .settings import value
 from .utils import compact, estimate_tokens, plain
 
 FINAL = {"answer", "answer_verify", "answer_generation", "answer_verification", "citation_render"}
+FINAL_GRACE_S = 45  # per-call HTTP allowance for the answer and claim check when the query deadline is close
 
 class QueryRuntime:
     def __init__(self, settings, llm, sink=None, request_id=None):
@@ -24,7 +25,7 @@ class QueryRuntime:
         self.started = time.monotonic()
         self.deadline = self.started + value(settings, "query_deadline_s")
         self.trace, self.events, self.limitations = [], [], []
-        self.calls = self.estimated_input = self.reserved_output = 0
+        self.calls = self.estimated_input = self.reserved_output = self.reserved_verify = 0
         self.pending_ledger = False
         self.input_tokens = self.output_tokens = self.cost = 0
         self.unknown_usage = self.unknown_cost = False
@@ -38,7 +39,7 @@ class QueryRuntime:
         # because a deadline hit there would throw away all the evidence already paid for.
         if name in FINAL:
             return
-        share = {"survey": 0.35, "verify": 0.65}.get(name, 1.0)
+        share = {"survey": 0.35, "verify": 0.55}.get(name, 1.0)
         if time.monotonic() >= self.started + share * (self.deadline - self.started):
             raise BudgetExceeded("Query deadline exhausted")
 
@@ -90,7 +91,8 @@ class QueryRuntime:
         else:
             # Own client per thread keeps usage deltas separate; copied contexts keep Langfuse spans nested.
             ctxs = [contextvars.copy_context() for _ in jobs]
-            with ThreadPoolExecutor(max_workers=min(6, len(jobs) or 1)) as pool:
+            # 12 workers: a 12-batch verification runs in one wave (two waves of 6 took ~14 s).
+            with ThreadPoolExecutor(max_workers=min(12, len(jobs) or 1)) as pool:
                 ran = list(pool.map(lambda pair: pair[0].run(self._run_safe, pair[1], self._clone()), zip(ctxs, jobs)))
         return ran + results
 
@@ -107,8 +109,9 @@ class QueryRuntime:
         user = compact(payload)
         predicted = estimate_tokens(system) + estimate_tokens(user)
         with self._lock:
-            # The optional ledger needs one extra call before synthesis and its claim check.
-            reserved_calls=0 if name in FINAL else 2 + int(self.pending_ledger and name!="ledger_extract")
+            # Earlier stages leave six calls (up to three parallel writers and three claim-check batches),
+            # plus one for the optional separate ledger extraction.
+            reserved_calls=0 if name in FINAL else 6 + int(self.pending_ledger and name!="ledger_extract")
             if self.calls >= value(self.settings, "max_llm_calls") - reserved_calls:
                 raise BudgetExceeded("Model call budget exhausted")
             # Early stages may not starve the later ones: plan/survey/verify each stop at a cumulative share of the budget.
@@ -116,14 +119,20 @@ class QueryRuntime:
             share = {"plan": 0.1, "survey": 0.3, "verify": 0.72}.get(name, 1.0)
             if self.estimated_input + predicted > share * value(self.settings, "max_input_tokens"):
                 raise BudgetExceeded("Conservative input budget exhausted")
-            final_check = self._effective_limit(2000)
-            final_reserve = (0 if name == "answer_verify" else final_check if name == "answer"
-                             else self._effective_limit(value(self.settings, "answer_output_tokens")) + final_check)
-            if self.reserved_output + max_tokens + final_reserve > value(self.settings, "max_output_tokens"):
-                raise BudgetExceeded("Output reservation budget exhausted")
+            # Verification has its own output pool: in-flight batches reserve their full limit, and sharing the
+            # answer's pool (minus its reserve) capped a concurrent round at ~14 batches and dropped the rest.
+            if name == "verify":
+                if self.reserved_verify + max_tokens > value(self.settings, "verify_output_tokens"):
+                    raise BudgetExceeded("Verification output budget exhausted")
+            else:
+                final_check = self._effective_limit(2000)
+                final_reserve = (0 if name == "answer_verify" else final_check if name == "answer"
+                                 else self._effective_limit(value(self.settings, "answer_output_tokens")) + final_check)
+                if self.reserved_output + max_tokens + final_reserve > value(self.settings, "max_output_tokens"):
+                    raise BudgetExceeded("Output reservation budget exhausted")
             self.calls += 1
             self.estimated_input += predicted
-            self.reserved_output += max_tokens
+            self._pool(name, max_tokens)
             number = self.calls
         self.save(f"call_{number}_input", {"system": system, "payload": payload})
         return {"number": number, "name": name, "system": system, "user": user, "payload": payload,
@@ -150,7 +159,8 @@ class QueryRuntime:
             with self.sink.span(name, as_type="generation", input=job["payload"],
                                 model=getattr(llm, "model", None)) as span:
                 if hasattr(llm, "set_request_deadline"):
-                    llm.set_request_deadline(self.deadline)
+                    # The answer and claim check are never cut by the query deadline: losing them discards paid evidence.
+                    llm.set_request_deadline(max(self.deadline, time.monotonic() + FINAL_GRACE_S) if name in FINAL else self.deadline)
                 result = llm.complete_json(job["system"], job["user"], name=name, max_tokens=max_tokens)
                 if not isinstance(result, dict):
                     raise QueryError("MODEL_SCHEMA", "Expected a JSON object", 503)
@@ -165,7 +175,7 @@ class QueryRuntime:
                     self._charge(usage)
                     charged = True
                     if isinstance(usage.get("output_tokens"), int):
-                        self.reserved_output += usage["output_tokens"] - max_tokens
+                        self._pool(name, usage["output_tokens"] - max_tokens)
                 attempt.update(status="ok", usage=usage)
                 kwargs = {"output": result}
                 known = {key: usage.get(alias) for key,alias in [("input","input_tokens"),("output","output_tokens")] if isinstance(usage.get(alias),int)}
@@ -183,7 +193,7 @@ class QueryRuntime:
                 if not charged and failed_usage:
                     self._charge(failed_usage)
                     if isinstance(failed_usage.get("output_tokens"),int):
-                        self.reserved_output+=failed_usage["output_tokens"]-max_tokens
+                        self._pool(name, failed_usage["output_tokens"]-max_tokens)
                 elif not charged:
                     self.unknown_usage = self.unknown_cost = True
             raise
@@ -196,6 +206,12 @@ class QueryRuntime:
                 self.events.append(attempt)
                 self.events.sort(key=lambda e: e["call"])
                 self.save("attempts", self.events)
+
+    def _pool(self, name, delta):
+        if name == "verify":
+            self.reserved_verify += delta
+        else:
+            self.reserved_output += delta
 
     def _charge(self, usage):
         for name in ("input_tokens", "output_tokens"):

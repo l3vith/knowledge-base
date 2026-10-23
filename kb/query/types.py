@@ -82,6 +82,8 @@ class Claim:
     verification: str = "pending"
     requirement_ids: list[str] = field(default_factory=list)
     record_ids: list[str] = field(default_factory=list)
+    section: str = ""  # synthesis answers: heading the statement is rendered under
+    kind: str = "finding"  # finding | inference | gap (gap = requested item the evidence does not show)
 
 
 @dataclass

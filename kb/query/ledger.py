@@ -62,6 +62,9 @@ class Finding:
     experiment_anchor_id: str | None = None
     method_anchor_id: str | None = None
     qualification_ids: list[str] = field(default_factory=list)
+    render_ids: list[str] = field(default_factory=list)  # compact source sentences rendered for this record
+    render_text: str = ""
+    position: tuple = ()  # (doc_id, page, char_start): ID- and order-independent tie-break
 
 
 def parse_records(raw, numbered, plan, requirements):
@@ -160,27 +163,69 @@ def cell_key(record):
     return (record.doc_id,record.experiment or unknown,record.method or unknown,record.metric,record.mode)
 
 
-def select_records(records, max_chars):
-    """Observed cells only; dependency quotes consume the same real budget."""
-    by_id={r.record_id:r for r in records};chosen=[];selected=set();used=0;cells=set()
-    # Exact duplicate records can share a cell, but distinct values/conditions cannot disappear.
-    signatures=set()
-    for record in sorted(records,key=lambda r:(r.role=='QUALIFICATION',r.record_id)):
-        signature=(cell_key(record),tuple(record.values),tuple(q['quote'] for q in record.quotes))
-        if signature in signatures:continue
-        signatures.add(signature)
-        group=[];todo=[record.record_id];group_ids=set()
+def _topics(record):
+    return list(dict.fromkeys(record.requirement_ids+record.obligation_ids))
+
+
+def _text(record):
+    return record.render_text or ' '.join(q['quote'] for q in record.quotes)
+
+
+def select_records(records, max_chars, qualification_share=.25):
+    """Pick records for the answer budget by what they add, never by record ID or input order.
+
+    1. one record per still-unanswered requested topic/obligation; 2. qualifications up to a reserved share;
+    3. the rest by diminishing topic gain, support strength, new values/words and length cost.
+    A record's links (same-scope baselines) are taken with it and share its cost."""
+    by_id={r.record_id:r for r in records};chosen=[];selected=set();used=0
+    counts={};seen_values=set();seen_words=[]
+    def group(record):
+        out=[];todo=[record.record_id];ids=set()
         while todo:
             rid=todo.pop()
-            if rid in selected or rid in group_ids:continue
-            group_ids.add(rid);item=by_id[rid];group.append(item);todo.extend(item.links)
-        cost=sum(len(q['quote']) for item in group for q in item.quotes)
-        if used+cost>max_chars:continue
-        chosen.extend(group);selected.update(group_ids);used+=cost
+            if rid in selected or rid in ids or rid not in by_id:continue
+            ids.add(rid);out.append(by_id[rid]);todo.extend(by_id[rid].links)
+        return out
+    def cost(items):return sum(len(_text(r)) for r in items)
+    def score(record):
+        items=group(record);text=' '.join(_text(r) for r in items)
+        gain=sum(1/(1+counts.get(t,0)) for r in items for t in _topics(r))
+        strength={'FINDING':1.,'QUALIFICATION':.9,'CONTRAST':.8}.get(record.role,.5)+(.3 if record.mode=='MEASURED' else 0)+(.2 if record.values else 0)
+        values=numeric_tokens(text);words=set(re.findall(r'[a-z]{3,}',text.lower()))
+        overlap=max((len(words&w)/max(1,len(words|w)) for w in seen_words),default=0.)
+        novelty=(len(values-seen_values)/len(values) if values else .5)+(1-overlap)
+        return (2*gain+strength+novelty)/max(1.,cost(items)/400)**.35
+    def take(record):
+        nonlocal used
+        for item in group(record):
+            chosen.append(item);selected.add(item.record_id);used+=len(_text(item))
+            for t in _topics(item):counts[t]=counts.get(t,0)+1
+            seen_values.update(numeric_tokens(_text(item)));seen_words.append(set(re.findall(r'[a-z]{3,}',_text(item).lower())))
+    reserve=int(max_chars*qualification_share) if any(r.role=='QUALIFICATION' for r in records) else 0
+    def best(pool,protect):
+        # Findings may not eat the space kept for qualifications until phase 3; ties go to source order.
+        left=max(0,reserve-sum(len(_text(r)) for r in chosen if r.role=='QUALIFICATION')) if protect else 0
+        fits=[r for r in pool if r.record_id not in selected and
+              used+cost(group(r))<=max_chars-(0 if r.role=='QUALIFICATION' else left)]
+        return max(sorted(fits,key=lambda r:(r.position,_text(r))),key=score,default=None)
+    while True:  # 1. one record for each still-unanswered topic
+        open_topics={t for r in records if r.record_id not in selected for t in _topics(r)}-set(counts)
+        pick=best([r for r in records if set(_topics(r))&open_topics],True)
+        if not pick:break
+        take(pick)
+    while sum(len(_text(r)) for r in chosen if r.role=='QUALIFICATION')<reserve:  # 2. qualifications
+        pick=best([r for r in records if r.role=='QUALIFICATION'],True)
+        if not pick:break
+        take(pick)
+    while True:  # 3. remaining space by marginal value
+        pick=best(records,False)
+        if not pick:break
+        take(pick)
     all_cells={cell_key(r) for r in records};chosen_cells={cell_key(r) for r in chosen}
     return chosen,{'observed_cells':len(all_cells),'selected_cells':len(chosen_cells),
         'selected_records':len(chosen),'omitted_records':len(records)-len(chosen),'quote_chars':used,
         'missing_cells':[list(c) for c in sorted(all_cells-chosen_cells)],
+        'uncovered_topics':sorted({t for r in records for t in _topics(r)}-set(counts)),
         'warning':'Coverage is relative to extracted records, never gold or exhaustive source recall.'}
 
 
@@ -202,7 +247,9 @@ def generate_ledger_answer(llm,query,plan,numbered,settings,ctx=None):
         except ValueError as exc:
             from .errors import QueryError
             raise QueryError('MODEL_SCHEMA','Ledger must contain source-anchored records',503) from exc
-    selected,matrix=select_records(records,value(settings,'ledger_quote_chars'))
+    # Integrated records are rendered from source, so the answer budget is the selection budget; the separate
+    # extraction path sends records to a writer, so its cap is that writer's input.
+    selected,matrix=select_records(records,value(settings,'analytical_answer_chars' if integrated else 'ledger_quote_chars'))
     if ctx:
         ctx.save('evidence_ledger',{'records':[asdict(r) for r in records],'validation':validation,'matrix':matrix})
     limits=list(plan.limitations)
@@ -329,12 +376,70 @@ def parse_id_records(rows,numbered,plan,requirements,catalog=None):
         rids=[r for r in rids if isinstance(r,str) and r in allowed_topics]
         identity=repr((all_ids,role,metric,mode,scope))
         rid='F'+hashlib.sha256(identity.encode()).hexdigest()[:20]
-        if rid in seen:continue
+        if rid in seen:
+            # Same source finding verified for another question part: keep one record covering both parts.
+            old=next(r for r in records if r.record_id==rid)
+            old.obligation_ids=list(dict.fromkeys(old.obligation_ids+aids));old.requirement_ids=list(dict.fromkeys(old.requirement_ids+rids))
+            continue
         seen.add(rid)
         labels=[catalog.anchors[s].text.strip() if s else None for s in scope]
-        records.append(Finding(rid,list(dict.fromkeys(aids)),rids,role,*labels,metric,mode,
-            [catalog.anchors[v].text for v in value_ids],quotes,doc,[],all_ids,value_ids,*scope,valid_qual))
-    return records,{'accepted':len(records),'rejections':rejections,'warnings':warnings,'contract':'source_ids_v2'}
+        record=Finding(rid,list(dict.fromkeys(aids)),rids,role,*labels,metric,mode,
+            [catalog.anchors[v].text for v in value_ids],quotes,doc,[],all_ids,value_ids,*scope,valid_qual)
+        primary=[v for v in supplied if v in value_ids] if isinstance(supplied,list) else []
+        compact_bundle(record,catalog,numbered,primary)
+        records.append(record)
+    records,merged=dedupe_records(records,catalog,numbered)
+    return records,{'accepted':len(records),'rejections':rejections,'warnings':warnings,'contract':'source_ids_v2','deduplicated':merged}
+
+
+# A sentence that leans on the one before it (pronoun subject, lowercase continuation, "hence ...").
+_LEANS=re.compile(r'(?:[a-z]|(?:It|This|These|They|Its|Their|Such|Hence|Thus|Therefore|However|Here)\b)')
+_PROJECTED=re.compile(r'\b(?:expect|project|estimat|extrapolat|anticipat|would|could)\w*',re.I)
+_ASSUMES=re.compile(r'\b(?:assum|expect|estimat|if|provided|based on|in that case)\w*',re.I)
+_SUMMARY_SECTION=re.compile(r'abstract|introduction|conclusion|summary',re.I)
+
+
+def compact_bundle(record,catalog,numbered,primary=()):
+    """The smallest exact source sentences that carry this record: its result (the value-bearing sentences, or the
+    ones holding the verifier's chosen values), method/experiment identity, qualifications and table header, the
+    preceding sentence a result leans on, and the assumption sentence next to a projection. Never rewritten."""
+    quals=set(record.qualification_ids)
+    core=[a for a in record.anchor_ids if a not in quals]
+    valued=[a for a in core if catalog.anchored_values([a])]
+    chosen=[a for a in valued if set(catalog.anchored_values([a]))&set(primary)]
+    core=chosen or valued or core
+    ids=set(core)|quals|{s for s in (record.experiment_anchor_id,record.method_anchor_id) if s}
+    for a in core:
+        seq=catalog.by_evidence[catalog.owners[a]];i=seq.index(a) if a in seq else -1
+        text=catalog.anchors[a].text.lstrip()
+        if i>0 and _LEANS.match(text):ids.add(seq[i-1])
+        if i>=0 and (record.mode=='PROJECTED' or _PROJECTED.search(text)):
+            ids.update(seq[j] for j in (i-1,i+1) if 0<=j<len(seq) and _ASSUMES.search(catalog.anchors[seq[j]].text))
+    order=lambda a:(catalog.anchors[a].page_no,catalog.anchors[a].char_start)
+    record.render_ids=sorted(ids,key=order)
+    record.render_text=display_source(' '.join(catalog.anchors[a].text.strip() for a in record.render_ids))
+    first=catalog.anchors[record.render_ids[0]]
+    record.position=(record.doc_id,first.page_no,first.char_start)
+
+
+def dedupe_records(records,catalog,numbered):
+    """An abstract/conclusion restating a detailed result is one finding: same document, numbers, mode, scope and
+    qualifications. The detailed (non-summary) statement survives; different scope or qualifications never merge."""
+    keep={};out=[];merged=0
+    def summary(r):return any(_SUMMARY_SECTION.search(get(numbered[catalog.owners[a]].element,'section','') or '') for a in r.render_ids)
+    for r in sorted(records,key=lambda r:r.position):
+        values=frozenset(numeric_tokens(r.render_text))
+        key=(r.doc_id,values,r.mode,r.experiment,r.method,frozenset(catalog.anchors[q].text for q in r.qualification_ids))
+        old=keep.get(key) if values else None
+        if old is None:
+            keep[key]=r;out.append(r);continue
+        merged+=1
+        better=r if (summary(old),len(old.render_text))>(summary(r),len(r.render_text)) else old
+        worse=old if better is r else r
+        better.obligation_ids=list(dict.fromkeys(better.obligation_ids+worse.obligation_ids))
+        better.requirement_ids=list(dict.fromkeys(better.requirement_ids+worse.requirement_ids))
+        if better is r:out[out.index(old)]=r;keep[key]=r
+    return out,merged
 
 
 def integrated_records(numbered,plan,requirements):
@@ -374,53 +479,51 @@ def render_id_records(llm,query,numbered,selected,requirements,limits,matrix,set
         'records':[{'id':record_aliases[r.record_id],'obligation_ids':r.obligation_ids,'role':r.role,'metric':r.metric,
             'mode':r.mode,'experiment_id':anchor_aliases.get(r.experiment_anchor_id),
             'method_id':anchor_aliases.get(r.method_anchor_id),
-            'anchors':{anchor_aliases[a]:catalog.anchors[a].text for a in r.anchor_ids},
+            'anchors':{anchor_aliases[a]:catalog.anchors[a].text for a in (r.render_ids or r.anchor_ids)},
             'qualification_ids':[anchor_aliases[a] for a in r.qualification_ids],
             'values':[{'id':anchor_aliases[v],'text':catalog.anchors[v].text} for v in r.value_ids]} for r in selected]},
         value(settings,'answer_output_tokens'))
-    claims=[];covered=set();used=0;rejections=[];fallback=[];claim_anchors={}
+    claims=[];covered=set();used=0;rejections=[];fallback=[];claim_anchors={};rendered=set()
+    order=lambda a:(catalog.anchors[a].page_no,catalog.anchors[a].char_start)
+    def attach(claim,records):
+        claim.record_ids+=[r.record_id for r in records]
+        claim.aspect_ids=list(dict.fromkeys(claim.aspect_ids+[a for r in records for a in r.obligation_ids]))
+        claim.requirement_ids=list(dict.fromkeys(claim.requirement_ids+[a for r in records for a in r.requirement_ids]))
+        covered.update(r.record_id for r in records)
     def add(records,ids):
         nonlocal used
-        ids=list(dict.fromkeys(ids));text=display_source(' '.join(catalog.anchors[a].text for a in ids))
+        # A sentence already printed (shared qualification, repeated table header) is not printed twice.
+        ids=sorted({a for a in ids if a not in rendered},key=order)
+        if not ids:
+            owner=next((c for c in claims if claim_anchors[c.claim_id]&{a for r in records for a in (r.render_ids or r.anchor_ids)}),None)
+            if owner:attach(owner,records);return True
+            return False
+        text=display_source(' '.join(catalog.anchors[a].text.strip() for a in ids))
         if used+len(text)>value(settings,'analytical_answer_chars'):return False
         quotes=catalog.source_quotes(ids)
         claims.append(Claim(f'c{len(claims)+1}',text,list(dict.fromkeys(q['evidence_id'] for q in quotes)),
             list(dict.fromkeys(a for r in records for a in r.obligation_ids)),quotes,
             requirement_ids=list(dict.fromkeys(a for r in records for a in r.requirement_ids)),
             record_ids=[r.record_id for r in records]))
-        claim_anchors[claims[-1].claim_id]=set(ids)
+        claim_anchors[claims[-1].claim_id]=set(ids);rendered.update(ids)
         covered.update(r.record_id for r in records);used+=len(text);return True
     rows=raw.get('selections',[]) if isinstance(raw,dict) else []
     if not isinstance(rows,list):rows=[];rejections.append('invalid_selection_list')
     for row in rows:
         if not isinstance(row,dict):rejections.append('invalid_selection');continue
-        ids=row.get('record_ids');chosen=row.get('anchor_ids')
+        # The model only orders and groups records; each record always renders its own compact source bundle.
+        ids=row.get('record_ids')
         if isinstance(ids,list):ids=[record_lookup.get(r,r) if isinstance(r,str) else r for r in ids]
-        if isinstance(chosen,list):chosen=[anchor_lookup.get(a,a) if isinstance(a,str) else a for a in chosen]
         if not isinstance(ids,list) or not ids or any(not isinstance(r,str) or r not in by_id for r in ids):
             rejections.append('unknown_record_id');continue
         records=[by_id[r] for r in dict.fromkeys(ids) if r not in covered]
         if not records:continue
         if not safe_joint_scope(records):rejections.append('unresolved_joint_scope');continue
-        allowed=set(a for r in records for a in r.anchor_ids)
-        if chosen is None:chosen=list(dict.fromkeys(a for r in records for a in r.anchor_ids))
-        if not isinstance(chosen,list) or not chosen or any(not isinstance(a,str) or a not in allowed for a in chosen):
-            rejections.append('invalid_render_anchor');continue
-        required=set(q for r in records for q in r.qualification_ids)
-        for a in allowed:
-            if catalog.anchored_values([a]):required.add(a)
-        if not required<=set(chosen):rejections.append('missing_value_or_qualification_anchor');continue
-        if not add(records,chosen):rejections.append('output_budget')
+        if not add(records,[a for r in records for a in (r.render_ids or r.anchor_ids)]):rejections.append('output_budget')
+    # Records the model skipped, in selection priority (topic coverage first), never in record-ID order.
     for record in selected:
         if record.record_id in covered:continue
-        # A qualification already quoted in a parent bundle need not be repeated.
-        existing=next((c for c in claims if set(record.anchor_ids)<=claim_anchors[c.claim_id]),None)
-        if existing:
-            existing.record_ids.append(record.record_id)
-            existing.aspect_ids=list(dict.fromkeys(existing.aspect_ids+record.obligation_ids))
-            existing.requirement_ids=list(dict.fromkeys(existing.requirement_ids+record.requirement_ids))
-            covered.add(record.record_id)
-        elif add([record],record.anchor_ids):fallback.append(record.record_id)
+        if add([record],record.render_ids or record.anchor_ids):fallback.append(record.record_id)
     missing=set(by_id)-covered
     if missing:limits.append(f'{len(missing)} selected findings omitted by source-output budget')
     if rejections:limits.append(f'{len(rejections)} invalid finding selections repaired or limited')

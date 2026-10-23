@@ -1,5 +1,6 @@
 """One generation's SQLite store: docs, pages, elements, FTS5 indexes and dense vectors (numpy files)."""
 import json
+import re
 import sqlite3
 import threading
 from dataclasses import asdict
@@ -28,8 +29,13 @@ _IN = "(SELECT value FROM json_each(?))"  # one bound JSON list instead of N pla
 
 
 def fts_query(terms: list[str]) -> str:
-    """Quoted OR-query over tokens(); every FTS5 operator and punctuation is neutralised."""
-    return " OR ".join(f'"{t}"' for t in tokens(" ".join(terms)))
+    """Quoted OR-query over tokens(); every FTS5 operator and punctuation is neutralised.
+
+    A letter+digit token ("i7", "a100") also matches as a phrase of its parts, because source Markdown such as
+    "_i_ 7" is indexed as "i" "7". Only the search changes; answers and citations keep the source text."""
+    toks = tokens(" ".join(terms))
+    split = [" ".join(re.findall(r"[^\W\d_]+|\d+", t)) for t in toks if re.fullmatch(r"[^\W\d_]+\d+|\d+[^\W\d_]+", t)]
+    return " OR ".join(f'"{t}"' for t in toks + split)
 
 
 def _element(row) -> Element:

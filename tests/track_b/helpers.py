@@ -97,6 +97,10 @@ class FakeLLM:
             return {"pages":[{"page_no":c["page_no"],"aspects":["a1"],"strength":"high"} for c in p["cards"]]}
         if name=="verify":
             return {"keep":[{"id":e["id"],"aspects":["a1"],"support_span_ids":list(e["source_spans"]),"note":"source support"} for e in p["elements"]]}
+        if name=="answer" and "max_statements" in p:  # cited-synthesis writer
+            return {"status":"answered","sections":[{"heading":"Findings","statements":[{"kind":"finding",
+                    "text":" ".join(e["source_spans"].values()),"obligation_ids":e["obligation_ids"][:1],
+                    "cites":[{"evidence_id":e["id"],"span_ids":list(e["source_spans"])}]} for e in p["evidence"]]}]}
         if name=="answer":
             return {"status":"answered","selections":[{"obligation_id":e["obligation_ids"][0],
                     "evidence_id":e["id"],"span_ids":list(e["source_spans"])} for e in p["evidence"]]}

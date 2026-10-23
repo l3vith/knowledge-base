@@ -90,6 +90,9 @@ def element_triage(candidates,plan,reranker,settings):
     report["metadata_boosted"]=sum(c.metadata_score>0 for c in candidates)
     ordered=sorted(candidates,key=lambda c:(c.ce_score is None,-((c.ce_score or 0)+min(2.,c.metadata_score)),get(c.element,"doc_id"),get(c.element,"page_no"),get(c.element,"idx",0)))
     queues=[[c for c in ordered if a.aspect_id in c.aspect_ids] for a in plan.aspects]
+    if plan.intent!="factoid":
+        # Conclusion/limitation passages go first (best-scored few): they state what results do not show.
+        queues.insert(0,[c for c in ordered if "structure" in c.sources][:value(settings,"endmatter_hits")])
     selected=[];seen=set();used=0;cap=budget(settings,plan.intent,"verify_chars")
     # Keep original candidates intact; screen.py creates visible bounded fragments.
     for i in range(max([len(q) for q in queues] or [0])):

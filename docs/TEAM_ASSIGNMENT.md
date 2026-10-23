@@ -6,7 +6,7 @@ Read in this order: **this file → `ARCHITECTURE.md` → your modules in `PLAN.
 
 ## The split
 
-| | **Person 1 (Satyaranjan + Claude)** | **Person 2 (teammate)** |
+| | **Person 1 (Satyaranjan)** | **Person 2 (teammate)** |
 |---|---|---|
 | Builds first | **M0 Foundation**: the shared contracts and test fakes. Ready ~20 min after this file is sent; pushed to the shared repo. | Starts immediately on Track B against the M0 interfaces written in PLAN.md (they are frozen). Pull M0 when it lands. |
 | Track | **Track A: Ingestion** = M1 Parse & OCR, M2 Segment & boilerplate, M3 Store/registry/CPU models, M4 Cards & identity, M5 Ingest pipeline + `POST /index` | **Track B: Query** = M6 Planning & guard, M7 CPU retrieval & triage, M8 LLM survey & verify, M9 Answer & citation render, M10 Query pipeline + `POST /query` |

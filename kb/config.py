@@ -37,7 +37,7 @@ class Settings:
     answer_model: str = ""
     price_input_per_m: float | None = 0.15
     price_output_per_m: float | None = 0.47
-    llm_concurrency: int = 8
+    llm_concurrency: int = 12
     llm_timeout_s: int = 180
     llm_max_retries: int = 3
     mongodb_uri: str = ""                      # env MONGODB_URI: enables Atlas GridFS persistence of generations

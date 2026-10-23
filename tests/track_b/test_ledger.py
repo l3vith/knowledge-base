@@ -163,7 +163,7 @@ def test_query_runtime_reserves_ledger_plus_writer_and_final_check(tmp_path):
     from kb.query.runtime import QueryRuntime
     from kb.query.errors import BudgetExceeded
     from kb.query.observability import LocalSink
-    runtime=QueryRuntime(settings(tmp_path,max_llm_calls=4),FakeLLM(),LocalSink())
+    runtime=QueryRuntime(settings(tmp_path,max_llm_calls=8),FakeLLM(),LocalSink())
     runtime.pending_ledger=True;runtime.calls=1
     with pytest.raises(BudgetExceeded):runtime._reserve('verify','system',{},100)
     runtime._reserve('ledger_extract','system',{},100)

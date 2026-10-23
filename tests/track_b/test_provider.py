@@ -47,7 +47,7 @@ def test_raw_failure_diagnostics_and_reservation_release(tmp_path,monkeypatch):
         runtime.call("verify","system",{},500)
     raw=json.loads((runtime.path/'call_1_raw_response.json').read_text(encoding='utf-8'))
     assert raw=={'content':None,'finish_reason':'length','output_limit':500}
-    assert runtime.reserved_output==23
+    assert runtime.reserved_verify==23 and runtime.reserved_output==0
     assert runtime.usage()['output_tokens']==23
 
 
@@ -154,5 +154,13 @@ def test_reasoning_floor_included_in_all_future_reserves(tmp_path):
     runtime.llm.model='deepseek-v4.1-flash'
     runtime.reserved_output=10000
     with pytest.raises(BudgetExceeded,match='Output reservation'):
-        runtime.call('verify','system',{},512)
+        runtime.call('survey','system',{},512)
     assert runtime.calls==0
+
+
+def test_verification_has_its_own_output_pool(tmp_path):
+    # A concurrent verify round must not be cut by the answer's reserve: 20 batches of 2,000 fit the verify pool.
+    from .helpers import FakeLLM
+    runtime=QueryRuntime(settings(tmp_path,max_llm_calls=40),FakeLLM(lambda n,p:{"keep":[]}),LocalSink())
+    out=runtime.call_many('verify','system',[{"i":i} for i in range(20)],2000)
+    assert not any(isinstance(r,Exception) for r in out) and runtime.reserved_output==0

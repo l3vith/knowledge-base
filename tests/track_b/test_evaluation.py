@@ -91,3 +91,29 @@ def test_official_judge_adapter_uses_configured_shared_transport(monkeypatch):
     assert client.call_structured('system','source',max_tokens=512)=={'ok':True}
     assert seen[0].llm_model=='qwen3.8-flash' and seen[0].llm_max_retries==1
     assert seen[1][2]=={'name':'official_judge','max_tokens':512}
+
+
+def test_deepseek_judge_is_cheap_cached_and_never_retries_an_empty_reply(tmp_path,monkeypatch):
+    import requests
+    from evaluation.official import OfficialJudgeTransport
+    monkeypatch.setenv("KB_SPEND_LEDGER",str(tmp_path/"spend.jsonl"))
+    monkeypatch.setenv("KB_BUDGET_USD","1")
+    sent=[]
+    class Reply:
+        def __init__(self,content): self.content=content
+        def raise_for_status(self): pass
+        def json(self): return {"usage":{"prompt_tokens":10,"completion_tokens":20},
+                                "choices":[{"message":{"content":self.content},"finish_reason":"stop" if self.content else "length"}]}
+    replies=iter([Reply('{"points":["a"]}'),Reply(None)])
+    monkeypatch.setattr(requests,"post",lambda url,headers,json,timeout:(sent.append(json),next(replies))[1])
+    judge=OfficialJudgeTransport("test-key","deepseek-v4.1-flash","http://judge.test")
+    judge.cache=tmp_path/"judge_cache"
+    assert judge.call_structured("s","u")=={"points":["a"]} and sent[0]["reasoning_effort"]=="low"
+    assert judge.call_structured("s","u")=={"points":["a"]} and len(sent)==1  # cached: no second paid call
+    replies2=iter([Reply(None),Reply('{"points":[]}'),Reply(None),Reply(None)])
+    monkeypatch.setattr(requests,"post",lambda url,headers,json,timeout:(sent.append(json),next(replies2))[1])
+    assert judge.call_structured("s","other")=={"points":[]}  # token-exhausted: one retry with a larger limit
+    assert [p["max_tokens"] for p in sent[1:]]==[10000,32000] and judge.over_notebook_limit==1
+    with pytest.raises(RuntimeError,match="no content"):
+        judge.call_structured("s","third")
+    assert len(sent)==5  # never more than that one larger retry

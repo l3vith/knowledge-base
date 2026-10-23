@@ -6,6 +6,7 @@ from .plan import _call_many, field
 from .settings import value, budget
 from .types import SurveyPick, Evidence
 from .anchors import SourceCatalog
+from .requirements import requested_topics
 from .utils import get, source_fragments, quote_valid, compact, support_spans, narrow_factoid
 
 NO_EVIDENCE_LIMIT = "No evidence verified before the verification budget was exhausted"
@@ -32,7 +33,8 @@ For finding_contract=source_ids_v2, source_spans already have immutable source-o
 Select their IDs only; NEVER retype a quantity, unit, method label or quotation. The application copies it.
 Optional keep-row fields: value_ids:[provided V IDs], experiment_id:provided A ID|null,
 method_id:provided A ID|null, metric:short_grouping_key, mode:MEASURED|PROJECTED|BOUND|REPORTED|UNSPECIFIED,
-qualification_ids:[provided A IDs]. Omit uncertain optional fields instead of guessing.
+qualification_ids:[provided A IDs], requirement_ids:[requested_topics IDs this row answers].
+Omit uncertain optional fields instead of guessing.
 Select the smallest complete relevant source sentences. Preserve conditions/negation and necessary
 qualifications; reference their source IDs. Different methods/experiments remain separate. Classifications
 are metadata hypotheses, not evidence. No free-text facts or synthesized values in the response.
@@ -130,6 +132,7 @@ def verify_elements(llm,store,plan,query,middle,settings,*,ctx=None):
     kept={}
     aspects={a.aspect_id for a in plan.aspects}
     binding_catalogs={}
+    topics=[{'id':r['id'],'text':r['text']} for r in requested_topics(query,plan.intent)] if integrated else []
     def build(batch):
         local={f"E{i+1}":candidate for i,candidate in enumerate(batch)}
         catalog=SourceCatalog({eid:c.element for eid,c in local.items()}) if integrated else None
@@ -145,7 +148,7 @@ def verify_elements(llm,store,plan,query,middle,settings,*,ctx=None):
             for eid,c in local.items()]}
         if integrated:
             lookup,aliases=catalog.aliases()
-            payload['finding_contract']='source_ids_v2'
+            payload['finding_contract']='source_ids_v2';payload['requested_topics']=topics
             for item in payload['elements']:
                 item['source_spans']={aliases[sid]:text for sid,text in spans[item['id']].items()}
                 item['value_anchors']=[{'id':aliases[v['id']],'text':v['text'],
@@ -155,8 +158,13 @@ def verify_elements(llm,store,plan,query,middle,settings,*,ctx=None):
                 'elements':{eid:get(c.element,'element_id') for eid,c in local.items()}})
         return [batch,local,spans,payload,min(2400,256+160*len(batch)),None]
     work=[build(batch) for batch in batches]
-    # At most one split recovery for schema failures, then stop repeated failures.
-    recovery_used=False;prefetched=False
+    if not fast and len(work)>1:
+        # All batches in one concurrent round (budget reserved in order): a 30 s answer leaves no time for
+        # sequential checks. The factual path stays sequential because it stops at the first kept batch.
+        for item,result in zip(work,_call_many(llm,ctx,"verify",VERIFY_SYSTEM+(ID_FINDING_SYSTEM if integrated else ""),[w[3] for w in work],[w[4] for w in work])):
+            item[5]=result
+    # At most one split recovery for schema failures; after a failure no new calls, paid results still used.
+    recovery_used=False;stopped=False
     batch_index=0
     while batch_index<len(work):
         batch,local,spans,payload,limit,raw=work[batch_index];batch_index+=1
@@ -164,6 +172,8 @@ def verify_elements(llm,store,plan,query,middle,settings,*,ctx=None):
             report["bounded_candidates_not_verified"]+=sum(len(w[0]) for w in work[batch_index-1:])
             break
         if raw is None:
+            if stopped:
+                report["omitted_fragments"]+=len(batch);continue
             raw=_call_many(llm,ctx,"verify",VERIFY_SYSTEM+(ID_FINDING_SYSTEM if integrated else ""),[payload],limit)[0]
         if isinstance(raw,BudgetExceeded):
             report["omitted_fragments"]+=sum(len(w[0]) for w in work[batch_index-1:])
@@ -180,20 +190,14 @@ def verify_elements(llm,store,plan,query,middle,settings,*,ctx=None):
                 work[batch_index:batch_index]=[build(batch[:half]),build(batch[half:])]
                 report["split_retries"]=1
                 continue
-            if fast or all(w[5] is None for w in work[batch_index:]):
-                # Stop paying after a failure; results already paid for in the concurrent round are still used.
-                report["omitted_fragments"]+=sum(len(w[0]) for w in work[batch_index:])
+            if not stopped:
+                stopped=True
                 report["limitations"].append("Verification stopped after a provider/schema failure")
+            if fast:
+                report["omitted_fragments"]+=sum(len(w[0]) for w in work[batch_index:])
                 break
             continue
         report["elements_seen"]+=len(batch)
-        if not fast and not prefetched:
-            # The first batch is a canary: once the model answers in schema, the rest run as one concurrent
-            # round (budget still reserved in order). The factual path stays sequential: it stops at the first kept batch.
-            prefetched=True
-            rest=[w for w in work[batch_index:] if w[5] is None]
-            for item,result in zip(rest,_call_many(llm,ctx,"verify",VERIFY_SYSTEM+(ID_FINDING_SYSTEM if integrated else ""),[w[3] for w in rest],[w[4] for w in rest]) if rest else []):
-                item[5]=result
         for row in raw["keep"]:
             if integrated and isinstance(row,dict):
                 _,lookup=binding_catalogs[id(local)];row=dict(row)
@@ -230,7 +234,7 @@ def verify_elements(llm,store,plan,query,middle,settings,*,ctx=None):
                 if not selected:selected=[a for a in catalog.by_evidence[row['id']] if catalog.anchors[a].text in quotes]
                 binding={'anchor_ids':selected,'obligation_ids':aids,
                     'role':'QUALIFICATION' if row.get('relevance')=='qualification' else 'FINDING'}
-                for binding_key in ('value_ids','experiment_id','method_id','metric','mode','qualification_ids'):
+                for binding_key in ('value_ids','experiment_id','method_id','metric','mode','qualification_ids','requirement_ids'):
                     if binding_key in row:binding[binding_key]=row[binding_key]
                 quals=row.get('qualification_ids',[])
                 for sid in quals if isinstance(quals,list) else []:
@@ -281,7 +285,11 @@ def local_survey_pages(plan,pool,lexical_net,page_report,settings):
         ranked=page_report.get("documents",{}).get(doc,{}).get("ranked_pages",pages)
         route=page_report.get("documents",{}).get(doc,{}).get("navigation",{})
         preferred=route.get("preferred_pages",[])
-        if route.get("focused"):
+        if plan.intent!="factoid" and len(pages)<=value(settings,"short_doc_pages"):
+            # Short document: every page is eligible; local cross-encoder triage (free) ranks the elements and only
+            # the verification budget, never a page's rank, decides what reaches the paid check.
+            chosen=route.get("direct_pages",[])+sorted(lexical_net.get(doc,set()) & allowed)+list(ranked)+list(pages)
+        elif route.get("focused"):
             outside=[p for p in ranked if p not in preferred][:value(settings,"metadata_fallback_pages")]
             chosen=preferred+outside
         else:

@@ -165,6 +165,14 @@ def answer_query(collection,query,*,store,generation_id,settings,llm,embedder=No
                     chunk["cited_by_claim_ids"]=cited
                     if cited:
                         chunk["evidence_role"]="claim_support"
+                # Verified evidence the writer did not see is still what this query retrieved: return it, labelled.
+                shown={get(ev.element,"element_id") for ev in numbered.values()}
+                rest=[ev for ev in evidence if get(ev.element,"element_id") not in shown] if mode!="baseline" else []
+                for i,ev in enumerate(rest,1):
+                    chunk=format_chunk(cards[get(ev.element,"doc_id")],ev,f"V{i}")
+                    chunk["evidence_role"]="verified_not_in_writer_context"
+                    chunks.append(chunk)
+                out.update(verified_not_in_writer_context=len(rest))
             coverage=_coverage(plan,numbered,draft.claims,limits+draft.limitations,counts)
             coverage["requested_topics"]=draft.requested_topics
             unresolved=any(a["status"]!="supported" for a in coverage["aspects"])

@@ -6,6 +6,8 @@ from .utils import get, terms, rrf
 from .metadata import navigation_hints, element_metadata_score
 from .requirements import requested_topics
 
+ENDMATTER=("conclusion","conclusions","limitation","limitations","discussion","future","caveats")
+
 
 def _query_vectors(embedder,texts):
     import numpy as np
@@ -145,6 +147,13 @@ def element_retrieval(store,plan,query,picks,escape,embedder,settings,*,navigati
         for el in store.elements_by_ids(ids):
             if get(el,"doc_id") in plan.doc_ids:
                 add(el,[aspect.aspect_id],"hybrid")
+    if plan.intent!="factoid" and plan.doc_ids:
+        # Conclusions and limitations often sit at a document's end and rank low for any one aspect; search them
+        # explicitly (element FTS indexes the section title) so page rank alone cannot drop them.
+        for eid,score in store.search_elements(list(ENDMATTER),plan.doc_ids,value(settings,"endmatter_hits")):
+            for el in store.elements_by_ids([eid]):
+                if get(el,"doc_id") in plan.doc_ids:
+                    add(el,[a.aspect_id for a in plan.aspects],"structure")
     for doc,page in escape:
         for el in store.elements_for_pages(doc,[page],include_boilerplate=True):
             add(el,[a.aspect_id for a in plan.aspects],"escape")
@@ -158,6 +167,6 @@ def element_retrieval(store,plan,query,picks,escape,embedder,settings,*,navigati
                 if get(el,"element_id") in merged:continue
                 add(el,candidate.aspect_ids,"source_dependency");dependency_count+=1
                 if dependency_count>=value(settings,"metadata_dependency_elements"):break
-    priority={"survey_high":0,"hybrid":1,"survey_lexical":2,"survey_medium":3,"source_dependency":3,"escape":4}
+    priority={"survey_high":0,"hybrid":1,"structure":1,"survey_lexical":2,"survey_medium":3,"source_dependency":3,"escape":4}
     result=sorted(merged.values(),key=lambda c:(min(priority.get(s,5) for s in c.sources),get(c.element,"doc_id"),get(c.element,"page_no"),get(c.element,"idx",0)))
     return result,{"total":len(result),"by_source":{s:sum(s in c.sources for c in result) for s in priority}}

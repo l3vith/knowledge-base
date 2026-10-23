@@ -80,7 +80,8 @@ def test_value_or_qualification_omission_gets_exact_source_fallback(tmp_path):
         return {'selections':[{'record_ids':[r['id']],'anchor_ids':[ids[0]]}]}
     draft=generate_answer(FakeLLM(respond),'cost',plan,ev,{},settings(tmp_path,analytical_writer_mode='ledger'))
     assert 'only inside the tested domain' in draft.claims[0].text
-    assert len(draft.claims[0].quotes)==2 and draft.status=='partial'
+    # The model's anchor choice is ignored: every record renders its own compact bundle, qualification included.
+    assert len(draft.claims[0].quotes)==2 and draft.status=='answered'
 
 
 def test_table_values_keep_source_header_and_exact_row(tmp_path):

@@ -12,6 +12,8 @@ class QuerySettings:
     max_obligations: int = 64
     page_selection_mode: str = "local"
     local_pages_per_doc: int = 5
+    short_doc_pages: int = 30  # analytical: every page of a document this short is eligible for local ranking
+    endmatter_hits: int = 8  # conclusion/limitation elements searched for and verified first
     metadata_navigation_enabled: bool = True
     metadata_dependency_elements: int = 4
     metadata_ranges_per_aspect: int = 2
@@ -31,19 +33,23 @@ class QuerySettings:
     verify_chars_per_call: int = 12000
     verify_chars_total: int = 192000
     max_evidence: int = 450
-    query_deadline_s: float = 120
-    max_llm_calls: int = 24
+    query_deadline_s: float = 30  # judges' guidance: an answer within 30 s is good
+    max_llm_calls: int = 32
     # UTF-8 bytes, not tokens (~4 bytes/token): 480 KB is ~120k input tokens, about $0.036 at $0.30/M.
-    # Sized from training: gold answers cite a median of 81 chunks, so the writer must see ~60-90 of ours.
+    # Writer context stays small (raw_token_budget_*) for a ~30 s answer; all verified evidence is still returned as chunks.
     max_input_tokens: int = 480000
     max_output_tokens: int = 32000
+    verify_output_tokens: int = 48000  # separate pool; ~$0.02 worst case at Qwen output prices
     answer_output_tokens: int = 8000
+    # extractive: copied sentences; ledger: source-ID findings rendered from source text; synthesis: cited analyst
+    # write-up with labelled finding/inference/gap statements. A narrow single-value factoid is always extractive.
     analytical_writer_mode: str = "extractive"
     ledger_extraction_mode: str = "integrated"
     ledger_output_tokens: int = 8000
     ledger_quote_chars: int = 30000
     analytical_answer_chars: int = 8000
     analytical_answer_claims: int = 24
+    max_synthesis_statements: int = 55  # synthesis: one atomic statement each; benchmark answers run ~40-75 points
     artifact_dir: Path = Path("artifacts/runs")
     strict_observability: bool = True
     raw_token_budget_factoid: int = 12000
@@ -63,9 +69,9 @@ def budget(settings, intent, key):
 
 
 def from_environment():
-    return QuerySettings(ledger_extraction_mode=os.getenv("KB_LEDGER_EXTRACTION","integrated"),analytical_writer_mode=os.getenv("KB_ANALYTICAL_WRITER","extractive"),metadata_navigation_enabled=os.getenv("KB_METADATA_NAVIGATION","1")!="0",page_selection_mode=os.getenv("KB_PAGE_SELECTION","local"),artifact_dir=Path(os.getenv("KB_RUN_DIR", "artifacts/runs")),
+    return QuerySettings(ledger_extraction_mode=os.getenv("KB_LEDGER_EXTRACTION","integrated"),analytical_writer_mode=os.getenv("KB_ANALYTICAL_WRITER","synthesis"),metadata_navigation_enabled=os.getenv("KB_METADATA_NAVIGATION","1")!="0",page_selection_mode=os.getenv("KB_PAGE_SELECTION","local"),artifact_dir=Path(os.getenv("KB_RUN_DIR", "artifacts/runs")),
                          strict_observability=os.getenv("KB_REQUIRE_LANGFUSE", "1") != "0",
-                         query_deadline_s=float(os.getenv("KB_QUERY_DEADLINE_S", "120")))
+                         query_deadline_s=float(os.getenv("KB_QUERY_DEADLINE_S", "30")))
 
 
 class SharedQuerySettings:
