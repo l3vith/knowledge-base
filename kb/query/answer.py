@@ -31,8 +31,8 @@ Return JSON {verdicts:[{claim_id,verdict:supported|partial|unsupported|uncertain
 A shared topic or a quoted number alone is insufficient support for a more specific claim."""
 
 
-def select_portfolio(evidence,plan,settings):
-    cap=value(settings,"raw_token_budget_"+plan.intent)
+def select_portfolio(evidence,plan,settings,cap=None):
+    cap=value(settings,"raw_token_budget_"+plan.intent) if cap is None else min(cap,value(settings,"raw_token_budget_"+plan.intent))
     maxcount=budget(settings,plan.intent,"max_evidence")
     # Deduplicate only exact source-backed values within one qualified obligation/document.
     # No cross-document/period collapse, no collapsing conflicting values or dependencies.
@@ -191,7 +191,7 @@ def verify_answer(llm,draft,numbered,settings,*,ctx=None):
     if not valid:
         return AnswerDraft([],"partial",draft.limitations+["All claims failed deterministic calculation checks"]),{"accepted":0,"rejected":rejected}
     raw=_call(llm,ctx,"answer_verify",CHECK_SYSTEM,{"claims":[{"claim_id":c.claim_id,"text":c.text,"quotes":c.quotes,"calculation":c.calculation} for c in valid],
-          "evidence":evidence_block(numbered,{})},2000)
+          "evidence":evidence_block({eid:ev for eid,ev in numbered.items() if any(eid in c.evidence_ids for c in valid)},{})},2000)
     verdicts={}
     duplicate=set()
     if not isinstance(raw.get("verdicts"),list):

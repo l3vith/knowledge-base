@@ -63,6 +63,19 @@ def _call(llm,ctx,name,system,payload,max_tokens):
     return ctx.call(name,system,payload,max_tokens) if ctx else llm.complete_json(system,compact(payload),name=name,max_tokens=max_tokens)
 
 
+def _call_many(llm,ctx,name,system,payloads,max_tokens):
+    """One result or exception per payload; with a runtime the budgeted calls run concurrently."""
+    if ctx:
+        return ctx.call_many(name,system,payloads,max_tokens)
+    out=[]
+    for payload in payloads:
+        try:
+            out.append(_call(llm,None,name,system,payload,max_tokens))
+        except Exception as exc:
+            out.append(exc)
+    return out
+
+
 def plan_query(llm, query, cards, settings, *, ctx=None):
     hints=query_hints(query,cards)
     fallback=Aspect("a1",query,terms(query)[:16])
@@ -70,9 +83,7 @@ def plan_query(llm, query, cards, settings, *, ctx=None):
         raw=_call(llm,ctx,"plan",PLAN_SYSTEM,{"query":query,"hints":hints,"catalogue":[card_line(c) for c in cards]},3000)
         if not isinstance(raw,dict):
             raise ValueError("planner schema")
-    except BudgetExceeded:
-        raise
-    except Exception:
+    except Exception:  # incl. BudgetExceeded from an oversized catalogue: plan from the query itself, never fail
         return QueryPlan("exhaustive" if re.search(r"\b(all|every|exhaustive)\b",query,re.I) else "analytical",[fallback],[],notes="planner_failed; source search remains required")
     intent=raw.get("intent","analytical")
     if not isinstance(intent,str):

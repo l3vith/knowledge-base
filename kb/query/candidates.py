@@ -50,14 +50,11 @@ def candidate_pages(store, plan, query, embedder, settings):
         source=store.search_pages(terms(query),[doc],cap)
         dense=_dense(store,embedder,[query]+[a.text for a in plan.aspects],[doc],cap,"pages",dense_cache)
         ranked=rrf([(d,p) for d,p,s in source],[(d,p) for d,p,s in dense])
-        broad=plan.intent=="exhaustive"
-        ordered=list(dict.fromkeys([p for d,p in ranked]+all_pages))
-        if broad or len(all_pages)<=cap:
-            selected=all_pages
-        else:
-            selected=list(dict.fromkeys(sorted(net)+ordered))[:cap]
+        # Relevance order, not page order: the survey budget runs out before the tail, so the tail must be the least relevant.
+        nonblank=set(all_pages)
+        selected=list(dict.fromkeys(sorted(net)+[p for d,p in ranked if p in nonblank]+all_pages))[:cap]
         pools[doc]=selected
-        report["documents"][doc]={"available":len(all_pages),"mode":"all" if len(selected)==len(all_pages) else "bounded", "ranked_pages":ordered}
+        report["documents"][doc]={"available":len(all_pages),"mode":"all" if len(selected)==len(all_pages) else "bounded", "ranked_pages":selected}
     # Global fair cap: lexical obligation hits first, then round-robin across documents.
     selected=[]; seen=set()
     for rank in range(max([len(x) for x in slot_lists] or [0])):
@@ -69,7 +66,7 @@ def candidate_pages(store, plan, query, embedder, settings):
             key=(doc,pages[index]) if index<len(pages) else None
             if key and key not in seen and len(selected)<cap:
                 selected.append(key);seen.add(key)
-    result={doc:sorted(p for d,p in selected if d==doc) for doc in pools}
+    result={doc:[p for d,p in selected if d==doc] for doc in pools}
     for doc,pages in result.items():
         report["documents"][doc]["selected"]=len(pages)
         report["documents"][doc]["ranked_pages"]=[p for p in report["documents"][doc]["ranked_pages"] if p in set(pages)]

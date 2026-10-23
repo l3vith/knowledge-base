@@ -137,7 +137,7 @@ def test_shared_qwen_wire_format_and_zero_cost_cache(tmp_path,monkeypatch):
 def test_final_check_is_reserved_during_drafting(tmp_path):
     from .helpers import FakeLLM
     from kb.query.errors import BudgetExceeded
-    runtime=QueryRuntime(settings(tmp_path),FakeLLM(),LocalSink())
+    runtime=QueryRuntime(settings(tmp_path,max_output_tokens=24000),FakeLLM(),LocalSink())
     runtime.reserved_output=18001
     with pytest.raises(BudgetExceeded,match='Output reservation'):
         runtime.call('answer','system',{},4000)
@@ -150,7 +150,7 @@ def test_reasoning_floor_included_in_all_future_reserves(tmp_path):
     from .helpers import FakeLLM
     from kb.query.errors import BudgetExceeded
     llm=FakeLLM()
-    runtime=QueryRuntime(settings(tmp_path),llm,LocalSink())
+    runtime=QueryRuntime(settings(tmp_path,max_output_tokens=24000),llm,LocalSink())
     runtime.llm.model='deepseek-v4.1-flash'
     runtime.reserved_output=10000
     with pytest.raises(BudgetExceeded,match='Output reservation'):

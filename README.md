@@ -16,7 +16,7 @@ python3.12 -m venv .venv
 .venv/bin/python -m pip install -r requirements.txt
 ```
 
-Copy `.env.example` to `.env` and configure the organizer OpenCode key/model and Langfuse credentials locally. Never commit `.env`. OPENCODE_MODEL is also mapped to the shared LLM_MODEL by the launch script. The base URL is configurable; the example follows the supplied evaluator and is not a claim of live model availability. Keep both PRICE fields blank until organizer/model prices are verified; query accounting records unknown cost as null.
+Copy `.env.example` to `.env` and configure the organizer OpenCode key/model and Langfuse credentials locally. Never commit `.env`. OPENCODE_MODEL is also mapped to the shared LLM_MODEL by the launch script. The base URL is configurable; the example follows the supplied evaluator and is not a claim of live model availability. Set both PRICE fields: when `KB_BUDGET_USD` is set and a price is blank, every model call is refused, because the spend cap could not be enforced. See [the credit plan](docs/CREDIT_PLAN.md).
 
 ```bash
 .venv/bin/python -m scripts.serve --env-file .env --host 127.0.0.1 --port 8000

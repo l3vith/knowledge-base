@@ -11,7 +11,7 @@ Rule: **everything that can run on the PC runs on the PC first.** Only planning,
 | Page cards (`KB_PAGE_CARDS=llm`, optional) | LLM | ≈ $1.75 per 7k pages (872 calls × ~3.9k in / ~0.7k out) |
 | Doc cards (one per document) | LLM | ≈ $0.05 for 35 docs |
 | Embeddings, BM25, cross-encoder triage, citation rendering | PC CPU | $0 |
-| Query: plan + survey + verify + answer | LLM | ≈ $0.01–0.05 per query (to be measured in dry-run mode) |
+| Query: plan + survey + verify + answer | LLM | ≈ $0.04 per query (dry-run measured: 330–400 KB of prompts ≈ 85–100k input tokens ≈ $0.03, plus ≈ $0.01 output) |
 | Re-running the same prompt (any step) | `data/llm_cache.sqlite` | $0 |
 | Re-indexing unchanged files | `data/cache/` | $0 |
 | Evaluation judge (`Evaluation.ipynb`) | LLM, same key, **not cached** | ≈ $0.02–0.04 per question |
@@ -36,7 +36,7 @@ Rule: **everything that can run on the PC runs on the PC first.** Only planning,
 | 6 | Tuning iterations: only the failing questions, 1–3 at a time | 4.50 | ≈ $1 |
 | — | **Reserve for the judges' hidden-set run: never touch** | — | **≥ $5** |
 
-**Hidden-run estimate:** about $0.05 ingestion (extractive page cards) plus N queries × $0.01–0.05. For 100 questions that is about $1–5. Stage 0's dry-run figures replace these estimates with measured ones.
+**Hidden-run estimate:** about $0.05 ingestion (extractive page cards) plus N queries × ≈ $0.04. For 100 questions that is about $4, inside the $5 reserve. The per-query ceiling is set by `max_input_tokens` / `max_output_tokens` in `kb/query/settings.py` (UTF-8 bytes, ≈ 4 per token). Stage 3 replaces these estimates with real usage; if real queries cost more than $0.05, lower `max_input_tokens` before the hidden run.
 
 **Stop rules:**
 - If any stage spends more than 2× its estimate, stop and check `data/spend.jsonl` (each line names the step).

@@ -7,11 +7,13 @@ from .errors import BudgetExceeded, QueryError
 from .observability import sink_from_environment
 from .plan import plan_query, guard_routing, field
 from .runtime import QueryRuntime
-from .screen import survey_pages, verify_elements, local_survey_pages
+from .screen import survey_pages, verify_elements, local_survey_pages, NO_EVIDENCE_LIMIT
 from .settings import value, QuerySettings
 from .triage import element_triage
 from .types import QueryPlan, Aspect, Evidence, AnswerDraft, SurveyPick
 from .utils import get, terms, plain, id_for, narrow_factoid
+
+BUDGET_TEXT="Not answered: the query budget ran out before any source evidence could be verified."
 
 STEP_NAMES=["query_planning","routing_guard","candidate_pages","page_survey","element_retrieval",
             "element_triage","element_verification","answer_generation","answer_verification","citation_render"]
@@ -140,7 +142,10 @@ def answer_query(collection,query,*,store,generation_id,settings,llm,embedder=No
                     evidence=[];out.update(skipped=True,reason="no source candidates")
             with ctx.stage(STEP_NAMES[7],DESCRIPTIONS[7],{"evidence":len(evidence)}) as out:
                 current_stage=7
-                portfolio,report=select_portfolio(evidence,plan,settings);numbered=number_evidence(portfolio)
+                # Writer and claim check each resend the portfolio; cap it to half of what the input budget has left.
+                left=value(settings,"max_input_tokens")-ctx.estimated_input
+                portfolio,report=select_portfolio(evidence,plan,settings,cap=max(0,left//2-8000))
+                numbered=number_evidence(portfolio)
                 if report["omitted"]:
                     limits.append(f"{report['omitted']} verified fragments omitted from writer context")
                 plan.limitations=list(dict.fromkeys(limits))
@@ -165,11 +170,9 @@ def answer_query(collection,query,*,store,generation_id,settings,llm,embedder=No
                 status="partial" if coverage["limitations"] or unresolved or draft.status=="partial" else "answered"
             else:
                 status="partial" if numbered else "no_answer"
-            if status=="partial" and draft.claims:
-                missing=[a["text"] for a in coverage["aspects"] if a["status"]!="supported"]
-                disclosures=coverage["limitations"]+(["Unresolved requests: "+"; ".join(missing)] if missing else [])
-                if disclosures:
-                    answer+="\n\nCoverage limitations: "+"; ".join(dict.fromkeys(disclosures))+"."
+                if not numbered and NO_EVIDENCE_LIMIT in limits:
+                    answer=BUDGET_TEXT  # a budget stop is not corpus absence; say which it was
+            # Limitations stay in `coverage` and the trace, not the answer: the judge scores every answer sentence as a claim.
             result={"request_id":ctx.request_id,"collection_name":collection,"generation_id":generation_id,
                     "config_sha256":config_sha256,
                     "status":status,"answer":answer,"chunks":chunks,"trace":ctx.trace,"coverage":coverage,

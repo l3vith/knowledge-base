@@ -36,7 +36,13 @@ class FastReranker:
     def score(self, query: str, texts: list[str]) -> list[float]:
         if not texts:
             return []
-        return [float(s) for s in self.model.rerank(query, list(texts), batch_size=64)]  # input order
+        # A batch pads to its longest pair, so batch similar lengths together, then restore input order.
+        order = sorted(range(len(texts)), key=lambda i: len(texts[i]))
+        scores = list(self.model.rerank(query, [texts[i] for i in order], batch_size=16))
+        out = [0.0] * len(texts)
+        for i, s in zip(order, scores):
+            out[i] = float(s)
+        return out
 
 
 def get_embedder(settings) -> Embedder:
