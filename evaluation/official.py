@@ -15,7 +15,7 @@ def load_notebook_namespace(ipynb,expected_hash=EXPECTED_EVALUATOR_SHA256,config
         raise ValueError("official evaluator hash differs; inspect and explicitly pin the provided original")
     notebook=json.loads(original)
     cfg={"OPENCODE_API_KEY":os.getenv("OPENCODE_API_KEY",""),
-         "OPENCODE_MODEL":os.getenv("OPENCODE_MODEL",os.getenv("LLM_MODEL","deepseek-v4.1-flash")),
+         "OPENCODE_MODEL":os.getenv("OPENCODE_MODEL",os.getenv("LLM_MODEL","qwen3.8-flash")),
          "OPENCODE_BASE_URL":os.getenv("OPENCODE_BASE_URL","https://opencode.ai/inference/openai/v1/chat/completions")}
     if config:
         cfg.update(config)
@@ -49,7 +49,8 @@ def evaluate_file(run_path,api_key=None,notebook=None,expected_hash=EXPECTED_EVA
     if not key:
         raise ValueError("OpenCode key required for real official judging")
     ns=load_notebook_namespace(notebook,expected_hash,{"OPENCODE_API_KEY":key})
-    client=ns["OpenCodeClient"](api_key=key,model=ns["OPENCODE_MODEL"],base_url=ns["OPENCODE_BASE_URL"])
+    # Keep official metric definitions unchanged; adapt only the provider transport.
+    client=OfficialJudgeTransport(key,ns["OPENCODE_MODEL"],ns["OPENCODE_BASE_URL"])
     evaluator=ns["RAGMetricsEvaluator"](client)
     rows=[json.loads(s) for s in Path(run_path).read_text(encoding="utf-8").splitlines() if s.strip()]
     scored=[];errors=[]
@@ -71,3 +72,15 @@ def evaluate_file(run_path,api_key=None,notebook=None,expected_hash=EXPECTED_EVA
     result={"summary":summary,"per_question":scored,"errors":errors}
     Path(str(run_path)+".scores.json").write_text(json.dumps(result,ensure_ascii=False,indent=2)+"\n",encoding="utf-8")
     return result
+
+
+class OfficialJudgeTransport:
+    """Use the shared Messages/OpenAI transport without changing official metric logic."""
+    def __init__(self,key,model,base_url):
+        from kb.config import get_settings
+        from kb.llm import OpenCodeLLM
+        self.client=OpenCodeLLM(get_settings(opencode_api_key=key,llm_model=model,
+                                            opencode_base_url=base_url,llm_max_retries=1))
+
+    def call_structured(self,system_prompt,user_prompt,max_tokens=10000,temperature=0,max_retries=3):
+        return self.client.complete_json(system_prompt,user_prompt,name="official_judge",max_tokens=max_tokens)

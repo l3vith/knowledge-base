@@ -137,3 +137,15 @@ def test_repeated_nested_fragments_keep_distinct_source_offsets():
     assert a.text==b.text
     assert a.element_id!=b.element_id
     assert (a.char_start,b.char_start)==(0,110)
+
+
+def test_local_page_navigation_uses_no_survey_call(tmp_path):
+    llm=FakeLLM()
+    result=answer_query('c','Explain trial counts and reported results',
+                       store=MemoryStore({'d':['Trials 72 and reported results improved.']}),
+                       generation_id='g',settings=settings(tmp_path),llm=llm,reranker=FakeReranker())
+    assert 'survey' not in [n for n,_ in llm.calls]
+    assert result['trace'][3]['output']['selection_mode']=='local'
+    assert result['trace'][3]['output']['navigation_only']
+    assert result['chunks'][0]['content']=='Trials 72 and reported results improved.'
+    assert len(result['trace'])==10

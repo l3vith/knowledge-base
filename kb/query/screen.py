@@ -181,3 +181,25 @@ def verify_elements(llm,store,plan,query,middle,settings,*,ctx=None):
     if ctx:
         report["artifact_id"]=ctx.save("verified_evidence",list(kept.values()))
     return list(kept.values()),report
+
+
+def local_survey_pages(plan,pool,lexical_net,page_report,settings):
+    """Navigation only: use initial source FTS/vector ranks, never assert factual support."""
+    bydoc={}
+    for doc,pages in pool.items():
+        allowed=set(pages)
+        ranked=page_report.get("documents",{}).get(doc,{}).get("ranked_pages",pages)
+        chosen=(list(pages) if plan.intent=="exhaustive" else
+                sorted(lexical_net.get(doc,set()) & allowed)+
+                [p for p in ranked[:value(settings,"local_pages_per_doc")] if p in allowed])
+        bydoc[doc]=list(dict.fromkeys(chosen))
+    fair=[]
+    for i in range(max([len(p) for p in bydoc.values()] or [0])):
+        for doc,pages in bydoc.items():
+            if i<len(pages):
+                fair.append(SurveyPick(doc,pages[i],[a.aspect_id for a in plan.aspects],"lexical"))
+    cap=budget(settings,plan.intent,"verify_pages")
+    return fair[:cap],{"batches":0,"failed_batches":0,"cards_surveyed":0,"lexical_added":0,
+                       "truncated":max(0,len(fair)-cap),"limitations":[],"selection_mode":"local",
+                       "method":"initial source FTS and dense ranks plus obligation lexical matches",
+                       "navigation_only":True}

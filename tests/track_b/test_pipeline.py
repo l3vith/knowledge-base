@@ -21,7 +21,7 @@ def test_ten_stage_trace_and_source_fidelity(tmp_path):
     assert result["chunks"][0]["content"]==store.elements[0].text
     assert result["status"]=="answered"
     assert result["usage"]["cost_usd"] is None
-    assert result["usage"]["input_tokens"]==500
+    assert result["usage"]["input_tokens"]==400
     assert (tmp_path/"runs"/result["request_id"]/"writer_context.json").exists()
 
 

@@ -28,7 +28,7 @@ services:
       - key: OPENCODE_BASE_URL
         value: https://opencode.ai/inference/openai/v1/chat/completions
       - key: LLM_MODEL
-        value: deepseek-v4.1-flash
+        value: qwen3.8-flash
       - key: KB_BUDGET_USD
         sync: false
       - key: MONGODB_URI

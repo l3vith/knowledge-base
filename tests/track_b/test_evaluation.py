@@ -75,3 +75,19 @@ def test_capture_keeps_failed_query_row_instead_of_skipping(tmp_path):
     capture(rows,api="local:",collection="test",out=path,source_hash="sourcehash",query_fn=fail)
     row=json.loads(path.read_text(encoding="utf-8"))
     assert row["id"]=="s1" and row["error"] and row["retrieved_chunks"]==[]
+
+
+def test_official_judge_adapter_uses_configured_shared_transport(monkeypatch):
+    from evaluation.official import OfficialJudgeTransport
+    seen=[]
+    class Client:
+        def __init__(self,settings):
+            seen.append(settings)
+        def complete_json(self,system,user,**kwargs):
+            seen.append((system,user,kwargs))
+            return {'ok':True}
+    monkeypatch.setattr('kb.llm.OpenCodeLLM',Client)
+    client=OfficialJudgeTransport('fake','qwen3.8-flash','https://opencode.ai/inference/openai/v1/chat/completions')
+    assert client.call_structured('system','source',max_tokens=512)=={'ok':True}
+    assert seen[0].llm_model=='qwen3.8-flash' and seen[0].llm_max_retries==1
+    assert seen[1][2]=={'name':'official_judge','max_tokens':512}

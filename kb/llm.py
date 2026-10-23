@@ -183,13 +183,9 @@ class OpenCodeLLM(LLM):
                            "so the cap cannot be enforced; set the prices")
         if s.budget_usd is not None and spent_usd(s) >= s.budget_usd:
             raise LLMError(f"{name}: spend cap KB_BUDGET_USD={s.budget_usd} reached ({spent_usd(s):.4f} USD recorded)")
-        payload = {"model": model, "temperature": 0, "max_tokens": max_tokens,
-                   "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}]}
-        if model.startswith("deepseek-"):
-            payload.update(thinking={"type":"disabled"},reasoning_effort="low")
-        if json_mode:
-            payload["response_format"] = {"type": "json_object"}
-        headers = {"Authorization": f"Bearer {s.opencode_api_key}", "Content-Type": "application/json"}
+        from kb.model_api import request_spec, response_parts
+        endpoint,wire_headers,payload=request_spec(s.opencode_base_url,model,system,user,max_tokens,json_mode)
+        headers={"Authorization":f"Bearer {s.opencode_api_key}","Content-Type":"application/json",**wire_headers}
         last_error: Exception | None = None
         for attempt in range(1, s.llm_max_retries + 1):
             with lf_generation(name, model, {"system": clip(system, 2000), "user": clip(user, 4000)}) as gen:
@@ -197,24 +193,24 @@ class OpenCodeLLM(LLM):
                 try:
                     with _semaphore(s.llm_concurrency):
                         remaining=min(s.llm_timeout_s,max(0.001,getattr(self,"deadline",time.monotonic()+s.llm_timeout_s)-time.monotonic()))
-                        resp = requests.post(s.opencode_base_url, headers=headers, json=payload, timeout=remaining)
+                        resp = requests.post(endpoint, headers=headers, json=payload, timeout=remaining)
                     if resp.status_code == 429 or resp.status_code >= 500:
                         retry_after = resp.headers.get("Retry-After")
                         raise LLMError(f"HTTP {resp.status_code}")
                     resp.raise_for_status()
                     data = resp.json()
-                    usage = data.get("usage") or {}
-                    in_tok, out_tok = int(usage.get("prompt_tokens") or 0), int(usage.get("completion_tokens") or 0)
-                    self._account(in_tok, out_tok)
-                    content = data["choices"][0]["message"].get("content")
+                    content,finish_reason,in_tok,out_tok=response_parts(data)
+                    if not isinstance(in_tok,int) or not isinstance(out_tok,int):
+                        raise LLMError("Provider usage missing; paid requests cannot be accounted")
+                    self._account(in_tok,out_tok)
                     cost = self._cost(in_tok, out_tok)
                     self.last_usage={"input_tokens":in_tok,"output_tokens":out_tok,"cost_usd":cost["total"] if cost else None}
-                    self.last_response={"content":content,"finish_reason":data["choices"][0].get("finish_reason"),"output_limit":max_tokens}
+                    self.last_response={"content":content,"finish_reason":finish_reason,"output_limit":max_tokens}
                     _record_spend(s, name, model, in_tok, out_tok, cost["total"] if cost else None)
                     gen.update(output=clip(content or "", 4000), usage_details={"input": in_tok, "output": out_tok},
                                **({"cost_details": cost} if cost else {}))
                     if not content:
-                        raise LLMError(f"empty content, finish_reason={data['choices'][0].get('finish_reason')}")
+                        raise LLMError(f"empty content, finish_reason={finish_reason}")
                     out = parse_json_content(content) if json_mode else content
                     if self.cache:
                         self.cache.put(key, name, content)

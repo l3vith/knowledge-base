@@ -79,7 +79,7 @@ def test_empty_content_retries_then_raises(monkeypatch, settings):
 
 def test_spend_cap_blocks_calls_and_ledger_records(monkeypatch, tmp_path):
     calls = _patch_post(monkeypatch, ['{"a": 1}'])
-    s = get_settings(data_dir=tmp_path, budget_usd=2.0, llm_cache=False)
+    s = get_settings(data_dir=tmp_path, budget_usd=2.0, llm_cache=False, price_input_per_m=0.30, price_output_per_m=1.20)
     llm = OpenCodeLLM(s)
     llm.complete_json("s", "u", name="plan")          # costs 1.50 (1M in + 1M out)
     ledger = (tmp_path / "spend.jsonl").read_text(encoding="utf-8").splitlines()

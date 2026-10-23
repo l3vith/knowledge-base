@@ -30,10 +30,8 @@ class OpenCodeJSONClient:
     def complete_json(self, system, user, *, name, max_tokens=4000):
         self.last_usage = None
         self.last_response = None
-        payload = {"model": self.model, "messages": [{"role":"system","content":system},{"role":"user","content":user}],
-                   "temperature":0, "max_tokens":max_tokens, "response_format":{"type":"json_object"}}
-        if self.model.startswith("deepseek-"):
-            payload.update(thinking={"type":"disabled"},reasoning_effort="low")
+        from kb.model_api import request_spec, response_parts
+        endpoint,wire_headers,payload=request_spec(self.base_url,self.model,system,user,max_tokens)
         # One transport attempt per call; retries must go through the request ledger.
         remaining = max(0.0, self.deadline-time.monotonic()) if self.deadline is not None else self.timeout
         acquired = _PROVIDER_GATE.acquire(timeout=min(self.timeout, remaining))
@@ -45,7 +43,7 @@ class OpenCodeJSONClient:
                 raise QueryError("QUERY_DEADLINE", "Query deadline exhausted before provider call", 504)
             try:
                 with httpx.Client(timeout=min(self.timeout, remaining)) as client:
-                    response = client.post(self.base_url, headers={"Authorization":"Bearer "+self.key},json=payload)
+                    response = client.post(endpoint, headers={"Authorization":"Bearer "+self.key,**wire_headers},json=payload)
                     response.raise_for_status()
                     body = response.json()
             except (httpx.HTTPError, ValueError) as exc:
@@ -54,15 +52,13 @@ class OpenCodeJSONClient:
             _PROVIDER_GATE.release()
         if not isinstance(body,dict):
             raise QueryError("MODEL_SCHEMA", "Provider returned a non-object response", 503)
-        usage = body.get("usage") or {}
-        if not isinstance(usage,dict):
-            usage={}
-        self.last_usage = {"input_tokens":usage.get("prompt_tokens"),"output_tokens":usage.get("completion_tokens"),"cost_usd":None}
-        choice=(body.get("choices") or [{}])[0]
-        self.last_response={"content":choice.get("message",{}).get("content"),
-                            "finish_reason":choice.get("finish_reason"),"output_limit":max_tokens}
         try:
-            content = body["choices"][0]["message"]["content"]
+            content,finish_reason,inputs,outputs=response_parts(body)
+        except (KeyError,IndexError,TypeError,ValueError) as exc:
+            raise QueryError("MODEL_SCHEMA","Invalid provider response envelope",503) from exc
+        self.last_usage={"input_tokens":inputs,"output_tokens":outputs,"cost_usd":None}
+        self.last_response={"content":content,"finish_reason":finish_reason,"output_limit":max_tokens}
+        try:
             if not isinstance(content,str):
                 raise ValueError("missing answer content")
             content=content.strip()

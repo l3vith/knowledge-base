@@ -39,3 +39,14 @@ That CLI reads process environment variables; the server launcher loads `.env`. 
 ```
 
 The default suite uses synthetic model replies, while PDF/SQLite/collection integration uses real adapters. Explicit slow model checks load pretrained weights and can download them. Langfuse connectivity is a separate explicit live check; it emits no fake inference usage. Full-corpus ingestion, live OpenCode answer quality, official dev/holdout scores and provided-server deployment remain to be measured. See the handoff for remaining ingestion compliance work before submission.
+
+
+### Current low-cost inference profile
+
+The default is **Qwen3.8 Flash with thinking disabled**. Shared and query transports use OpenCode's Messages endpoint for this model; setting only the model ID on the old Chat Completions request is insufficient. `LLM_MODEL`, `ANSWER_MODEL` and `OPENCODE_MODEL` should all be `qwen3.8-flash`. Current verified catalogue rates are $0.15 input / $0.47 output per million tokens; explicit environment prices override defaults.
+
+Page selection now uses the initial source FTS/vector rankings and per-obligation lexical matches locally. `KB_PAGE_SELECTION=llm` opts back into paid page-card surveying. The ten trace stages remain present. Local navigation does not establish factual support; source evidence and final claims still undergo semantic verification.
+
+BGE-small embeddings, MiniLM cross-encoder reranking, SQLite FTS5, extractive page cards, citation validation and arithmetic already run locally. No additional generative local model is required for these steps. Final-stage token reservations include both answer generation and claim verification, using the same model limits as actual calls.
+
+A live Qwen source-span smoke returned HTTP 200, text blocks only, 484 input / 77 output tokens, $0.00010879 reported-token/catalog cost, and 3.36 seconds. This is transport/evidence-selection validation, not a full analytical benchmark or an accuracy claim. See `docs/QWEN_LOCAL_INFERENCE.md` for the shipped scope and remaining validation.

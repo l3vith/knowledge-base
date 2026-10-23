@@ -33,10 +33,10 @@ def load_dotenv(path: Path | None = None) -> None:
 class Settings:
     opencode_api_key: str = ""
     opencode_base_url: str = "https://opencode.ai/inference/openai/v1/chat/completions"
-    llm_model: str = "deepseek-v4.1-flash"
+    llm_model: str = "qwen3.8-flash"
     answer_model: str = ""
-    price_input_per_m: float | None = 0.30
-    price_output_per_m: float | None = 1.20
+    price_input_per_m: float | None = 0.15
+    price_output_per_m: float | None = 0.47
     llm_concurrency: int = 8
     llm_timeout_s: int = 180
     llm_max_retries: int = 3
@@ -135,8 +135,8 @@ def get_settings(**overrides) -> Settings:
     for env, (name, parse) in _ENV.items():
         if os.environ.get(env) not in (None, ""):
             values[name] = parse(os.environ[env])
-    values["price_input_per_m"] = _opt_float(os.environ.get("PRICE_INPUT_PER_M"), 0.30)
-    values["price_output_per_m"] = _opt_float(os.environ.get("PRICE_OUTPUT_PER_M"), 1.20)
+    values["price_input_per_m"] = _opt_float(os.environ.get("PRICE_INPUT_PER_M"), 0.15)
+    values["price_output_per_m"] = _opt_float(os.environ.get("PRICE_OUTPUT_PER_M"), 0.47)
     values["ce_tau_low"] = _opt_float(os.environ.get("CE_TAU_LOW"), None)
     values["ce_tau_high"] = _opt_float(os.environ.get("CE_TAU_HIGH"), None)
     known = {f.name for f in fields(Settings)}

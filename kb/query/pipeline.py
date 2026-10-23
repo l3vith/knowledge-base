@@ -7,7 +7,7 @@ from .errors import BudgetExceeded, QueryError
 from .observability import sink_from_environment
 from .plan import plan_query, guard_routing, field
 from .runtime import QueryRuntime
-from .screen import survey_pages, verify_elements
+from .screen import survey_pages, verify_elements, local_survey_pages
 from .settings import value, QuerySettings
 from .triage import element_triage
 from .types import QueryPlan, Aspect, Evidence, AnswerDraft, SurveyPick
@@ -84,9 +84,10 @@ def answer_query(collection,query,*,store,generation_id,settings,llm,embedder=No
                 if mode=="baseline":
                     pool,lexical,escape={},{},[];out.update(skipped=True,reason="baseline control")
                 else:
-                    pool,lexical,report=candidate_pages(store,plan,query,embedder,settings)
+                    pool,lexical,page_report=candidate_pages(store,plan,query,embedder,settings)
                     blocked={x["doc_id"] for x in guard.get("excluded",[])}
                     escape=[(d,p) for d,p in escape_pages(store,plan,query,embedder,settings) if d not in blocked]
+                    report=page_report
                     out.update(report,escape_pages=escape)
                     counts["candidate_pages"]=report["total"]
                     if report["omitted_cards"]:
@@ -103,7 +104,12 @@ def answer_query(collection,query,*,store,generation_id,settings,llm,embedder=No
                     counts["cards_surveyed"]=0
                     counts["raw_candidate_pages"]=len(picks)+len(escape)
                 else:
-                    picks,report=survey_pages(ctx.llm,store,plan,query,pool,lexical,settings,ctx=ctx)
+                    if value(settings,"page_selection_mode")=="local":
+                        picks,report=local_survey_pages(plan,pool,lexical,page_report,settings)
+                    elif value(settings,"page_selection_mode")=="llm":
+                        picks,report=survey_pages(ctx.llm,store,plan,query,pool,lexical,settings,ctx=ctx)
+                    else:
+                        raise QueryError("INVALID_CONFIG","KB_PAGE_SELECTION must be local or llm",500)
                     out.update(report,picked_pages=len(picks));limits.extend(report["limitations"])
                     counts["cards_surveyed"]=report["cards_surveyed"]
                     counts["raw_candidate_pages"]=len(picks)+len(escape)

@@ -10,6 +10,8 @@ class QuerySettings:
     router_max_docs: int = 12
     router_max_cards: int = 120
     max_obligations: int = 64
+    page_selection_mode: str = "local"
+    local_pages_per_doc: int = 5
     survey_batch_cards: int = 40
     survey_cards_total: int = 400
     verify_pages: int = 200
@@ -47,7 +49,7 @@ def budget(settings, intent, key):
 
 
 def from_environment():
-    return QuerySettings(artifact_dir=Path(os.getenv("KB_RUN_DIR", "artifacts/runs")),
+    return QuerySettings(page_selection_mode=os.getenv("KB_PAGE_SELECTION","local"),artifact_dir=Path(os.getenv("KB_RUN_DIR", "artifacts/runs")),
                          strict_observability=os.getenv("KB_REQUIRE_LANGFUSE", "1") != "0",
                          query_deadline_s=float(os.getenv("KB_QUERY_DEADLINE_S", "120")))
 
@@ -59,7 +61,7 @@ class SharedQuerySettings:
         self._query=from_environment()
 
     def __getattr__(self,name):
-        if name in ("strict_observability","query_deadline_s","artifact_dir"):
+        if name in ("strict_observability","query_deadline_s","artifact_dir","page_selection_mode"):
             return getattr(self._query,name)
         if hasattr(self._shared,name):
             return getattr(self._shared,name)

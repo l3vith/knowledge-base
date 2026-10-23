@@ -67,7 +67,7 @@ def test_shared_query_client_preserves_cache_spend_and_one_attempt(tmp_path,monk
         return SharedResponse()
     monkeypatch.setattr('kb.llm.requests.post',post)
     shared=get_settings(data_dir=tmp_path/'data',llm_cache=False,llm_max_retries=3,
-                        opencode_api_key='fake',price_input_per_m=0.3,price_output_per_m=1.2)
+                        llm_model="deepseek-v4.1-flash",opencode_api_key='fake',price_input_per_m=0.3,price_output_per_m=1.2)
     client=SharedQueryClient(OpenCodeLLM(shared)).scoped()
     runtime=QueryRuntime(settings(tmp_path),client,LocalSink())
     with pytest.raises(QueryError,match='invalid or truncated'):
@@ -87,3 +87,72 @@ def test_shared_dryrun_understands_compact_spans(tmp_path):
     out=client.complete_json('system',json.dumps({'query':'capital ratio','aspects':'a1: capital ratio',
         'elements':[{'id':'E1','source_spans':{'S1':'The capital ratio is 15 percent.'}}]}),name='verify',max_tokens=500)
     assert out['keep'][0]['support_span_ids']==['S1']
+
+
+def test_qwen_uses_messages_without_reasoning_and_accounts_usage(tmp_path,monkeypatch):
+    calls=[]
+    body={'content':[{'type':'text','text':'{"keep":[]}'}],'stop_reason':'end_turn',
+          'usage':{'input_tokens':30,'output_tokens':7,'cache_read_input_tokens':10}}
+    class CaptureClient(Client):
+        def post(self,url,**kwargs):
+            calls.append((url,kwargs))
+            return Response(self.body)
+    monkeypatch.setattr('kb.query.provider.httpx.Client',lambda **kwargs:CaptureClient(body))
+    llm=OpenCodeJSONClient(model='qwen3.8-flash',key='test',base_url='https://opencode.ai/inference/openai/v1/chat/completions')
+    runtime=QueryRuntime(settings(tmp_path),llm,LocalSink())
+    assert runtime.call('verify','Select exact spans',{},512)=={'keep':[]}
+    url,kw=calls[0]
+    assert url=='https://opencode.ai/inference/anthropic/v1/messages'
+    assert kw['json']['thinking']=={'type':'disabled'}
+    assert kw['json']['max_tokens']==512
+    assert 'reasoning_effort' not in kw['json'] and 'response_format' not in kw['json']
+    assert kw['headers']['anthropic-version']=='2023-06-01'
+    assert runtime.usage()['input_tokens']==40 and runtime.usage()['output_tokens']==7
+
+
+def test_shared_qwen_wire_format_and_zero_cost_cache(tmp_path,monkeypatch):
+    from kb.config import get_settings
+    from kb.llm import OpenCodeLLM
+    seen=[]
+    class Resp:
+        status_code=200
+        def raise_for_status(self): pass
+        def json(self):
+            return {'content':[{'type':'text','text':'{"ok":true}'}],'stop_reason':'end_turn',
+                    'usage':{'input_tokens':12,'output_tokens':5}}
+    def post(url,**kwargs):
+        seen.append((url,kwargs))
+        return Resp()
+    monkeypatch.setattr('kb.llm.requests.post',post)
+    s=get_settings(data_dir=tmp_path,llm_model='qwen3.8-flash',price_input_per_m=.15,price_output_per_m=.47)
+    first=OpenCodeLLM(s)
+    assert first.complete_json('system','user',name='verify',max_tokens=512)=={'ok':True}
+    assert first.last_usage['cost_usd']==pytest.approx((12*.15+5*.47)/1e6)
+    second=OpenCodeLLM(s)
+    assert second.complete_json('system','user',name='verify',max_tokens=512)=={'ok':True}
+    assert second.last_usage['cost_usd']==0 and len(seen)==1
+    assert seen[0][1]['json']['thinking']=={'type':'disabled'}
+
+
+def test_final_check_is_reserved_during_drafting(tmp_path):
+    from .helpers import FakeLLM
+    from kb.query.errors import BudgetExceeded
+    runtime=QueryRuntime(settings(tmp_path),FakeLLM(),LocalSink())
+    runtime.reserved_output=18001
+    with pytest.raises(BudgetExceeded,match='Output reservation'):
+        runtime.call('answer','system',{},4000)
+    assert runtime.calls==0
+    runtime.reserved_output=18000
+    runtime.call('answer_verify','system',{'claims':[]},2000)
+
+
+def test_reasoning_floor_included_in_all_future_reserves(tmp_path):
+    from .helpers import FakeLLM
+    from kb.query.errors import BudgetExceeded
+    llm=FakeLLM()
+    runtime=QueryRuntime(settings(tmp_path),llm,LocalSink())
+    runtime.llm.model='deepseek-v4.1-flash'
+    runtime.reserved_output=10000
+    with pytest.raises(BudgetExceeded,match='Output reservation'):
+        runtime.call('verify','system',{},512)
+    assert runtime.calls==0

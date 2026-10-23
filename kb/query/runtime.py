@@ -57,10 +57,9 @@ class QueryRuntime:
 
     def call(self, name, system, payload, max_tokens=4000):
         self.check()
-        # This gateway exposes DeepSeek reasoning variants; hidden reasoning consumes
-        # completion tokens even when the upstream thinking toggle is ignored.
-        if str(getattr(self.llm,"model","")).startswith("deepseek-"):
-            max_tokens=max(max_tokens,4096)
+        def effective_limit(n):
+            return max(n,4096) if str(getattr(self.llm,"model","")).startswith("deepseek-") else n
+        max_tokens=effective_limit(max_tokens)
         user = compact(payload)
         predicted = estimate_tokens(system) + estimate_tokens(user)
         if self.calls >= value(self.settings, "max_llm_calls"):
@@ -70,7 +69,9 @@ class QueryRuntime:
         share = {"plan": 0.25, "survey": 0.5, "verify": 0.85}.get(name, 1.0)
         if self.estimated_input + predicted > share * value(self.settings, "max_input_tokens"):
             raise BudgetExceeded("Conservative input budget exhausted")
-        final_reserve = 0 if name in ("answer", "answer_verify") else value(self.settings, "answer_output_tokens") + 2000
+        final_check=effective_limit(2000)
+        final_reserve=(0 if name=="answer_verify" else final_check if name=="answer"
+                       else effective_limit(value(self.settings,"answer_output_tokens"))+final_check)
         if self.reserved_output + max_tokens + final_reserve > value(self.settings, "max_output_tokens"):
             raise BudgetExceeded("Output reservation budget exhausted")
         self.calls += 1

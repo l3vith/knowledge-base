@@ -57,7 +57,7 @@ def candidate_pages(store, plan, query, embedder, settings):
         else:
             selected=list(dict.fromkeys(sorted(net)+ordered))[:cap]
         pools[doc]=selected
-        report["documents"][doc]={"available":len(all_pages),"mode":"all" if len(selected)==len(all_pages) else "bounded"}
+        report["documents"][doc]={"available":len(all_pages),"mode":"all" if len(selected)==len(all_pages) else "bounded", "ranked_pages":ordered}
     # Global fair cap: lexical obligation hits first, then round-robin across documents.
     selected=[]; seen=set()
     for rank in range(max([len(x) for x in slot_lists] or [0])):
@@ -72,6 +72,7 @@ def candidate_pages(store, plan, query, embedder, settings):
     result={doc:sorted(p for d,p in selected if d==doc) for doc in pools}
     for doc,pages in result.items():
         report["documents"][doc]["selected"]=len(pages)
+        report["documents"][doc]["ranked_pages"]=[p for p in report["documents"][doc]["ranked_pages"] if p in set(pages)]
         report["omitted_cards"]+=report["documents"][doc]["available"]-len(pages)
         lexical[doc]&=set(pages)
     report["total"]=len(selected)
