@@ -1,6 +1,6 @@
 # Major issues: Smart Knowledge Base repair handoff
 
-**Latest coverage-repair result:** factual answer precision/recall 100% / 66.67% at 19.06s; analytical 20% / 34.04% at 66.48s, partial. See [the latest measured report](docs/diagnostics/coverage-repair/REPORT.md). Broad metadata narrowing, missing topic checks and decimal display artifacts were addressed, but analytical omissions and over-inclusion remain unresolved. The first repair over-selected and took 139.11s; the bounded follow-up is the current implementation. Judge inconsistencies are flagged separately; official scores are unchanged. Do not claim all quality issues solved or submission readiness.
+**Latest default-mode coverage-repair result:** factual answer precision/recall 100% / 66.67% at 19.06s; analytical 20% / 34.04% at 66.48s, partial. See [the latest measured report](docs/diagnostics/coverage-repair/REPORT.md). Broad metadata narrowing, missing topic checks and decimal display artifacts were addressed, but analytical omissions and over-inclusion remain unresolved. The first repair over-selected and took 139.11s; the bounded follow-up is the current implementation. Judge inconsistencies are flagged separately; official scores are unchanged. Do not claim all quality issues solved or submission readiness.
 
 **Historical extractive-repair status (superseded by the update below):** factual scores are now 100% on this one case; analytical output now contains 18 verified claims, but its precision is only 25.93%. Sections describing zero claims/66.7% factual scores are historical baseline evidence. Read the final “Latest live repair result” section and its report first; analytical over-inclusion, latency and deployment/accounting gaps remain open.
 
@@ -321,3 +321,10 @@ An offline comparison using identical saved plans on the same one-document cases
 Broad analytical searches no longer narrow to metadata-only ranges; literal requested topics receive independent source matches. The extractive writer receives a checklist of topic phrases copied from the original question, and the existing final verifier checks topic coverage separately from claim support. Missing/duplicate/invalid coverage checks cannot prove completeness. General background is filtered separately from direct findings and necessary qualifications. Source numeric Markdown artifacts are repaired for display while raw quotation validation remains exact.
 
 These are implementation changes, not proof of a metric improvement. Read [the repair notes](docs/ANALYTICAL_COVERAGE_REPAIR.md) and the subsequent benchmark report for measured limits. The official evaluator is unchanged; a separate zero-call audit flags inconsistent labels without rewriting scores.
+
+
+## Relational ledger experiment
+
+A new optional ledger branch addresses finding-level selection and relation preservation. On the same frozen 51 writer-evidence fragments, guarded output scored 54.55% answer precision / 45.65% recall versus the default baseline’s 20% / 34.04%. This is a single public answer-stage trial, not an end-to-end or held-out result. The first unrestricted synthesis attempt regressed recall and merged unknown scopes; stricter guards and exact-source fallbacks fixed those specific unsafe outputs in saved-output replay. The default remains extractive. [Full ledger report](docs/diagnostics/ledger-trial/REPORT.md).
+
+Remaining: incomplete extraction (including missed requested numeric findings), frequent unknown method/setup labels, no independent faithfulness labels, unvalidated production latency/token behavior with the extra extraction call, and no broader generalization evidence. Do not describe the experiment as all quality issues solved or submission-ready.

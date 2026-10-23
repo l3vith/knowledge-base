@@ -25,6 +25,7 @@ class QueryRuntime:
         self.deadline = self.started + value(settings, "query_deadline_s")
         self.trace, self.events, self.limitations = [], [], []
         self.calls = self.estimated_input = self.reserved_output = 0
+        self.pending_ledger = False
         self.input_tokens = self.output_tokens = self.cost = 0
         self.unknown_usage = self.unknown_cost = False
         self._lock = threading.RLock()
@@ -106,8 +107,9 @@ class QueryRuntime:
         user = compact(payload)
         predicted = estimate_tokens(system) + estimate_tokens(user)
         with self._lock:
-            # Earlier stages leave two calls for the answer and its claim check.
-            if self.calls >= value(self.settings, "max_llm_calls") - (0 if name in FINAL else 2):
+            # The optional ledger needs one extra call before synthesis and its claim check.
+            reserved_calls=0 if name in FINAL else 2 + int(self.pending_ledger and name!="ledger_extract")
+            if self.calls >= value(self.settings, "max_llm_calls") - reserved_calls:
                 raise BudgetExceeded("Model call budget exhausted")
             # Early stages may not starve the later ones: plan/survey/verify each stop at a cumulative share of the budget.
             # ponytail: fixed shares; make them per-intent settings if dev evaluation shows a better split.

@@ -50,6 +50,7 @@ A supported claim is not proof that its entire topic is covered. Use partial if 
 are absent. Mathematical caveats do not satisfy formal supervisory or production-control requirements;
 only explicit controls in source qualify. Never invent recommendations. Missing coverage must stay missing.
 Return compact IDs and verdicts only, no explanations or repeated source text.
+For ledger claims, verify the complete relationship, scope, values, units, epistemic mode and attached qualifications against exact quotes. Ledger labels themselves are untrusted extraction hypotheses. Reject a projected timing presented as measured or a number assigned to the wrong method/experiment.
 A shared topic or a quoted number alone is insufficient support for a more specific claim."""
 
 
@@ -135,6 +136,9 @@ def bound_analytical_claims(claims, settings):
 def generate_answer(llm,query,plan,numbered,cards,settings,*,ctx=None):
     if not numbered:
         return AnswerDraft([],"no_answer",list(plan.limitations))
+    if plan.intent!='factoid' and value(settings,'analytical_writer_mode')=='ledger':
+        from .ledger import generate_ledger_answer
+        return generate_ledger_answer(llm,query,plan,numbered,settings,ctx)
     spans={eid:answer_spans(get(ev.element,"text"),get(ev.element,"kind","text")) for eid,ev in numbered.items()}
     requirements=requested_topics(query,plan.intent)
     payload={"query":query,"requested_topics":requirements,"obligations":[{"id":a.aspect_id,"text":a.text,"entity":a.entity,"period":a.period,"scope":a.scope} for a in plan.aspects],
@@ -255,7 +259,7 @@ def verify_answer(llm,draft,numbered,settings,*,ctx=None,query=""):
     rejected=len(draft.claims)-len(valid)
     if not valid:
         return AnswerDraft([],"partial",draft.limitations+["All claims failed deterministic calculation checks"]),{"accepted":0,"rejected":rejected}
-    raw=_call(llm,ctx,"answer_verify",CHECK_SYSTEM,{"query":query,"requested_topics":draft.requested_topics,"claims":[{"claim_id":c.claim_id,"text":c.text,"quotes":c.quotes,"calculation":c.calculation,"requirement_ids":c.requirement_ids} for c in valid],
+    raw=_call(llm,ctx,"answer_verify",CHECK_SYSTEM,{"query":query,"requested_topics":draft.requested_topics,"ledger_records":draft.ledger_records,"claims":[{"claim_id":c.claim_id,"text":c.text,"quotes":c.quotes,"calculation":c.calculation,"requirement_ids":c.requirement_ids,"record_ids":c.record_ids} for c in valid],
           "evidence":evidence_block({eid:ev for eid,ev in numbered.items() if any(eid in c.evidence_ids for c in valid)},{})},min(5000,1000+100*len(valid)+150*len(draft.requested_topics)))
     verdicts={}
     duplicate=set();background=set()
@@ -275,8 +279,21 @@ def verify_answer(llm,draft,numbered,settings,*,ctx=None,query=""):
     missing=[r['text'] for r in topics if r['status']!='supported']
     if missing:
         limits.append('Requested topics not fully supported by final claims: '+', '.join(missing))
-    checked=AnswerDraft(accepted,"partial" if rejected or limits else draft.status,limits,topics)
-    return checked,{"accepted":len(accepted),"rejected":rejected,"background_removed":len(background),"requested_topics":topics}
+    checked=AnswerDraft(accepted,"partial" if rejected or limits else draft.status,limits,topics,draft.ledger_records)
+    ledger_report={}
+    if draft.ledger_records:
+        accepted_records={rid for c in accepted for rid in c.record_ids}
+        missed=[r['record_id'] for r in draft.ledger_records if r['record_id'] not in accepted_records]
+        from .ledger import cell_key, Finding
+        all_cells={cell_key(Finding(**r)) for r in draft.ledger_records}
+        accepted_cells={cell_key(Finding(**r)) for r in draft.ledger_records if r['record_id'] in accepted_records}
+        ledger_report={'selected_records':len(draft.ledger_records),'accepted_records':len(accepted_records),
+                       'selected_cells':len(all_cells),'accepted_cells':len(accepted_cells),
+                       'selected_cell_coverage':len(accepted_cells)/len(all_cells) if all_cells else None,
+                       'warning':'Extracted/selected ledger coverage, not gold-cell recall or independent faithfulness.'}
+        if missed:
+            checked.status='partial';checked.limitations.append(f'{len(missed)} selected ledger records absent after final semantic verification')
+    return checked,{"accepted":len(accepted),"rejected":rejected,"background_removed":len(background),"requested_topics":topics,"ledger":ledger_report}
 
 
 def render_verified(draft,numbered,cards):

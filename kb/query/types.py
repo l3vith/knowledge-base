@@ -80,6 +80,7 @@ class Claim:
     calculation: dict[str, Any] | None = None
     verification: str = "pending"
     requirement_ids: list[str] = field(default_factory=list)
+    record_ids: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -88,3 +89,4 @@ class AnswerDraft:
     status: str
     limitations: list[str] = field(default_factory=list)
     requested_topics: list[dict[str, Any]] = field(default_factory=list)
+    ledger_records: list[dict[str, Any]] = field(default_factory=list)

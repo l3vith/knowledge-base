@@ -59,3 +59,5 @@ A live Qwen source-span smoke returned HTTP 200, text blocks only, 484 input / 7
 Latest source-selection benchmark and remaining limitations: [extractive writer report](docs/diagnostics/qwen-extractive/REPORT.md). The official evaluator remains unchanged.
 
 Latest analytical routing/coverage repair and measured limits: [repair benchmark](docs/diagnostics/coverage-repair/REPORT.md).
+
+Experimental relational findings and guarded synthesis: [ledger trial](docs/diagnostics/ledger-trial/REPORT.md). Opt in with `KB_ANALYTICAL_WRITER=ledger`; default remains extractive.

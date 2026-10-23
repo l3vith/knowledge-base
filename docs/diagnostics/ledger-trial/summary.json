@@ -1,0 +1,304 @@
+{
+  "scope": "single public analytical question, identical 51 saved writer-context fragments; answer-stage trial only",
+  "model": "qwen3.8-flash",
+  "thinking": "disabled",
+  "default_writer": "extractive",
+  "experiment_switch": "KB_ANALYTICAL_WRITER=ledger",
+  "tests": {
+    "passed": 200,
+    "slow_deselected": 7
+  },
+  "saved_context_sha256": "8a96e660dee0567472f9b24c550540120f944fc06bb7841bc8a73f2c4fb530b8",
+  "baseline": {
+    "official_metrics": {
+      "answer_precision": 0.2,
+      "answer_recall": 0.3404255319148936,
+      "context_precision": 1.0,
+      "context_recall": 1.0408163265306123
+    },
+    "answer_chars": 6062
+  },
+  "initial_ledger": {
+    "official_metrics": {
+      "answer_precision": 0.5,
+      "answer_recall": 0.20454545454545456,
+      "context_precision": 1.0,
+      "context_recall": 1.0408163265306123
+    },
+    "answer_stage_seconds": 71.1075993340055,
+    "answer_chars": 1272,
+    "claims": 4,
+    "limitations": [
+      "8 ledger records rejected for invalid source anchors/schema",
+      "13 anchored values not reproduced literally by synthesis",
+      "1 unsupported or uncertain claims removed",
+      "Requested topics not fully supported by final claims: conceptual soundness, ongoing monitoring, build cost, controls",
+      "1 selected ledger records absent after final semantic verification"
+    ],
+    "verification": {
+      "accepted": 4,
+      "rejected": 1,
+      "background_removed": 1,
+      "requested_topics": [
+        {
+          "id": "R1",
+          "text": "conceptual soundness",
+          "query_start": 49,
+          "query_end": 69,
+          "status": "unresolved",
+          "claim_ids": [
+            "c1",
+            "c2"
+          ]
+        },
+        {
+          "id": "R2",
+          "text": "ongoing monitoring",
+          "query_start": 71,
+          "query_end": 89,
+          "status": "unresolved",
+          "claim_ids": []
+        },
+        {
+          "id": "R3",
+          "text": "outcomes analysis",
+          "query_start": 91,
+          "query_end": 108,
+          "status": "supported",
+          "claim_ids": [
+            "c1",
+            "c3"
+          ]
+        },
+        {
+          "id": "R4",
+          "text": "outside its original purpose",
+          "query_start": 139,
+          "query_end": 167,
+          "status": "supported",
+          "claim_ids": [
+            "c2"
+          ]
+        },
+        {
+          "id": "R5",
+          "text": "accuracy",
+          "query_start": 380,
+          "query_end": 388,
+          "status": "supported",
+          "claim_ids": [
+            "c1"
+          ]
+        },
+        {
+          "id": "R6",
+          "text": "speed",
+          "query_start": 390,
+          "query_end": 395,
+          "status": "supported",
+          "claim_ids": [
+            "c3"
+          ]
+        },
+        {
+          "id": "R7",
+          "text": "build cost",
+          "query_start": 400,
+          "query_end": 410,
+          "status": "unresolved",
+          "claim_ids": []
+        },
+        {
+          "id": "R8",
+          "text": "controls",
+          "query_start": 421,
+          "query_end": 429,
+          "status": "unresolved",
+          "claim_ids": []
+        },
+        {
+          "id": "R9",
+          "text": "limitations",
+          "query_start": 434,
+          "query_end": 445,
+          "status": "supported",
+          "claim_ids": [
+            "c2"
+          ]
+        }
+      ],
+      "ledger": {
+        "selected_records": 11,
+        "accepted_records": 10,
+        "selected_cells": 11,
+        "accepted_cells": 10,
+        "selected_cell_coverage": 0.9090909090909091,
+        "warning": "Extracted/selected ledger coverage, not gold-cell recall or independent faithfulness."
+      }
+    }
+  },
+  "guarded_followup": {
+    "official_metrics": {
+      "answer_precision": 0.5454545454545454,
+      "answer_recall": 0.45652173913043476,
+      "context_precision": 1.0,
+      "context_recall": 1.0408163265306123
+    },
+    "live_semantic_verification_seconds": 15.559081708022859,
+    "reuses_saved_extraction_and_synthesis": true,
+    "answer_chars": 3588,
+    "claims": 17,
+    "answer": "Controls should include memory footprint verification, as tensors range from 16 KB to 800 KB, ensuring efficient storage while maintaining the reported accuracy and speed benchmarks. [2012.07440v3.pdf p23; 2012.07440v3.pdf p18; 2012.07440v3.pdf p20; 2012.07440v3.pdf p17]\n\nBoth methods yield similar results; the average errors fall within 0.05% and 0.35%, while the maximum errors are between 0.1% and 5%, in absolute implied volatility values. [2012.07440v3.pdf p18]\n\nIt took the Rank Adaptive Algorithm under 8 minutes to obtain a TT-format Chebyshev Tensor — in Matlab. [2012.07440v3.pdf p20]\n\nOnce these 10,000 values were obtained, it took the Rank Adaptive Algorithm under 5 minutes to obtain a TT-format Chebyshev Tensor — in Matlab. [2012.07440v3.pdf p18]\n\nBoth methods yield similar results; the average errors fall within 0.05% and 0.35%, while the maximum errors are between 0.1% and 5%, in absolute implied volatility values. [2012.07440v3.pdf p18]\n\nOnce again, accuracy is very high; similar to the one presented in [13] and [2], where Deep Neural Nets were used. [2012.07440v3.pdf p21]\n\nNote that in both cases, the 99% quantile of the RMSE is around 0.5% and the maximum RMSE value is less than 0.6%. The quantile values of the errors, measured using the RMSE, are shown in Figures 5 and 7, where all errors were less than 0.6%. [2012.07440v3.pdf p19; 2012.07440v3.pdf p23]\n\nThe speed of evaluation for the Chebyshev Tensors built is such, that a single calibration, with a C++ implementation, should be completed in less than a second; around 40,000 times faster than if the original pricing function is used. [2012.07440v3.pdf p23]\n\n### **5.2.4 Computational gains at calibration**\nThe evaluation time of the TT-format Chebyshev Tensor was measured at 2 milliseconds per evaluation (in Matlab). [2012.07440v3.pdf p22]\n\nAn implementation in C++ would be expected to run between 10 and 100 times faster.  Therefore, the calibration routing using the Chebyshev Tensor should be between 10,000 _−_ 100,000 times faster than one using the original pricing function. [2012.07440v3.pdf p22]\n\nThis represents a computational building cost reduction of 87.5% compared to the 80,000 parameter combinations in [13]; a reduction of 75% compared to the 40,000 [2012.07440v3.pdf p17]\n\nHowever, outside of it, there is no guarantee.  Chebyshev Tensors do not extrapolate. [2012.07440v3.pdf p14; 2012.07440v3.pdf p23]\n\nTherefore, it is preferable to use optimisation algorithms that admit domain restrictions.  This ensures the parameter points evaluated by the Chebyshev Tensor are within the domain where we know the accuracy to be high. [2012.07440v3.pdf p14]\n\nOnce the tensor has been built and its accuracy verified by direct comparison with the pricing model, it can be used in calibration exercises as many times as needed. [2012.07440v3.pdf p13]\n\nIn principle, the tensor built should work well for many weeks or monthts in the future.  Perhaps one should consider building a new one once market conditions change substantially. [2012.07440v3.pdf p18]\n\nThe greater the dimension, the less effective it is.  The maximum dimension tested was 13.  We do not know what will be the maximum dimension for which the presented technique would work. [2012.07440v3.pdf p23]\n\nIf an optimisation algorithm that does not admit domain restrictions must be used, one can opt for a mix of Chebyshev Tensor and pricing function calls.  In this case, Chebyshev Tensors return implied volatilities only when the parameter explored by the optimisation algorithm is within the [2012.07440v3.pdf p14]",
+    "limitations": [
+      "2 ledger records rejected for invalid source anchors/schema",
+      "4 synthesized claims rejected for invalid IDs or output budget",
+      "2 anchored values not reproduced literally by synthesis",
+      "Requested topics not fully supported by final claims: outcomes analysis"
+    ],
+    "verification": {
+      "accepted": 17,
+      "rejected": 0,
+      "background_removed": 0,
+      "requested_topics": [
+        {
+          "id": "R1",
+          "text": "conceptual soundness",
+          "query_start": 49,
+          "query_end": 69,
+          "status": "supported",
+          "claim_ids": [
+            "c12",
+            "c13"
+          ]
+        },
+        {
+          "id": "R2",
+          "text": "ongoing monitoring",
+          "query_start": 71,
+          "query_end": 89,
+          "status": "supported",
+          "claim_ids": [
+            "c14",
+            "c15"
+          ]
+        },
+        {
+          "id": "R3",
+          "text": "outcomes analysis",
+          "query_start": 91,
+          "query_end": 108,
+          "status": "unresolved",
+          "claim_ids": []
+        },
+        {
+          "id": "R4",
+          "text": "outside its original purpose",
+          "query_start": 139,
+          "query_end": 167,
+          "status": "supported",
+          "claim_ids": [
+            "c12",
+            "c17"
+          ]
+        },
+        {
+          "id": "R5",
+          "text": "accuracy",
+          "query_start": 380,
+          "query_end": 388,
+          "status": "supported",
+          "claim_ids": [
+            "c2",
+            "c5",
+            "c6",
+            "c7"
+          ]
+        },
+        {
+          "id": "R6",
+          "text": "speed",
+          "query_start": 390,
+          "query_end": 395,
+          "status": "supported",
+          "claim_ids": [
+            "c8",
+            "c9",
+            "c10"
+          ]
+        },
+        {
+          "id": "R7",
+          "text": "build cost",
+          "query_start": 400,
+          "query_end": 410,
+          "status": "supported",
+          "claim_ids": [
+            "c1",
+            "c3",
+            "c4",
+            "c11"
+          ]
+        },
+        {
+          "id": "R8",
+          "text": "controls",
+          "query_start": 421,
+          "query_end": 429,
+          "status": "supported",
+          "claim_ids": [
+            "c1",
+            "c13",
+            "c14",
+            "c15",
+            "c17"
+          ]
+        },
+        {
+          "id": "R9",
+          "text": "limitations",
+          "query_start": 434,
+          "query_end": 445,
+          "status": "supported",
+          "claim_ids": [
+            "c12",
+            "c16",
+            "c17"
+          ]
+        }
+      ],
+      "ledger": {
+        "selected_records": 17,
+        "accepted_records": 17,
+        "selected_cells": 17,
+        "accepted_cells": 17,
+        "selected_cell_coverage": 1.0,
+        "warning": "Extracted/selected ledger coverage, not gold-cell recall or independent faithfulness."
+      }
+    },
+    "judge_audit": {
+      "official_scores_unchanged": true,
+      "flags": [],
+      "interpretation": "Flags require review; they do not compute corrected scores or prove semantic equivalence."
+    }
+  },
+  "offline_guard_replay": {
+    "scope": "offline replay of the paid extraction/synthesis through strengthened guards, no new semantic verification/judging",
+    "paid_calls": 0,
+    "claims": 17,
+    "answer_chars": 3055,
+    "multi_record_claims": 0,
+    "contains_merged_time_range": false,
+    "invented_mandatory_control_present": false,
+    "limitations": [
+      "2 ledger records rejected for invalid source anchors/schema",
+      "4 synthesized claims rejected for invalid IDs or output budget",
+      "2 anchored values not reproduced literally by synthesis"
+    ]
+  },
+  "total_cost_usd": 0.011851266,
+  "cost_upper_bound_usd": 0.01552551,
+  "aggregate_cap_usd": 0.03,
+  "paid_calls": 12,
+  "thinking_blocks": 0,
+  "protected_inputs_unchanged": true
+}

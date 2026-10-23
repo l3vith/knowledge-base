@@ -81,6 +81,7 @@ def answer_query(collection,query,*,store,generation_id,settings,llm,embedder=No
                 else:
                     plan,guard=guard_routing(plan,query,list(cards.values()),store,settings);out.update(guard)
             limits.extend(plan.limitations)
+            ctx.pending_ledger=plan.intent!="factoid" and value(settings,"analytical_writer_mode")=="ledger"
             with ctx.stage(STEP_NAMES[2],DESCRIPTIONS[2],{"doc_ids":plan.doc_ids}) as out:
                 current_stage=2
                 if mode=="baseline":
