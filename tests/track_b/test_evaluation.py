@@ -61,7 +61,7 @@ def test_capture_preserves_writer_context_and_resume_generation(tmp_path):
     path=tmp_path/"run.jsonl"
     manifest=capture(rows,api="local:",collection="test",out=path,source_hash="sourcehash",query_fn=execute)
     capture(rows,api="local:",collection="test",out=path,source_hash="sourcehash",query_fn=execute)
-    result=json.loads(path.read_text())
+    result=json.loads(path.read_text(encoding="utf-8"))
     assert len(calls)==1 and result["retrieved_chunks"]==["cited","writer context"]
     assert manifest["generation_id"]=="g1" and manifest["system_config_sha256"]=="config1"
     with pytest.raises(ValueError,match="resume manifest"):
@@ -73,5 +73,5 @@ def test_capture_keeps_failed_query_row_instead_of_skipping(tmp_path):
     def fail(c,q): raise RuntimeError("offline")
     path=tmp_path/"failed.jsonl"
     capture(rows,api="local:",collection="test",out=path,source_hash="sourcehash",query_fn=fail)
-    row=json.loads(path.read_text())
+    row=json.loads(path.read_text(encoding="utf-8"))
     assert row["id"]=="s1" and row["error"] and row["retrieved_chunks"]==[]

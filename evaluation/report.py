@@ -5,7 +5,7 @@ from .official import METRICS
 
 
 def summarize(run_path,scores_path=None):
-    rows=[json.loads(s) for s in Path(run_path).read_text().splitlines() if s.strip()]
+    rows=[json.loads(s) for s in Path(run_path).read_text(encoding="utf-8").splitlines() if s.strip()]
     latency=sorted((r.get("metrics") or {}).get("latency_ms",r.get("capture_latency_ms",0)) for r in rows if not r.get("error"))
     known=[];unknown=0
     for row in rows:
@@ -18,7 +18,7 @@ def summarize(run_path,scores_path=None):
             "unknown_cost_rows":unknown,"latency_p50_ms":latency[len(latency)//2] if latency else None,
             "latency_p95_ms":latency[max(0,math.ceil(len(latency)*.95)-1)] if latency else None}
     if scores_path:
-        scores=json.loads(Path(scores_path).read_text())
+        scores=json.loads(Path(scores_path).read_text(encoding="utf-8"))
         output["scoring_summary"]=scores["summary"]
         output["worst_questions"]={m:[r["id"] for r in sorted(scores["per_question"],key=lambda r:r[m])[:10]] for m in METRICS}
     return output

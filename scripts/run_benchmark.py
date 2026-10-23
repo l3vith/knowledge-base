@@ -21,7 +21,7 @@ def main():
     if args.split!="all" and ids is None:
         if not args.split_file:
             p.error("a frozen reviewed --split-file is required; use --ids only for explicit diagnostics")
-        ids=json.loads(Path(args.split_file).read_text())[args.split]
+        ids=json.loads(Path(args.split_file).read_text(encoding="utf-8"))[args.split]
     selected=select_rows(rows,ids=ids)
     if not selected:
         p.error("no benchmark rows matched the requested partition or IDs")

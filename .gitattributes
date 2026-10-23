@@ -1,0 +1,8 @@
+# Same line endings on Windows and macOS: text files are stored and checked out with LF.
+* text=auto eol=lf
+*.pdf binary
+*.zip binary
+*.png binary
+*.npy binary
+*.onnx binary
+*.ipynb text eol=lf
