@@ -95,3 +95,14 @@ def test_each_literal_topic_keeps_an_independent_source_page(tmp_path):
     pool,lexical,report=candidate_pages(store,plan,'accuracy, speed and build cost',None,settings(tmp_path))
     assert {1,2,3} <= lexical['a']
     assert len(report['documents']['a']['requested_topic_hits'])==3
+
+
+def test_bounded_answers_keep_source_text_and_topic_diversity(tmp_path):
+    from kb.query.answer import bound_analytical_claims
+    claims=[Claim('c1','Accuracy error was 0.2%.',['E1'],['a1'],requirement_ids=['R1']),
+            Claim('c2','Accuracy error was 0.2%.',['E2'],['a1'],requirement_ids=['R1']),
+            Claim('c3','Runtime was 12 milliseconds.',['E3'],['a1'],requirement_ids=['R2'])]
+    chosen,report=bound_analytical_claims(claims,settings(tmp_path,analytical_answer_chars=100,analytical_answer_claims=2))
+    assert {c.claim_id for c in chosen}=={'c1','c3'}
+    assert report['selected_source_chars']<=100
+    assert chosen[0] is claims[0] and chosen[1] is claims[2]

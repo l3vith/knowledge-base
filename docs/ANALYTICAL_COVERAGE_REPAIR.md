@@ -14,8 +14,16 @@ The prior live rerun was faster but omitted important requested results. Its tra
 
 ## Validation and limits
 
-181 non-slow tests pass (seven slow model tests deselected), including literal topic extraction, independent topic retrieval, broad-query navigation, background removal, fail-closed topic coverage, numeric display/source fidelity and unchanged-score judge audits.
+182 non-slow tests pass (seven slow model tests deselected), including literal topic extraction, independent topic retrieval, broad-query navigation, background removal, fail-closed topic coverage, numeric display/source fidelity and unchanged-score judge audits.
 
 Topic detection is a bounded generic heuristic, not a semantic coverage guarantee. Relevance and completeness judgments remain model-dependent. Source-only answers cannot invent production recommendations absent from the supplied collection. Partial status is expected when the collection lacks support.
 
 The next live diagnostic uses exactly the same single document and two public development questions, Qwen3.8 Flash with thinking disabled, a 180-second diagnostic deadline and a $0.05 ceiling including judging. Production still defaults to 120 seconds. End-to-end gains must be read from the measured report, not inferred from passing tests.
+
+## Output-size correction after the first live rerun
+
+The first live repair recovered detail but over-selected source statements: 41 final cited passages, about 18.7k answer characters and 139 seconds. Answer precision/recall were 2.97%/68.18%; context precision was 98.11%. The official context-recall count ratio exceeded 100% (106.12%); it is preserved unchanged and is not semantic recall. This was an overcorrection, not a successful final result.
+
+The writer now receives explicit ceilings of 8,000 source characters and 24 selections for analytical output; these are ceilings, not targets. A deterministic bounded selector preserves original source statements, balances requested topics and novel numeric values, and suppresses high-overlap repeats before semantic verification. Any omissions are visible in limitations, and final coverage checks still run on the retained claims. Compact verifier responses omit unused prose explanations. On saved first-rerun output, the local-only check reduced 47 model selections to 18 selections/7,943 source characters with zero API calls. Selection is heuristic and can omit useful findings; the live diagnostic determines the tradeoff.
+
+Only the analytical case needs the follow-up live run: factual rendering was unchanged. The first pass and follow-up share an aggregate conservative $0.05 ceiling. Both results must be reported; do not replace the first run silently.

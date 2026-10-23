@@ -38,6 +38,8 @@ class QuerySettings:
     max_input_tokens: int = 480000
     max_output_tokens: int = 32000
     answer_output_tokens: int = 8000
+    analytical_answer_chars: int = 8000
+    analytical_answer_claims: int = 24
     artifact_dir: Path = Path("artifacts/runs")
     strict_observability: bool = True
     raw_token_budget_factoid: int = 12000
