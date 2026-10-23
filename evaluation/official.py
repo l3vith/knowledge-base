@@ -47,7 +47,8 @@ def evaluate_file(run_path,api_key=None,notebook=None,expected_hash=EXPECTED_EVA
         raise ValueError("pass the provided official notebook path")
     key=api_key or os.getenv("OPENCODE_API_KEY","")
     if not key:
-        raise ValueError("OpenCode key required for real official judging")
+        from kb.opencode_auth import cli_headers
+        cli_headers()  # no key: the judge uses the logged-in opencode CLI (fails here, before any spend)
     ns=load_notebook_namespace(notebook,expected_hash,{"OPENCODE_API_KEY":key})
     # Keep official metric definitions unchanged; adapt only the provider transport.
     client=OfficialJudgeTransport(key,ns["OPENCODE_MODEL"],ns["OPENCODE_BASE_URL"])

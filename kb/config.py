@@ -146,4 +146,9 @@ def get_settings(**overrides) -> Settings:
     values.update(overrides)
     if "data_dir" in values:
         values["data_dir"] = Path(values["data_dir"])
-    return replace(Settings(), **values)
+    settings = replace(Settings(), **values)
+    from kb.model_api import REQUIRED_MODEL
+    for name in ("llm_model", "answer_model"):
+        if getattr(settings, name) not in ("", REQUIRED_MODEL):
+            raise ValueError(f"{name}={getattr(settings, name)!r} refused: set LLM_MODEL/ANSWER_MODEL to {REQUIRED_MODEL}")
+    return settings

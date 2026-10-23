@@ -184,8 +184,16 @@ class OpenCodeLLM(LLM):
         if s.budget_usd is not None and spent_usd(s) >= s.budget_usd:
             raise LLMError(f"{name}: spend cap KB_BUDGET_USD={s.budget_usd} reached ({spent_usd(s):.4f} USD recorded)")
         from kb.model_api import request_spec, response_parts
-        endpoint,wire_headers,payload=request_spec(s.opencode_base_url,model,system,user,max_tokens,json_mode)
-        headers={"Authorization":f"Bearer {s.opencode_api_key}","Content-Type":"application/json",**wire_headers}
+        try:
+            endpoint,wire_headers,payload=request_spec(s.opencode_base_url,model,system,user,max_tokens,json_mode)
+            if s.opencode_api_key:
+                auth={"Authorization":f"Bearer {s.opencode_api_key}"}
+            else:
+                from kb.opencode_auth import cli_headers
+                auth=cli_headers()  # logged-in opencode CLI; token stays in memory
+        except Exception as exc:
+            raise LLMError(f"{name}: {exc}") from None
+        headers={**auth,"Content-Type":"application/json",**wire_headers}
         last_error: Exception | None = None
         for attempt in range(1, s.llm_max_retries + 1):
             with lf_generation(name, model, {"system": clip(system, 2000), "user": clip(user, 4000)}) as gen:

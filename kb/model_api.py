@@ -1,28 +1,25 @@
-"""Provider wire formats. Qwen Flash uses OpenCode's Messages endpoint without thinking."""
+"""Provider wire format. Every paid call is qwen3.8-flash on OpenCode's Messages endpoint, thinking disabled."""
 from urllib.parse import urlsplit, urlunsplit
+
+# Team rule: one model, never with thinking. Any other model is refused here, the single wire-format door
+# shared by ingestion, queries and the evaluator judge.
+REQUIRED_MODEL = "qwen3.8-flash"
 
 
 def is_qwen_no_thinking(model):
-    return model == "qwen3.8-flash"
+    return model == REQUIRED_MODEL
 
 
 def request_spec(base_url, model, system, user, max_tokens, json_mode=True):
-    headers={}
-    if is_qwen_no_thinking(model):
-        parts=urlsplit(base_url)
-        if parts.hostname == "opencode.ai":
-            base_url=urlunsplit((parts.scheme,parts.netloc,"/inference/anthropic/v1/messages","",""))
-        headers["anthropic-version"]="2023-06-01"
-        payload={"model":model,"system":system+("\nReturn only a valid JSON object." if json_mode else ""),
-                 "messages":[{"role":"user","content":user}],"temperature":0,
-                 "max_tokens":max_tokens,"thinking":{"type":"disabled"}}
-    else:
-        payload={"model":model,"temperature":0,"max_tokens":max_tokens,
-                 "messages":[{"role":"system","content":system},{"role":"user","content":user}]}
-        if json_mode:
-            payload["response_format"]={"type":"json_object"}
-        if model.startswith("deepseek-"):
-            payload["reasoning_effort"]="low"
+    if model != REQUIRED_MODEL:
+        raise ValueError(f"model {model!r} refused: only {REQUIRED_MODEL} (thinking disabled) may be called")
+    parts=urlsplit(base_url)
+    if parts.hostname == "opencode.ai":
+        base_url=urlunsplit((parts.scheme,parts.netloc,"/inference/anthropic/v1/messages","",""))
+    headers={"anthropic-version":"2023-06-01"}
+    payload={"model":model,"system":system+("\nReturn only a valid JSON object." if json_mode else ""),
+             "messages":[{"role":"user","content":user}],"temperature":0,
+             "max_tokens":max_tokens,"thinking":{"type":"disabled"}}
     return base_url,headers,payload
 
 
