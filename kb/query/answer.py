@@ -399,25 +399,32 @@ def _densest(ids,spans,limit=4):
     return max(windows,key=lambda w:sum(len(re.findall(r"\d",spans[x])) for x in w))
 
 
-def fact_clause(ev,query=""):
-    """The ';'-clause of the source sentence holding the verified fact value (exact source text), else None.
-    The clause before it is kept when it names the query's subject ("It is a Monte Carlo based pricing routine; 60,000
-    paths were used"): two query words the value clause lacks."""
-    if not ev.fact_value or get(ev.element,"kind","text")=="table":
+_SENTENCE=re.compile(r"(?<=[.!?])\s+(?:<sup>.*?</sup>\s*)?")
+
+
+def fact_clause(ev,query="",within=None):
+    """The ';'-clause holding the fact (exact source text), else None: the clause with the verified fact value, or,
+    when the verifier gave none, the number-bearing clause sharing most words with the query (footnote and
+    reference markers are not numbers). The clause before it is kept when it names the query's subject ("It is a
+    Monte Carlo based pricing routine; 60,000 paths were used"): two query words the value clause lacks."""
+    if get(ev.element,"kind","text")=="table":
         return None
     words=lambda s:set(re.findall(r"[a-z]{3,}",s.casefold()))
-    for span in answer_spans(get(ev.element,"text")).values():
-        if ev.fact_value in span:
-            parts=re.split(r"(?<=;)\s+",span)
-            i=next((k for k,c in enumerate(parts) if ev.fact_value in c),None)
-            if i is None:
-                return span
-            # Only the last sentence of the previous clause (spans can hold a sentence ending before a footnote).
-            before=re.split(r"(?<=[.!?])\s+(?:<sup>.*?</sup>\s*)?",parts[i-1])[-1] if i else ""
-            if before and len((words(before)&words(query))-words(parts[i]))>=2:
-                return span[span.index(before):span.index(parts[i])+len(parts[i])]
-            return parts[i]
-    return None
+    number=lambda s:re.search(r"\d",re.sub(r"<sup>.*?</sup>|\[\d+(?:,\s*\d+)*\]","",s))
+    texts=within or list(answer_spans(get(ev.element,"text")).values())
+    sentences=[s for span in texts for s in _SENTENCE.split(span) if s.strip()]
+    rows=[(s,re.split(r"(?<=;)\s+",s)) for s in sentences]
+    if ev.fact_value:
+        hits=[(s,parts,i) for s,parts in rows for i,c in enumerate(parts) if ev.fact_value in c]
+    else:
+        hits=sorted(((s,parts,i) for s,parts in rows for i,c in enumerate(parts) if number(c)),
+                    key=lambda h:-len(words(h[1][h[2]])&words(query)))
+    if not hits:
+        return None
+    sentence,parts,i=hits[0]
+    if i and len((words(parts[i-1])&words(query))-words(parts[i]))>=2:
+        return sentence[sentence.index(parts[i-1]):sentence.index(parts[i])+len(parts[i])]
+    return parts[i]
 
 
 def _narrow_to_fact(claims,numbered,query=""):
@@ -425,7 +432,7 @@ def _narrow_to_fact(claims,numbered,query=""):
     # (provenance, method, footnotes) is an extra point that lowers answer precision.
     out=[];seen=set()
     for c in claims:
-        clause=fact_clause(numbered[c.evidence_ids[0]],query)
+        clause=fact_clause(numbered[c.evidence_ids[0]],query,[q["quote"] for q in c.quotes if q["evidence_id"]==c.evidence_ids[0]])
         if clause:
             c=replace(c,text=display_source(clause),quotes=[{"evidence_id":c.evidence_ids[0],"quote":clause}])
         if c.text not in seen:

@@ -142,6 +142,11 @@ def test_factoid_answer_keeps_only_the_clause_with_the_verified_value(tmp_path):
     assert draft.claims[0].quotes[0]["quote"] in text
     draft=generate_answer(llm,"How many paths were used?",plan,numbered,{"a":store.doc("a")},settings(tmp_path))
     assert [c.text for c in draft.claims]==["60,000 paths were\nused to generate the prices in our tests."]
+    # Live C31: the verifier returned no fact_value; the number clause matching the query is still found,
+    # and the footnote marker <sup>5</sup> is not taken for the number.
+    numbered=number_evidence([Evidence(store.elements[0],["a1"])])
+    draft=generate_answer(llm,"How many Monte Carlo paths were used?",plan,numbered,{"a":store.doc("a")},settings(tmp_path))
+    assert [c.text for c in draft.claims]==["It is a Monte Carlo based pricing routine; 60,000 paths were\nused to generate the prices in our tests."]
 
 
 
