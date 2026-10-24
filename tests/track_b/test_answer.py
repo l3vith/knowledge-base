@@ -270,6 +270,8 @@ def test_fact_selection_keeps_each_topics_top_ranked_quota_and_cannot_keep_every
     assert len(kept)==14 and report["failed"]=="ValueError"  # a failed call never loses the answer
     kept,report=_select_facts(FakeLLM(broken),None,"how fast?",[],facts[:5],s)
     assert len(kept)==5 and report["skipped"]
+    kept,report=_select_facts(FakeLLM(broken),None,"how fast?",[],facts,settings(tmp_path))
+    assert len(kept)==14 and "off" in report["skipped"]  # off by default: no call is made (broken would raise)
 
 
 def test_writers_and_limits_scale_with_the_facts(tmp_path):

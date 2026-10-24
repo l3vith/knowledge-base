@@ -266,6 +266,8 @@ def _select_facts(llm,ctx,query,topics,facts,settings):
     """Qwen ranks each topic's facts; code keeps only the top quota of each (quota from the group's size), so the
     model cannot keep everything. Groups the model leaves out keep their first facts in source order. Fails open
     (every fact kept) only if the call itself fails."""
+    if value(settings,"select_share")>=1:
+        return facts,{"selected":len(facts),"dropped":[],"skipped":"selection off (select_share=1)"}
     if len(facts)<12:
         return facts,{"selected":len(facts),"dropped":[],"skipped":"few facts"}
     labels={t["id"]:t["text"] for t in topics}
