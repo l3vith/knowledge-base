@@ -22,9 +22,12 @@ Return JSON {keep:[{id:string,aspects:[aspect_id],support_span_ids:[string],fact
 requirement_ids: the supplied requested_topics IDs this fragment gives a finding for (empty if none or not supplied).
 Select the S identifiers of supplied source spans supporting each kept fragment. Never repeat source text.
 For a single requested numeric fact only, fact_value may be the exact short source substring giving that value and unit; otherwise null.
-Direct means an experimental finding or explicit instruction answering a requested topic. Qualification means
-an explicit condition/limitation needed to interpret that finding. Drop general definitions, unrelated numerical
-methods and background theory unless explicitly requested. General implementation caveats do not establish
+Direct means a source statement that answers a requested topic: an experimental or reported finding, an explicit
+instruction, or, when the query asks about a model or method itself (its parameters, assumptions, mechanics,
+behaviour, extensions or limits), the source's definitions, model equations, parameter roles, derivation steps,
+assumptions, stated effects of parameters and cited supporting evidence. Qualification means an explicit
+condition/limitation needed to interpret a finding. Drop definitions, numerical methods and background theory only
+when they answer no requested topic. General implementation caveats do not establish
 formal supervisory controls, ongoing monitoring, outcomes analysis or regulatory requirements.
 Keep test conditions (hardware, data used, models and dimensions tested), stated generalisation claims and stated
 guidance on settings (e.g. how a domain or range is chosen) when they bear on a requested result or limitation.
