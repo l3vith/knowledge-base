@@ -191,7 +191,17 @@ def bound_analytical_claims(claims, settings):
 
 
 def source_spans(numbered):
-    return {eid:answer_spans(get(ev.element,"text"),get(ev.element,"kind","text")) for eid,ev in numbered.items()}
+    return {eid:_table_rows(get(ev.element,"text")) if get(ev.element,"kind","text")=="table" and "|" in get(ev.element,"text")
+            else answer_spans(get(ev.element,"text"),get(ev.element,"kind","text")) for eid,ev in numbered.items()}
+
+
+def _table_rows(text):
+    """A Markdown table as exact spans: S1 = caption and header (through the |---| line), then one span per row, so
+    a writer can cite, and the fact list restore, the one row that answers instead of the whole table."""
+    lines=text.splitlines(keepends=True)
+    head=next((i+1 for i,l in enumerate(lines) if re.fullmatch(r"\s*\|?[\s:|-]+\|?\s*",l) and "-" in l),0)
+    parts=["".join(lines[:head])]+lines[head:] if head else lines
+    return {f"S{i+1}":p for i,p in enumerate(x for x in parts if x.strip())}
 
 
 def _repeats(text,seen,docs=frozenset()):

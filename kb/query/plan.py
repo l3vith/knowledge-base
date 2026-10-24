@@ -120,7 +120,8 @@ def plan_query(llm, query, cards, settings, *, ctx=None):
         period=field(card,"period_year")
         if hints["years"] and period not in hints["years"]:
             continue
-        if entity and not any(a.entity==entity and (not period or a.period==str(period)) for a in aspects):
+        # The planner writes periods as prose ("December 2017 / 1 January 2025"): the year counts if it appears.
+        if entity and not any(a.entity==entity and (not period or re.search(rf"\b{period}\b",a.period or "")) for a in aspects):
             if len(aspects)<limit:
                 aspects.append(Aspect(f"a{len(aspects)+1}",query,terms(query)[:16],entity,str(period) if period else None))
             else:
@@ -171,9 +172,13 @@ def guard_routing(plan, query, cards, store, settings):
         selected=list(dict.fromkeys(d for d,p,s in hits if d in by_id and d not in blocked))[:value(settings,"router_max_docs")]
         fallback=True
     if hints["years"] and hints["named_docs"]:
-        for year in hints["years"]:
-            if not any(field(by_id[d],"period_year")==year for d in selected):
-                missing.append(f"Requested period {year} not confirmed in routed source metadata")
+        periods={field(by_id[d],"period_year") for d in selected}
+        # When a routed source matches one year of a non-comparison question, its other years are dates inside that
+        # source ("the December 2017 timetable ... from 1 January 2025"), not further reporting periods to find.
+        if hints["comparison"] or not periods & set(hints["years"]):
+            for year in hints["years"]:
+                if year not in periods:
+                    missing.append(f"Requested period {year} not confirmed in routed source metadata")
     updated=replace(plan,doc_ids=selected,answerable=True,limitations=list(dict.fromkeys(plan.limitations+missing)))
     return updated,{"dropped_unknown":unknown,"added_by_entity":added,"excluded":excluded,"fallback":fallback,
                     "global_escape":fallback or bool(missing),"missing_requests":missing,"routed_doc_ids":selected}

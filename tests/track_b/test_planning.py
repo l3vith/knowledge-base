@@ -68,3 +68,23 @@ def test_null_or_wrong_planner_fields_have_safe_fallback(tmp_path):
     llm=FakeLLM(lambda n,p:{"intent":{},"aspects":[{"text":"capital","keywords":None}],"documents":None})
     result=plan_query(llm,"capital",[],settings(tmp_path))
     assert result.intent=="analytical" and result.aspects[0].keywords==["capital"]
+
+
+def test_other_years_in_a_question_are_dates_inside_the_matched_source(tmp_path):
+    # B30: the 2017 framework's timetable "from 1 January 2025" is not a missing 2025 report.
+    card=Card("bcbs","bcbs.pdf",issuer="Basel Committee",period_year=2017)
+    store=MemoryStore({"bcbs":["output floor 65% from 1 January 2025"]},[card])
+    plan=QueryPlan("factoid",[Aspect("a1","output floor calibration",["floor"],"Basel Committee","December 2017 / 1 January 2025")],["bcbs"])
+    guarded,_=guard_routing(plan,"Under the Basel Committee's December 2017 timetable, what was the output floor from 1 January 2025?",[card],store,settings(tmp_path))
+    assert not guarded.limitations
+    # A comparison still needs every year it names.
+    guarded,_=guard_routing(plan,"Compare the Basel Committee 2017 and 2025 output floor",[card],store,settings(tmp_path))
+    assert guarded.limitations==["Requested period 2025 not confirmed in routed source metadata"]
+
+
+def test_a_prose_period_containing_the_year_needs_no_extra_obligation(tmp_path):
+    card=Card("bcbs","bcbs.pdf",issuer="Basel Committee",period_year=2017)
+    reply={"intent":"factoid","aspects":[{"text":"output floor calibration","keywords":["floor"],"entity":"Basel Committee",
+           "period":"December 2017 / 1 January 2025"}],"documents":[{"doc_id":"bcbs"}]}
+    plan=plan_query(FakeLLM(lambda n,p:reply),"Basel Committee December 2017 output floor from 1 January 2025?",[card],settings(tmp_path))
+    assert len(plan.aspects)==1

@@ -106,7 +106,10 @@ def inventory(numbered, spans, topics):
                 topic = hits[0]["id"] if hits else None
             # Restored verbatim, a sentence that leans on the previous one ("It took ...") keeps that sentence.
             ids = list(spans[eid])
-            context = [ids[ids.index(sid)-1]] if LEANS.match(sentence.lstrip()) and ids.index(sid) > 0 else []
+            if getattr(ev.element, "kind", "text") == "table":
+                context = [ids[0]] if sid != ids[0] else []  # a table row is restored with its caption and header
+            else:
+                context = [ids[ids.index(sid)-1]] if LEANS.match(sentence.lstrip()) and ids.index(sid) > 0 else []
             facts.append({"id": f"F{len(facts)+1}", "evidence_id": eid, "span_id": sid, "context_span_ids": context,
                           "text": display_source(sentence), "topic": topic or (ev.aspect_ids[0] if ev.aspect_ids else ""),
                           "doc_id": getattr(ev.element, "doc_id", ""), "page": getattr(ev.element, "page_no", None),

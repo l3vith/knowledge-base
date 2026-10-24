@@ -300,3 +300,11 @@ def test_check_batches_scale_and_a_failed_batch_is_split(tmp_path):
         return {"verdicts":[{"claim_id":c["claim_id"],"verdict":"supported"} for c in p["claims"]]}
     checked,report=verify_answer(FakeLLM(respond),AnswerDraft(claims,"answered"),numbered,settings(tmp_path))
     assert sizes[:3]==[12,12,6] and report["accepted"]==30 and not checked.limitations
+
+
+def test_a_table_splits_into_header_and_row_spans():
+    from kb.query.answer import _table_rows
+    text="Caption: Dates\n|Revision|Date|\n|---|---|\n|Credit risk|1 January 2022|\n|Output floor|2025: 65%|"
+    spans=_table_rows(text)
+    assert list(spans.values())==["Caption: Dates\n|Revision|Date|\n|---|---|\n","|Credit risk|1 January 2022|\n","|Output floor|2025: 65%|"]
+    assert "".join(spans.values())==text  # exact source text, nothing lost
