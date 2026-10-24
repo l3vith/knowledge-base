@@ -71,3 +71,5 @@ Latest team update and evidence-integrity repairs: [implementation, offline evid
 GLM 5.3 Flash judging and post-merge fixes: [measured results, subsequent offline changes and cost accounting](docs/diagnostics/post-merge-integrity/REPORT.md). Configure the judge independently with `OPENCODE_JUDGE_MODEL`; the answer model stays Qwen.
 
 First-pass tests on three previously unbenchmarked documents: [four query results and per-document metrics](docs/diagnostics/three-unseen/REPORT.md). Generalization remains weak; no runtime changes or score-driven reruns were made.
+
+Next iteration proposal: [task-driven evidence worksheet, paired checks and bounded recovery](docs/next-iteration/PLAN.md). This is a design blueprint incorporating the latest audit, not an implemented accuracy gain.

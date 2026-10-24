@@ -1,0 +1,9 @@
+flowchart TD
+  Q["Original question"] --> T["Compile evidence requirements and operations"]
+  T --> R["Retrieve complementary passages and table rows"]
+  R --> W["Build a source-backed evidence worksheet"]
+  W --> C["Check coverage, scope and contradictions"]
+  C -->|"One bounded search for a missing item"| R
+  C -->|"Requirements resolved or marked unknown"| A["Write a concise answer from the worksheet"]
+  A --> V["Verify claims AND requested-task coverage"]
+  V --> O["Answer with exact source citations and visible gaps"]
