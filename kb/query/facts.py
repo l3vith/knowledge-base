@@ -109,5 +109,6 @@ def inventory(numbered, spans, topics):
             context = [ids[ids.index(sid)-1]] if LEANS.match(sentence.lstrip()) and ids.index(sid) > 0 else []
             facts.append({"id": f"F{len(facts)+1}", "evidence_id": eid, "span_id": sid, "context_span_ids": context,
                           "text": display_source(sentence), "topic": topic or (ev.aspect_ids[0] if ev.aspect_ids else ""),
-                          "doc_id": getattr(ev.element, "doc_id", "")})
+                          "doc_id": getattr(ev.element, "doc_id", ""), "page": getattr(ev.element, "page_no", None),
+                          "section": section})
     return facts

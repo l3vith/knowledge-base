@@ -252,7 +252,9 @@ measured, not shown); the source's own guidance that bears on a requested contro
 Least essential: the same kind of result repeated for another configuration or case (unless the query asks to compare
 cases); intermediate arithmetic or set-up figures behind a headline result; general theory, definitions or method
 properties; software or code-source detail; restatements of a fact already ranked higher (in any group).
-Rank every ID of the group exactly once. Return IDs only."""
+Rank every ID of the group exactly once. Return IDs only.
+Each fact carries its page and section: use the section to tell which experiment, case or configuration a figure
+belongs to, and which section states the main results or the conclusions."""
 
 
 SET_SYSTEM = """Choose the smallest set of source facts that together answer the query (set selection, not ranking).
@@ -263,14 +265,16 @@ conditions and limitations that bound the results. Step 2: for each requirement 
 it, usually one or two. Prefer the main experiment or case unless the query asks to compare cases. A fact that adds
 nothing to any requirement is left out, even if it is true and relevant: a repeat of a result for another case,
 intermediate arithmetic, a comparison with other work, background theory or set-up detail. A fact may serve several
-requirements. Return {requirements:[{id:string,need:string,fact_ids:[fact_id]}]}. Facts not listed are dropped."""
+requirements. Return {requirements:[{id:string,need:string,fact_ids:[fact_id]}]}. Facts not listed are dropped.
+Each fact carries its page and section: use the section to tell which experiment, case or configuration a figure
+belongs to, and which section states the main results or the conclusions."""
 
 
 def _select_set(llm,ctx,query,topics,facts):
     """SetR-style: Qwen states the answer's requirements and the fewest facts covering each; the union is kept.
     Every requested topic keeps at least one fact; a failed or empty reply keeps every fact."""
     payload={"query":query,"requested_topics":[t["text"] for t in topics],
-             "facts":[{"id":f["id"],"topic":f["topic"],"text":f["text"]} for f in facts]}
+             "facts":[{"id":f["id"],"topic":f["topic"],"page":f.get("page"),"section":f.get("section",""),"text":f["text"]} for f in facts]}
     try:
         raw=_call(llm,ctx,"answer_select",SET_SYSTEM,payload,600+20*len(facts))
     except BudgetExceeded:
@@ -316,7 +320,7 @@ def _select_facts(llm,ctx,query,topics,facts,settings):
         groups.setdefault(f["topic"],[]).append(f)
     quota={k:_quota(len(v),settings) for k,v in groups.items()}
     payload={"query":query,"groups":[{"topic":k,"label":labels.get(k,k),"keep":quota[k],
-             "facts":[{"id":f["id"],"text":f["text"]} for f in v]} for k,v in groups.items()]}
+             "facts":[{"id":f["id"],"page":f.get("page"),"section":f.get("section",""),"text":f["text"]} for f in v]} for k,v in groups.items()]}
     try:
         raw=_call(llm,ctx,"answer_select",SELECT_SYSTEM,payload,400+12*len(facts))
     except BudgetExceeded:
