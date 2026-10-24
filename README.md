@@ -69,3 +69,5 @@ Ledger source-ID repair: [implementation and zero-cost replay](docs/SOURCE_ID_LE
 Latest team update and evidence-integrity repairs: [implementation, offline evidence and remaining limits](docs/diagnostics/post-merge-integrity/IMPLEMENTATION.md). The source-ID ledger reports above describe historical modes/runs; use the new report for current synthesis behavior.
 
 GLM 5.3 Flash judging and post-merge fixes: [measured results, subsequent offline changes and cost accounting](docs/diagnostics/post-merge-integrity/REPORT.md). Configure the judge independently with `OPENCODE_JUDGE_MODEL`; the answer model stays Qwen.
+
+First-pass tests on three previously unbenchmarked documents: [four query results and per-document metrics](docs/diagnostics/three-unseen/REPORT.md). Generalization remains weak; no runtime changes or score-driven reruns were made.

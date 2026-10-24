@@ -1,0 +1,479 @@
+{
+  "git_commit": "9eb518cc5047beecef89dc0248975480d542c88e",
+  "scope": "First available-history benchmark of three documents; four self-contained public queries, not a hidden holdout",
+  "selection_frozen_before_scoring": [
+    {
+      "document": "10.1515_econ-2022-0073 (1).pdf",
+      "id": "C26",
+      "query": "A business line wants to use the published neural-network classifier for predicting daily direction of emerging-market equity ETFs as a trading signal. What would a model validator flag about how the target was defined, how the data were prepared and split, the robustness of the reported accuracy, and how far the results can be generalised?"
+    },
+    {
+      "document": "Bhadora Industries_Annual Report.pdf",
+      "id": "A20",
+      "query": "Bhadora Industries listed on the SME platform after a year of rapid growth. From a lender's perspective, how is that growth being financed and what do the quality of its receivables and working capital look like?"
+    },
+    {
+      "document": "Bhadora Industries_Annual Report.pdf",
+      "id": "A21",
+      "query": "How reliable is the financial information Bhadora Industries gives its lenders and shareholders? Look for internal inconsistencies across the directors' report, auditor annexures and the notes."
+    },
+    {
+      "document": "FDIC FAQ.pdf",
+      "id": "C32",
+      "query": "According to the FDIC, by what percentage did US community banks' loan-loss allowances increase on the day they adopted the lifetime expected-loss standard?"
+    }
+  ],
+  "excluded_prior_documents": [
+    "2012.07440v3.pdf",
+    "Heston.pdf",
+    "BCBS-Basel-Endgame.pdf"
+  ],
+  "answer_model": "qwen3.8-flash",
+  "answer_thinking": "disabled",
+  "judge_model": "glm-5.3-flash",
+  "judge_reasoning_effort": "low",
+  "query_deadline_setting_s": 30,
+  "generation_cap_usd": 0.14,
+  "total_cap_usd": 0.2,
+  "status": "completed",
+  "protected_inputs_unchanged": true,
+  "computed_cost_usd": 0.05324337,
+  "cost_upper_bound_usd": 0.06412013000000001,
+  "document_metrics": {
+    "10.1515_econ-2022-0073 (1).pdf": {
+      "expected_queries": 1,
+      "scored_queries": 1,
+      "aggregation": "arithmetic mean across this document's selected self-contained queries",
+      "metrics": {
+        "answer_precision": 0.11764705882352941,
+        "answer_recall": 0.25,
+        "context_precision": 0.9714285714285714,
+        "context_recall": 1.0625
+      }
+    },
+    "Bhadora Industries_Annual Report.pdf": {
+      "expected_queries": 2,
+      "scored_queries": 2,
+      "aggregation": "arithmetic mean across this document's selected self-contained queries",
+      "metrics": {
+        "answer_precision": 0.3187134502923976,
+        "answer_recall": 0.16474953617810761,
+        "context_precision": 0.9199999999999999,
+        "context_recall": 0.4346153846153846
+      }
+    },
+    "FDIC FAQ.pdf": {
+      "expected_queries": 1,
+      "scored_queries": 1,
+      "aggregation": "arithmetic mean across this document's selected self-contained queries",
+      "metrics": {
+        "answer_precision": 0.0,
+        "answer_recall": 0.0,
+        "context_precision": 0.0,
+        "context_recall": 0.0
+      }
+    }
+  },
+  "pricing_per_million": {
+    "qwen3.8-flash": {
+      "input": 0.15,
+      "output": 0.47,
+      "cache_read": 0.016,
+      "cache_write": 0.2
+    },
+    "glm-5.3-flash": {
+      "input": 0.15,
+      "output": 0.5,
+      "cache_read": 0.03,
+      "cache_write": 0
+    }
+  },
+  "source_hashes": {
+    "benchmark_100.jsonl": "bce8a3e48d493e5635fa83cfd5c0c309f02a171fc1951a2f76bd128b23cd1288",
+    "Evaluation.ipynb": "f75493648896a79fc28499f04bb4909baea9bf717c1b040d0c3fb3974aa5f583",
+    "10.1515_econ-2022-0073 (1).pdf": "650673fa7497874ee7bb4cb3517cf68dab10a61dbf40252d60acd1a216cfefb4",
+    "Bhadora Industries_Annual Report.pdf": "3717c690e5f0c6bfb8206715fa35d5ab5dd25b8ae2c295c2045d0f81e4852412",
+    "FDIC FAQ.pdf": "0bad87e9267c7854e2222f16898d3377eb53ac65e8271786a27f3bad95760ab4"
+  },
+  "indexing": [
+    {
+      "document": "10.1515_econ-2022-0073 (1).pdf",
+      "status": "ready",
+      "collection_name": "unseen_etf",
+      "generation_id": "gen_20261024014318_64fd112c",
+      "documents": 1,
+      "pages": 14,
+      "elements": 179,
+      "ocr_pages": 0,
+      "ocr_unavailable_pages": 0,
+      "warnings": [],
+      "llm_usage": {
+        "calls": 1,
+        "input_tokens": 3215,
+        "output_tokens": 377,
+        "cost_usd": 0.0006594400000000001,
+        "cache_hits": 0
+      },
+      "cache_hits": {
+        "parse": 0,
+        "cards": 0,
+        "embeddings": 0
+      },
+      "ingestion_seconds": 11.57,
+      "measured_seconds": 11.5696972500009,
+      "computed_cost_usd": 0.0006594400000000001
+    },
+    {
+      "document": "Bhadora Industries_Annual Report.pdf",
+      "status": "ready",
+      "collection_name": "unseen_bhadora",
+      "generation_id": "gen_20261024014441_ad9e92f7",
+      "documents": 1,
+      "pages": 89,
+      "elements": 280,
+      "ocr_pages": 1,
+      "ocr_unavailable_pages": 0,
+      "warnings": [],
+      "llm_usage": {
+        "calls": 1,
+        "input_tokens": 3773,
+        "output_tokens": 368,
+        "cost_usd": 0.0007389099999999998,
+        "cache_hits": 0
+      },
+      "cache_hits": {
+        "parse": 0,
+        "cards": 0,
+        "embeddings": 0
+      },
+      "ingestion_seconds": 33.3,
+      "measured_seconds": 33.29959533299552,
+      "computed_cost_usd": 0.0007389099999999989
+    },
+    {
+      "document": "FDIC FAQ.pdf",
+      "status": "ready",
+      "collection_name": "unseen_fdic",
+      "generation_id": "gen_20261024014806_ea4b8a12",
+      "documents": 1,
+      "pages": 43,
+      "elements": 329,
+      "ocr_pages": 0,
+      "ocr_unavailable_pages": 0,
+      "warnings": [],
+      "llm_usage": {
+        "calls": 1,
+        "input_tokens": 2936,
+        "output_tokens": 474,
+        "cost_usd": 0.00066318,
+        "cache_hits": 0
+      },
+      "cache_hits": {
+        "parse": 0,
+        "cards": 0,
+        "embeddings": 0
+      },
+      "ingestion_seconds": 14.71,
+      "measured_seconds": 14.710526290989947,
+      "computed_cost_usd": 0.0006631799999999993
+    }
+  ],
+  "results": [
+    {
+      "id": "C26",
+      "document": "10.1515_econ-2022-0073 (1).pdf",
+      "query": "A business line wants to use the published neural-network classifier for predicting daily direction of emerging-market equity ETFs as a trading signal. What would a model validator flag about how the target was defined, how the data were prepared and split, the robustness of the reported accuracy, and how far the results can be generalised?",
+      "generation_id": "gen_20261024014318_64fd112c",
+      "status": "partial",
+      "query_seconds": 47.95476608298486,
+      "returned_chunks": 35,
+      "answer_characters": 3844,
+      "trace_steps": 10,
+      "langfuse_trace_id": "459f996f8c62056c11ace9a70044aeeb",
+      "query_calls": 29,
+      "query_cost_usd": 0.015357767999999997,
+      "judge_audit": {
+        "official_scores_unchanged": true,
+        "flags": [
+          {
+            "kind": "citations_in_answer_dropped_by_decomposition"
+          },
+          {
+            "kind": "citation_present_but_judge_marks_missing",
+            "benchmark_id": "bp23"
+          },
+          {
+            "kind": "citation_present_but_judge_marks_missing",
+            "benchmark_id": "bp22"
+          }
+        ],
+        "interpretation": "Flags require review; they do not compute corrected scores or prove semantic equivalence."
+      },
+      "judge_seconds": 23.76712345899432,
+      "judge_cost_usd": 0.003000550000000001,
+      "judge_calls": [
+        {
+          "request_sha256": "53c73fd05c01d58cdee8b5c837390903e82529c0eed02711dab7da7ddb86cc84",
+          "finish_reason": "stop",
+          "model": "glm-5.3-flash",
+          "max_tokens": 6000
+        },
+        {
+          "request_sha256": "39d79c3a2d2ee37ffe80d2463632ce737af8ccd8f65faba6f768f183047c7db8",
+          "finish_reason": "stop",
+          "model": "glm-5.3-flash",
+          "max_tokens": 6000
+        },
+        {
+          "request_sha256": "e36ab066d6bd591faa95f6d4d9c518921b63903a54b80aaa0848c61ad098681b",
+          "finish_reason": "stop",
+          "model": "glm-5.3-flash",
+          "max_tokens": 6000
+        },
+        {
+          "request_sha256": "c300e454271bba8295843518e9a4aa9195c851d342f426eeeab553a79edcf6a1",
+          "finish_reason": "stop",
+          "model": "glm-5.3-flash",
+          "max_tokens": 6000
+        }
+      ],
+      "official_metrics": {
+        "answer_precision": 0.11764705882352941,
+        "answer_recall": 0.25,
+        "context_precision": 0.9714285714285714,
+        "context_recall": 1.0625
+      },
+      "coverage": {
+        "counts": {
+          "candidate_pages": 14,
+          "cards_surveyed": 0,
+          "raw_candidate_pages": 14,
+          "elements_retrieved": 179,
+          "raw_fragments_verified": 179
+        },
+        "limitations": [
+          "15 draft statements rejected for invalid source support",
+          "7 unsupported or uncertain claims removed"
+        ],
+        "requested_topics": [
+          {
+            "id": "R1",
+            "text": "accuracy",
+            "query_start": 289,
+            "query_end": 297,
+            "status": "supported",
+            "claim_ids": [
+              "c2",
+              "c4",
+              "c5",
+              "c6",
+              "c15",
+              "c19",
+              "c21",
+              "c22"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "A20",
+      "document": "Bhadora Industries_Annual Report.pdf",
+      "query": "Bhadora Industries listed on the SME platform after a year of rapid growth. From a lender's perspective, how is that growth being financed and what do the quality of its receivables and working capital look like?",
+      "generation_id": "gen_20261024014441_ad9e92f7",
+      "status": "partial",
+      "query_seconds": 68.78813062497647,
+      "returned_chunks": 36,
+      "answer_characters": 6020,
+      "trace_steps": 10,
+      "langfuse_trace_id": "4754b0178c0f12013fada75626d81608",
+      "query_calls": 24,
+      "query_cost_usd": 0.017095142,
+      "judge_audit": {
+        "official_scores_unchanged": true,
+        "flags": [
+          {
+            "kind": "citations_in_answer_dropped_by_decomposition"
+          }
+        ],
+        "interpretation": "Flags require review; they do not compute corrected scores or prove semantic equivalence."
+      },
+      "judge_seconds": 32.931705666997004,
+      "judge_cost_usd": 0.0041125499999999995,
+      "judge_calls": [
+        {
+          "request_sha256": "1584a86c53b0873e9b3713b7ed0542513a542662f334a88f0fee247bde036979",
+          "finish_reason": "stop",
+          "model": "glm-5.3-flash",
+          "max_tokens": 6000
+        },
+        {
+          "request_sha256": "97ead1891309e972f6ab43178569c06fd8d9c1089af9b4b502ffee34b194a93d",
+          "finish_reason": "stop",
+          "model": "glm-5.3-flash",
+          "max_tokens": 6000
+        },
+        {
+          "request_sha256": "e16841c9a7acae7244112bd11d213f5a0b403aaa9c379049f889ec56b042af8f",
+          "finish_reason": "stop",
+          "model": "glm-5.3-flash",
+          "max_tokens": 6000
+        },
+        {
+          "request_sha256": "d2be5309b2dedefeaf603f61c8092062b0a8823e365239331e4f3be8427fecad",
+          "finish_reason": "stop",
+          "model": "glm-5.3-flash",
+          "max_tokens": 6000
+        }
+      ],
+      "official_metrics": {
+        "answer_precision": 0.5263157894736842,
+        "answer_recall": 0.3090909090909091,
+        "context_precision": 1.0,
+        "context_recall": 0.6
+      },
+      "coverage": {
+        "counts": {
+          "candidate_pages": 53,
+          "cards_surveyed": 0,
+          "raw_candidate_pages": 10,
+          "elements_retrieved": 125,
+          "raw_fragments_verified": 125
+        },
+        "limitations": [
+          "33 draft statements rejected for invalid source support",
+          "12 unsupported or uncertain claims removed"
+        ],
+        "requested_topics": []
+      }
+    },
+    {
+      "id": "A21",
+      "document": "Bhadora Industries_Annual Report.pdf",
+      "query": "How reliable is the financial information Bhadora Industries gives its lenders and shareholders? Look for internal inconsistencies across the directors' report, auditor annexures and the notes.",
+      "generation_id": "gen_20261024014441_ad9e92f7",
+      "status": "partial",
+      "query_seconds": 46.01742054100032,
+      "returned_chunks": 25,
+      "answer_characters": 2574,
+      "trace_steps": 10,
+      "langfuse_trace_id": "297b0886af5e3e33d0bdcb6f2b99d388",
+      "query_calls": 13,
+      "query_cost_usd": 0.007817209999999984,
+      "judge_audit": {
+        "official_scores_unchanged": true,
+        "flags": [],
+        "interpretation": "Flags require review; they do not compute corrected scores or prove semantic equivalence."
+      },
+      "judge_seconds": 23.05615933399531,
+      "judge_cost_usd": 0.002687150000000006,
+      "judge_calls": [
+        {
+          "request_sha256": "362169ac7bd88799214ffb7a873d381ca9da0c9799bc69961febc5b9e4f9e95b",
+          "finish_reason": "stop",
+          "model": "glm-5.3-flash",
+          "max_tokens": 6000
+        },
+        {
+          "request_sha256": "1f50c22ad4f440cd152ded48ebee53670d702794a65c015d5e1ad0281aef0e47",
+          "finish_reason": "stop",
+          "model": "glm-5.3-flash",
+          "max_tokens": 6000
+        },
+        {
+          "request_sha256": "2bb0bf62d016cc625b5bf7174cb833215a780fc540f5cc26319a49e358278d0e",
+          "finish_reason": "stop",
+          "model": "glm-5.3-flash",
+          "max_tokens": 6000
+        },
+        {
+          "request_sha256": "9515361a99412f0db152906bc8a75f17c8eefcf8e2066cb42ff288ca1b2627c7",
+          "finish_reason": "stop",
+          "model": "glm-5.3-flash",
+          "max_tokens": 6000
+        }
+      ],
+      "official_metrics": {
+        "answer_precision": 0.1111111111111111,
+        "answer_recall": 0.02040816326530612,
+        "context_precision": 0.84,
+        "context_recall": 0.2692307692307692
+      },
+      "coverage": {
+        "counts": {
+          "candidate_pages": 53,
+          "cards_surveyed": 0,
+          "raw_candidate_pages": 5,
+          "elements_retrieved": 61,
+          "raw_fragments_verified": 61
+        },
+        "limitations": [
+          "Reasonable assurance is a high level of assurance but not a guarantee that an audit will always detect a material misstatement when it exists.",
+          "Internal financial controls have inherent limitations, including the possibility of collusion or improper management override, which may result in material misstatements due to error or fraud not being detected.",
+          "5 draft statements rejected for invalid source support",
+          "4 unsupported or uncertain claims removed"
+        ],
+        "requested_topics": []
+      }
+    },
+    {
+      "id": "C32",
+      "document": "FDIC FAQ.pdf",
+      "query": "According to the FDIC, by what percentage did US community banks' loan-loss allowances increase on the day they adopted the lifetime expected-loss standard?",
+      "generation_id": "gen_20261024014806_ea4b8a12",
+      "status": "no_answer",
+      "query_seconds": 12.971617250004783,
+      "returned_chunks": 0,
+      "answer_characters": 73,
+      "trace_steps": 10,
+      "langfuse_trace_id": "b043480d6fe8b6382e666b2de748b1b7",
+      "query_calls": 3,
+      "query_cost_usd": 0.0009352000000000041,
+      "judge_audit": {
+        "official_scores_unchanged": true,
+        "flags": [],
+        "interpretation": "Flags require review; they do not compute corrected scores or prove semantic equivalence."
+      },
+      "judge_seconds": 4.300407457980327,
+      "judge_cost_usd": 0.00017627000000000614,
+      "judge_calls": [
+        {
+          "request_sha256": "f691132692086c01fdb703393c43d07202ebc124d5a59bdbf3f98c4e9107b2cb",
+          "finish_reason": "stop",
+          "model": "glm-5.3-flash",
+          "max_tokens": 6000
+        },
+        {
+          "request_sha256": "14cb38c3271418260f808cb46ad809848167f9c18f0fe635e583854290486513",
+          "finish_reason": "stop",
+          "model": "glm-5.3-flash",
+          "max_tokens": 6000
+        }
+      ],
+      "official_metrics": {
+        "answer_precision": 0.0,
+        "answer_recall": 0.0,
+        "context_precision": 0.0,
+        "context_recall": 0.0
+      },
+      "coverage": {
+        "counts": {
+          "candidate_pages": 43,
+          "cards_surveyed": 0,
+          "raw_candidate_pages": 5,
+          "elements_retrieved": 72,
+          "raw_fragments_verified": 16
+        },
+        "limitations": [],
+        "requested_topics": []
+      }
+    }
+  ],
+  "total_requests": 86,
+  "failed_requests": 0,
+  "requests_by_phase": {
+    "index": 3,
+    "query": 69,
+    "judge": 14
+  }
+}
