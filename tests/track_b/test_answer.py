@@ -245,7 +245,24 @@ def big_case(tmp_path,n_facts,respond,**kw):
     numbered=number_evidence([Evidence(e,["a1"]) for e in store.elements])
     plan=QueryPlan("analytical",[Aspect("a1","speed",["speed"])],["a"])
     s=settings(tmp_path,analytical_writer_mode="synthesis",**kw)
-    return generate_answer(FakeLLM(respond),"how fast is it?",plan,numbered,{"a":store.doc("a")},s),numbered,s
+    route=lambda n,p:FakeLLM.default(n,p) if n=="answer_select" else respond(n,p)  # selection keeps every fact
+    return generate_answer(FakeLLM(route),"how fast is it?",plan,numbered,{"a":store.doc("a")},s),numbered,s
+
+
+def test_llm_fact_selection_drops_secondary_facts_with_a_topic_floor_and_fails_open(tmp_path):
+    from kb.query.answer import _select_facts
+    facts=[{"id":f"F{i}","topic":"R1" if i<12 else "R2","text":f"Run {i} took {i} seconds."} for i in range(14)]
+    def pick(n,p):
+        assert n=="answer_select" and len(p["facts"])==14
+        return {"keep":["F0","F1","F99"],"drop":[{"id":"F2","reason":"secondary_case"}]}  # F99 unknown; R2 dropped entirely
+    kept,report=_select_facts(FakeLLM(pick),None,"how fast?",[{"id":"R1","text":"speed"}],facts)
+    assert [f["id"] for f in kept]==["F0","F1","F12"]  # unknown ID ignored, R2 keeps its first fact
+    assert report["selected"]==3 and {"text":"Run 2 took 2 seconds.","reason":"secondary_case"} in report["dropped"]
+    def broken(n,p): raise ValueError("bad JSON")
+    kept,report=_select_facts(FakeLLM(broken),None,"how fast?",[],facts)
+    assert len(kept)==14 and report["failed"]=="ValueError"  # never loses the answer
+    kept,report=_select_facts(FakeLLM(broken),None,"how fast?",[],facts[:5])
+    assert len(kept)==5 and report["skipped"]  # too few facts to be worth a call
 
 
 def test_writers_and_limits_scale_with_the_facts(tmp_path):

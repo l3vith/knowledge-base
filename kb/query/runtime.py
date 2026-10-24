@@ -12,7 +12,7 @@ from .observability import LocalSink
 from .settings import value
 from .utils import compact, estimate_tokens, plain
 
-FINAL = {"answer", "answer_verify", "answer_generation", "answer_verification", "citation_render"}
+FINAL = {"answer", "answer_select", "answer_verify", "answer_generation", "answer_verification", "citation_render"}
 FINAL_GRACE_S = 45  # minimum per-call HTTP allowance for the answer and claim check when the query deadline is close
 FINAL_TOKENS_PER_S = 40  # conservative Qwen output speed (measured ~65 tokens/s): a long writer gets time to finish
 
