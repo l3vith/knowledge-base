@@ -244,49 +244,8 @@ def big_case(tmp_path,n_facts,respond,**kw):
     store=MemoryStore({"a":[f"Test run number {i} took {i+1} seconds to finish." for i in range(n_facts)]})
     numbered=number_evidence([Evidence(e,["a1"]) for e in store.elements])
     plan=QueryPlan("analytical",[Aspect("a1","speed",["speed"])],["a"])
-    s=settings(tmp_path,analytical_writer_mode="synthesis",**{"select_mode":"off",**kw})  # writer scaling: keep every fact
-    route=lambda n,p:FakeLLM.default(n,p) if n=="answer_select" else respond(n,p)
-    return generate_answer(FakeLLM(route),"how fast is it?",plan,numbered,{"a":store.doc("a")},s),numbered,s
-
-
-def test_fact_selection_keeps_each_topics_top_ranked_quota_and_cannot_keep_everything(tmp_path):
-    from kb.query.answer import _select_facts,_quota
-    s=settings(tmp_path,select_mode="quota",select_share=0.4,select_max=5)
-    assert [_quota(n,s) for n in (1,2,4,8,13,40)]==[1,2,2,4,5,5]  # 40% share, at least 2, at most 5
-    facts=[{"id":f"F{i}","topic":"R1" if i<12 else "R2","text":f"Run {i} took {i} seconds."} for i in range(14)]
-    def rank(n,p):
-        assert n=="answer_select" and [g["keep"] for g in p["groups"]]==[5,2]
-        # R1 ranked best-last plus an unknown and a repeated ID; R2 left out entirely.
-        return {"groups":[{"topic":"R1","ranked":["F11","F10","F99","F10","F9","F8","F7","F6"]}]}
-    kept,report=_select_facts(FakeLLM(rank),None,"how fast?",[{"id":"R1","text":"speed"}],facts,s)
-    assert [f["id"] for f in kept]==["F7","F8","F9","F10","F11","F12","F13"]  # top 5 of R1; R2 its first 2 in source order
-    assert report["selected"]==7 and report["groups_unranked"]==["R2"] and len(report["dropped"])==7
-    def everything(n,p):  # a model that ranks without choosing still only gets the quota through
-        return {"groups":[{"topic":g["topic"],"ranked":[f["id"] for f in g["facts"]]} for g in p["groups"]]}
-    kept,_=_select_facts(FakeLLM(everything),None,"how fast?",[],facts,s)
-    assert len(kept)==7
-    def broken(n,p): raise ValueError("bad JSON")
-    kept,report=_select_facts(FakeLLM(broken),None,"how fast?",[],facts,s)
-    assert len(kept)==14 and report["failed"]=="ValueError"  # a failed call never loses the answer
-    kept,report=_select_facts(FakeLLM(broken),None,"how fast?",[],facts[:5],s)
-    assert len(kept)==5 and report["skipped"]
-    kept,report=_select_facts(FakeLLM(broken),None,"how fast?",[],facts,settings(tmp_path))
-    assert len(kept)==14 and "off" in report["skipped"]  # off by default: no call is made (broken would raise)
-
-
-def test_set_selection_keeps_the_union_covering_the_requirements(tmp_path):
-    from kb.query.answer import _select_facts
-    s=settings(tmp_path,select_mode="setr")
-    facts=[{"id":f"F{i}","topic":"R1" if i<12 else "R2","text":f"Run {i} took {i} seconds."} for i in range(14)]
-    def pick(n,p):
-        assert n=="answer_select" and len(p["facts"])==14 and "requested_topics" in p
-        return {"requirements":[{"id":"Q1","need":"build time","fact_ids":["F3","F99"]},
-                                {"id":"Q2","need":"evaluation time","fact_ids":["F3","F5"]}]}  # F99 unknown; R2 not covered
-    kept,report=_select_facts(FakeLLM(pick),None,"how fast?",[{"id":"R1","text":"speed"}],facts,s)
-    assert [f["id"] for f in kept]==["F3","F5","F12"]  # union, unknown ignored, R2 keeps its first fact
-    assert report["topic_floor_added"]==["F12"] and report["requirements"][0]=={"need":"build time","fact_ids":["F3"]}
-    kept,report=_select_facts(FakeLLM(lambda n,p:{"requirements":[]}),None,"how fast?",[],facts,s)
-    assert len(kept)==14 and report["failed"]  # nothing selected: keep every fact
+    s=settings(tmp_path,analytical_writer_mode="synthesis",**kw)
+    return generate_answer(FakeLLM(respond),"how fast is it?",plan,numbered,{"a":store.doc("a")},s),numbered,s
 
 
 def test_writers_and_limits_scale_with_the_facts(tmp_path):

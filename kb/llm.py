@@ -314,8 +314,6 @@ def _dry_json_payload(name: str, p: dict) -> dict:
             if hit(text) and quote(text):
                 kept.append({"id":e["id"],"aspects":aspect_ids,**({"support_span_ids":list(spans)} if spans else {"quotes":[quote(text)],"note":"dryrun lexical overlap"})})
         return {"keep":kept}
-    if name == "answer_select":  # fact selection: rank each topic's facts in the order given
-        return {"groups": [{"topic": g["topic"], "ranked": [f["id"] for f in g["facts"]]} for g in p.get("groups", [])]}
     if name == "answer" and "max_statements" in p:  # cited-synthesis writer: first span of each evidence, cited
         return {"status":"partial","limitations":["dryrun answer"],"sections":[{"heading":"Findings","statements":[
             {"kind":"finding","text":next(iter(e["source_spans"].values())),"obligation_ids":e.get("obligation_ids",[])[:1],
