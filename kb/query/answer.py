@@ -250,9 +250,12 @@ Most essential: the headline figures the source reports as its main results for 
 or limitation that bounds a headline result (tested data, models, hardware, scope, domain, projected rather than
 measured, not shown); the source's own guidance that bears on a requested control or risk.
 Least essential: the same kind of result repeated for another configuration or case (unless the query asks to compare
-cases); intermediate arithmetic or set-up figures behind a headline result; general theory, definitions or method
+cases); intermediate arithmetic behind a headline result, or set-up figures that answer no requested topic; general theory, definitions or method
 properties; software or code-source detail; restatements of a fact already ranked higher (in any group).
 Rank every ID of the group exactly once. Return IDs only.
+Quantities that directly answer a requested topic are headline figures even when they read like set-up: for
+cost or effort, the number of calls or evaluations, grid or sample size, memory footprint, rank and build time; for
+test conditions, the hardware and the data used; for speed, the measured or expected time per evaluation.
 Each fact carries its page and section: use the section to tell which experiment, case or configuration a figure
 belongs to, and which section states the main results or the conclusions."""
 
@@ -264,8 +267,11 @@ tests ran on", "pricing calls needed to build"), not a broad topic. Cover every 
 conditions and limitations that bound the results. Step 2: for each requirement pick the fewest fact IDs that satisfy
 it, usually one or two. Prefer the main experiment or case unless the query asks to compare cases. A fact that adds
 nothing to any requirement is left out, even if it is true and relevant: a repeat of a result for another case,
-intermediate arithmetic, a comparison with other work, background theory or set-up detail. A fact may serve several
+intermediate arithmetic, a comparison with other work, background theory, or set-up detail that answers no requested topic. A fact may serve several
 requirements. Return {requirements:[{id:string,need:string,fact_ids:[fact_id]}]}. Facts not listed are dropped.
+Quantities that directly answer a requested topic are headline figures even when they read like set-up: for
+cost or effort, the number of calls or evaluations, grid or sample size, memory footprint, rank and build time; for
+test conditions, the hardware and the data used; for speed, the measured or expected time per evaluation.
 Each fact carries its page and section: use the section to tell which experiment, case or configuration a figure
 belongs to, and which section states the main results or the conclusions."""
 
