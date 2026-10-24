@@ -61,3 +61,13 @@ C26 improved answer precision substantially, but the system checked only 72 of 1
 - Reproducer: [benchmark_task_worksheet.py](../../../scripts/benchmark_task_worksheet.py). It requires the original local corpus and existing indexes, uses CLI credentials only in memory, and refuses to overwrite an existing report. Use a fresh output directory; pass the prior cost ledger when continuing an attempt.
 - Raw local folders: `artifacts/task_worksheet_20261024/` and `artifacts/task_worksheet_corrective_20261024/`.
 - The 30-second setting remains a soft overall target because writer/checker completion has explicit grace. These measured latencies are not a claim of meeting a 30-second service target. Changing several components together does not establish which component caused a metric difference. No broad unseen-document accuracy claim follows from these two cases.
+
+## Follow-up: dynamic selector removed
+
+The LLM-driven next-batch selector was removed after a capped C32/C26 rerun showed that C26 stopped after its first eight-fragment tranche: 0.00% / 2.78% / 100.00% / 12.50%, 66.64 seconds, with 171 candidates left unchecked. On C32 the selector did make two follow-up choices, but returned 60.00% / 42.86% / 0.00% / 0.00% in 56.27 seconds.
+
+A deterministic 12-fragment batch experiment also underperformed: C26 checked 36 fragments and scored 71.43% / 27.03% / 100.00% / 62.50%, versus the earlier eight-fragment static run's 80.00% / 34.21% / 100.00% / 90.62%. The 12-fragment change was discarded. With the original eight-fragment size restored, the latest C32 run scored 75.00% / 50.00% / 0.00% / 0.00% in 43.32 seconds. Its C26 run was refused before a provider request by the cumulative per-query $0.035 admission limit; the earlier static eight-fragment C26 result is therefore the best completed measurement for that configuration, not a fresh replicate.
+
+The C32 context scores are zero because the official evaluator's context judge marked all three retrieved chunks irrelevant. One retrieved chunk contains the same page-18 "depends on many factors / cannot reasonably forecast" material as a gold chunk, and the answer judge credited that fact. Context scoring asks the judge about query relevance without showing it the gold chunks, so this is a judge inconsistency rather than evidence that retrieval returned no context. The original evaluator was left unchanged.
+
+The latest cumulative billed upper bound across carried-forward runs is $0.06591522, below the $0.10 experiment cap. Raw artifacts for the follow-up runs remain in ignored local directories `artifacts/dynamic_selection_c32_c26_rerun_20261024/`, `artifacts/ranked_batches_c32_c26_20261024/`, and `artifacts/ranked_batches_8_c32_c26_20261024/`.

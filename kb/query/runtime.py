@@ -132,8 +132,7 @@ class QueryRuntime:
                     raise BudgetExceeded("Model call budget exhausted")
                 # Early stages may not starve the later ones: plan/survey/verify each stop at a cumulative share.
                 # ponytail: fixed shares; make them per-intent settings if dev evaluation shows a better split.
-                share = {"plan": 0.1, "survey": 0.3, "verify": 0.72,
-                         "verify_select": 0.80}.get(name, 1.0)
+                share = {"plan": 0.1, "survey": 0.3, "verify": 0.72}.get(name, 1.0)
                 if self.estimated_input + predicted > share * value(self.settings, "max_input_tokens"):
                     raise BudgetExceeded("Conservative input budget exhausted")
                 # Verification has its own output pool: in-flight batches reserve their full limit.
