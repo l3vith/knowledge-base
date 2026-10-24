@@ -732,7 +732,7 @@ def render_verified(draft,numbered,cards):
     key=lambda c:" ".join(c.section.split()).casefold()
     first={};shown={}
     for i,c in enumerate(draft.claims):
-        first.setdefault(key(c),i);shown.setdefault(key(c),c.section.strip())
+        first.setdefault(key(c),i);shown.setdefault(key(c),c.section.strip()[:1].upper()+c.section.strip()[1:])
     claims=[replace(c,section=shown[key(c)]) for c in sorted(draft.claims,key=lambda c:first[key(c)])] if sectioned else draft.claims
     for claim in claims:
         if any(eid not in numbered for eid in claim.evidence_ids):
