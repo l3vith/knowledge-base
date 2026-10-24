@@ -108,7 +108,7 @@ def test_call_many_runs_concurrently_and_keeps_budget_order(tmp_path):
     import time
     def slow(name,p):
         time.sleep(0.3);return {"ok":p["i"]}
-    runtime=QueryRuntime(settings(tmp_path,max_llm_calls=9),FakeLLM(slow),LocalSink())  # 6 kept back for writers + checks
+    runtime=QueryRuntime(settings(tmp_path,max_llm_calls=3),FakeLLM(slow),LocalSink())  # answer calls have their own pool
     t=time.monotonic();out=runtime.call_many("verify","system",[{"i":i} for i in range(4)],100)
     assert time.monotonic()-t<0.8  # three 0.3 s calls at once, not 0.9 s in a row
     assert out[:3]==[{"ok":0},{"ok":1},{"ok":2}] and isinstance(out[3],BudgetExceeded)

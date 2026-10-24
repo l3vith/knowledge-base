@@ -54,6 +54,7 @@ class Evidence:
     fact_value: str | None = None
     relevance: str = "direct"
     findings: list[dict[str, Any]] = field(default_factory=list)
+    requirement_ids: list[str] = field(default_factory=list)  # requested topics the verifier tagged
 
 
 @dataclass(frozen=True)
@@ -84,6 +85,7 @@ class Claim:
     record_ids: list[str] = field(default_factory=list)
     section: str = ""  # synthesis answers: heading the statement is rendered under
     kind: str = "finding"  # finding | inference | gap (gap = requested item the evidence does not show)
+    fact_ids: list[str] = field(default_factory=list)  # inventoried facts this statement carries with all their figures
 
 
 @dataclass
@@ -93,3 +95,4 @@ class AnswerDraft:
     limitations: list[str] = field(default_factory=list)
     requested_topics: list[dict[str, Any]] = field(default_factory=list)
     ledger_records: list[dict[str, Any]] = field(default_factory=list)
+    facts: list[dict[str, Any]] = field(default_factory=list)  # synthesis fact inventory the final answer must carry

@@ -39,6 +39,11 @@ class QuerySettings:
     # Writer context stays small (raw_token_budget_*) for a ~30 s answer; all verified evidence is still returned as chunks.
     max_input_tokens: int = 480000
     max_output_tokens: int = 32000
+    # Answer stage pools (writers + claim checks), separate from the early stages. Bounds, not targets: actual
+    # writer and check limits are computed from the evidence. Worst case ~$0.04 output at Qwen prices.
+    max_answer_calls: int = 24
+    answer_input_tokens: int = 600000
+    answer_pool_output_tokens: int = 80000
     verify_output_tokens: int = 48000  # separate pool; ~$0.02 worst case at Qwen output prices
     answer_output_tokens: int = 8000
     # extractive: copied sentences; ledger: source-ID findings rendered from source text; synthesis: cited analyst
@@ -47,9 +52,14 @@ class QuerySettings:
     ledger_extraction_mode: str = "integrated"
     ledger_output_tokens: int = 8000
     ledger_quote_chars: int = 30000
-    analytical_answer_chars: int = 8000
-    analytical_answer_claims: int = 24
-    max_synthesis_statements: int = 55  # synthesis: one atomic statement each; benchmark answers run ~40-75 points
+    # Ceilings only: the answer takes what its evidence needs up to these (ledger/extractive source text).
+    analytical_answer_chars: int = 24000
+    analytical_answer_claims: int = 80
+    # Synthesis: code picks the facts, each writer phrases at most this many; writer count and every output limit are
+    # computed from the facts. Claim checks run in parallel batches of claims_per_check.
+    facts_per_writer: int = 12
+    max_answer_writers: int = 10
+    claims_per_check: int = 12
     artifact_dir: Path = Path("artifacts/runs")
     strict_observability: bool = True
     raw_token_budget_factoid: int = 12000

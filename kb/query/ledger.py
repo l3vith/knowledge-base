@@ -262,7 +262,8 @@ def generate_ledger_answer(llm,query,plan,numbered,settings,ctx=None):
     if integrated:
         return render_id_records(llm,query,numbered,selected,requirements,limits,matrix,settings,ctx)
     raw=_call(llm,ctx,'answer',SYNTHESIZE_SYSTEM,{'query':query,'requested_topics':requirements,
-        'max_answer_chars':value(settings,'analytical_answer_chars'),'records':[asdict(r) for r in selected]},value(settings,'answer_output_tokens'))
+        'max_answer_chars':value(settings,'analytical_answer_chars'),'records':[asdict(r) for r in selected]},
+        max(value(settings,'answer_output_tokens'),600+150*len(selected)))  # ~one sentence per record
     by_id={r.record_id:r for r in selected};claims=[];rejected=[];used_chars=0
     for i,row in enumerate(raw.get('selections',[]) if isinstance(raw,dict) else []):
         if not isinstance(row,dict):rejected.append(i);continue
@@ -482,7 +483,7 @@ def render_id_records(llm,query,numbered,selected,requirements,limits,matrix,set
             'anchors':{anchor_aliases[a]:catalog.anchors[a].text for a in (r.render_ids or r.anchor_ids)},
             'qualification_ids':[anchor_aliases[a] for a in r.qualification_ids],
             'values':[{'id':anchor_aliases[v],'text':catalog.anchors[v].text} for v in r.value_ids]} for r in selected]},
-        value(settings,'answer_output_tokens'))
+        400+40*len(selected))  # IDs only: ~40 tokens a selection row, sized to the records so the order is never cut
     claims=[];covered=set();used=0;rejections=[];fallback=[];claim_anchors={};rendered=set()
     order=lambda a:(catalog.anchors[a].page_no,catalog.anchors[a].char_start)
     def attach(claim,records):

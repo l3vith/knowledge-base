@@ -134,16 +134,19 @@ def test_shared_qwen_wire_format_and_zero_cost_cache(tmp_path,monkeypatch):
     assert seen[0][1]['json']['thinking']=={'type':'disabled'}
 
 
-def test_final_check_is_reserved_during_drafting(tmp_path):
+def test_answer_stage_has_its_own_pool(tmp_path):
+    # Early stages using their whole output pool cannot starve the writers or claim checks, and the answer pool
+    # still has a hard bound.
     from .helpers import FakeLLM
     from kb.query.errors import BudgetExceeded
-    runtime=QueryRuntime(settings(tmp_path,max_output_tokens=24000),FakeLLM(),LocalSink())
-    runtime.reserved_output=18001
-    with pytest.raises(BudgetExceeded,match='Output reservation'):
-        runtime.call('answer','system',{},4000)
-    assert runtime.calls==0
-    runtime.reserved_output=18000
+    runtime=QueryRuntime(settings(tmp_path,max_output_tokens=24000,answer_pool_output_tokens=10000),FakeLLM(lambda n,p:{'ok':1}),LocalSink())
+    runtime.reserved_output=24000
+    runtime.call('answer','system',{},4000)
     runtime.call('answer_verify','system',{'claims':[]},2000)
+    runtime.reserved_final=8001
+    with pytest.raises(BudgetExceeded,match='Answer output'):
+        runtime.call('answer','system',{},2000)
+    assert runtime.calls==2
 
 
 def test_reasoning_floor_included_in_all_future_reserves(tmp_path):
@@ -152,7 +155,7 @@ def test_reasoning_floor_included_in_all_future_reserves(tmp_path):
     llm=FakeLLM()
     runtime=QueryRuntime(settings(tmp_path,max_output_tokens=24000),llm,LocalSink())
     runtime.llm.model='deepseek-v4.1-flash'
-    runtime.reserved_output=10000
+    runtime.reserved_output=20000  # 512 becomes the 4,096 reasoning floor: 24,096 > 24,000
     with pytest.raises(BudgetExceeded,match='Output reservation'):
         runtime.call('survey','system',{},512)
     assert runtime.calls==0

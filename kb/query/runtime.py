@@ -13,7 +13,8 @@ from .settings import value
 from .utils import compact, estimate_tokens, plain
 
 FINAL = {"answer", "answer_verify", "answer_generation", "answer_verification", "citation_render"}
-FINAL_GRACE_S = 45  # per-call HTTP allowance for the answer and claim check when the query deadline is close
+FINAL_GRACE_S = 45  # minimum per-call HTTP allowance for the answer and claim check when the query deadline is close
+FINAL_TOKENS_PER_S = 40  # conservative Qwen output speed (measured ~65 tokens/s): a long writer gets time to finish
 
 class QueryRuntime:
     def __init__(self, settings, llm, sink=None, request_id=None):
@@ -26,6 +27,7 @@ class QueryRuntime:
         self.deadline = self.started + value(settings, "query_deadline_s")
         self.trace, self.events, self.limitations = [], [], []
         self.calls = self.estimated_input = self.reserved_output = self.reserved_verify = 0
+        self.final_calls = self.final_input = self.reserved_final = 0
         self.pending_ledger = False
         self.input_tokens = self.output_tokens = self.cost = 0
         self.unknown_usage = self.unknown_cost = False
@@ -109,29 +111,39 @@ class QueryRuntime:
         user = compact(payload)
         predicted = estimate_tokens(system) + estimate_tokens(user)
         with self._lock:
-            # Earlier stages leave six calls (up to three parallel writers and three claim-check batches),
-            # plus one for the optional separate ledger extraction.
-            reserved_calls=0 if name in FINAL else 6 + int(self.pending_ledger and name!="ledger_extract")
-            if self.calls >= value(self.settings, "max_llm_calls") - reserved_calls:
-                raise BudgetExceeded("Model call budget exhausted")
-            # Early stages may not starve the later ones: plan/survey/verify each stop at a cumulative share of the budget.
-            # ponytail: fixed shares; make them per-intent settings if dev evaluation shows a better split.
-            share = {"plan": 0.1, "survey": 0.3, "verify": 0.72}.get(name, 1.0)
-            if self.estimated_input + predicted > share * value(self.settings, "max_input_tokens"):
-                raise BudgetExceeded("Conservative input budget exhausted")
-            # Verification has its own output pool: in-flight batches reserve their full limit, and sharing the
-            # answer's pool (minus its reserve) capped a concurrent round at ~14 batches and dropped the rest.
-            if name == "verify":
-                if self.reserved_verify + max_tokens > value(self.settings, "verify_output_tokens"):
-                    raise BudgetExceeded("Verification output budget exhausted")
+            # Three separate pools, so no stage can starve another: earlier stages (plan/survey/verify), the
+            # answer writers and their claim checks. The answer pool is sized for many parallel writers and checks;
+            # each writer's own limit is computed from its evidence (answer.py), never cut to fit a fixed share.
+            final = name in FINAL
+            if final:
+                if self.final_calls >= value(self.settings, "max_answer_calls"):
+                    raise BudgetExceeded("Answer call budget exhausted")
+                if self.final_input + predicted > value(self.settings, "answer_input_tokens"):
+                    raise BudgetExceeded("Answer input budget exhausted")
+                if self.reserved_final + max_tokens > value(self.settings, "answer_pool_output_tokens"):
+                    raise BudgetExceeded("Answer output budget exhausted")
             else:
-                final_check = self._effective_limit(2000)
-                final_reserve = (0 if name == "answer_verify" else final_check if name == "answer"
-                                 else self._effective_limit(value(self.settings, "answer_output_tokens")) + final_check)
-                if self.reserved_output + max_tokens + final_reserve > value(self.settings, "max_output_tokens"):
+                # The optional separate ledger extraction keeps one early-stage call for itself.
+                keep = int(self.pending_ledger and name != "ledger_extract")
+                if self.calls - self.final_calls >= value(self.settings, "max_llm_calls") - keep:
+                    raise BudgetExceeded("Model call budget exhausted")
+                # Early stages may not starve the later ones: plan/survey/verify each stop at a cumulative share.
+                # ponytail: fixed shares; make them per-intent settings if dev evaluation shows a better split.
+                share = {"plan": 0.1, "survey": 0.3, "verify": 0.72}.get(name, 1.0)
+                if self.estimated_input + predicted > share * value(self.settings, "max_input_tokens"):
+                    raise BudgetExceeded("Conservative input budget exhausted")
+                # Verification has its own output pool: in-flight batches reserve their full limit.
+                if name == "verify":
+                    if self.reserved_verify + max_tokens > value(self.settings, "verify_output_tokens"):
+                        raise BudgetExceeded("Verification output budget exhausted")
+                elif self.reserved_output + max_tokens > value(self.settings, "max_output_tokens"):
                     raise BudgetExceeded("Output reservation budget exhausted")
             self.calls += 1
-            self.estimated_input += predicted
+            if final:
+                self.final_calls += 1
+                self.final_input += predicted
+            else:
+                self.estimated_input += predicted
             self._pool(name, max_tokens)
             number = self.calls
         self.save(f"call_{number}_input", {"system": system, "payload": payload})
@@ -160,7 +172,8 @@ class QueryRuntime:
                                 model=getattr(llm, "model", None)) as span:
                 if hasattr(llm, "set_request_deadline"):
                     # The answer and claim check are never cut by the query deadline: losing them discards paid evidence.
-                    llm.set_request_deadline(max(self.deadline, time.monotonic() + FINAL_GRACE_S) if name in FINAL else self.deadline)
+                    grace = max(FINAL_GRACE_S, 15 + max_tokens / FINAL_TOKENS_PER_S)
+                    llm.set_request_deadline(max(self.deadline, time.monotonic() + grace) if name in FINAL else self.deadline)
                 result = llm.complete_json(job["system"], job["user"], name=name, max_tokens=max_tokens)
                 if not isinstance(result, dict):
                     raise QueryError("MODEL_SCHEMA", "Expected a JSON object", 503)
@@ -210,6 +223,8 @@ class QueryRuntime:
     def _pool(self, name, delta):
         if name == "verify":
             self.reserved_verify += delta
+        elif name in FINAL:
+            self.reserved_final += delta
         else:
             self.reserved_output += delta
 

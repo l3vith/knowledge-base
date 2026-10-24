@@ -176,7 +176,8 @@ def test_synthesis_statement_gets_exact_source_quotes_and_a_cited_bullet(tmp_pat
     draft,checked,_,answer=synth(tmp_path,[{"kind":"finding","text":"Capital was USD 12 million in FY2025.",
                                              "obligation_ids":["a1"],"cites":[{"evidence_id":"E1","span_ids":["S1"]}]}])
     assert draft.claims[0].quotes==[{"evidence_id":"E1","quote":"Capital was 12 million USD in FY2025. "}]
-    assert answer=="## Capital\n- Capital was USD 12 million in FY2025. [a.pdf p1]"
+    # The writer skipped the second fact: it is put back verbatim under the same heading.
+    assert answer=="## Capital\n- Capital was USD 12 million in FY2025. [a.pdf p1]\n- Buffers rose to 3 percent. [a.pdf p1]"
 
 
 def test_synthesis_rejects_uncited_or_invented_citations_but_keeps_gaps(tmp_path):
@@ -185,8 +186,11 @@ def test_synthesis_rejects_uncited_or_invented_citations_but_keeps_gaps(tmp_path
         {"kind":"finding","text":"Bad span.","cites":[{"evidence_id":"E1","span_ids":["S9"]}]},
         {"kind":"inference","text":"Unknown source.","cites":[{"evidence_id":"E7","span_ids":["S1"]}]},
         {"kind":"gap","text":"The excerpts do not show the 2024 figure.","obligation_ids":["a1"]}])
-    assert [c.kind for c in checked.claims]==["gap"] and report["gaps"]==1
-    assert answer=="## Capital\n- The excerpts do not show the 2024 figure."
+    # Invented or badly cited statements are rejected; the gap stays; both facts the writer failed to carry
+    # are restored as their exact source sentences.
+    assert [c.kind for c in checked.claims]==["gap","finding","finding"] and report["gaps"]==1
+    assert answer==("## Capital\n- The excerpts do not show the 2024 figure.\n\n## Further findings\n"
+                    "- Capital was 12 million USD in FY2025. [a.pdf p1]\n- Buffers rose to 3 percent. [a.pdf p1]")
 
 
 def test_synthesis_claims_the_checker_rejects_are_removed(tmp_path):
@@ -230,5 +234,69 @@ def test_synthesis_writes_each_obligation_group_in_parallel_with_its_own_evidenc
         return {"status":"answered","sections":[{"heading":p["obligations"][0]["text"],"statements":[
             {**st,"text":e["source_spans"]["S1"]},st]}]}
     draft=generate_answer(FakeLLM(respond),"assess capital and liquidity",plan,numbered,{"a":store.doc("a")},settings(tmp_path,analytical_writer_mode="synthesis"))
-    assert sorted(seen)==[(["E1"],True,"findings"),(["E1","E2"],False,"appraisal"),(["E2"],False,"findings")]
-    assert [c.text for c in draft.claims].count("Same sentence.")==1 and len(draft.claims)==3
+    # Two one-fact topics fit one writer (facts_per_writer), so they are packed; the appraisal writer sees everything.
+    assert sorted(seen)==[(["E1","E2"],False,"appraisal"),(["E1","E2"],True,"findings")]
+    texts=[c.text for c in draft.claims]
+    assert texts.count("Same sentence.")==1 and "Liquidity was 140 percent." in texts and len(texts)==3
+
+
+def big_case(tmp_path,n_facts,respond,**kw):
+    store=MemoryStore({"a":[f"Test run number {i} took {i+1} seconds to finish." for i in range(n_facts)]})
+    numbered=number_evidence([Evidence(e,["a1"]) for e in store.elements])
+    plan=QueryPlan("analytical",[Aspect("a1","speed",["speed"])],["a"])
+    s=settings(tmp_path,analytical_writer_mode="synthesis",**kw)
+    return generate_answer(FakeLLM(respond),"how fast is it?",plan,numbered,{"a":store.doc("a")},s),numbered,s
+
+
+def test_writers_and_limits_scale_with_the_facts(tmp_path):
+    seen=[]
+    def respond(n,p):
+        seen.append((p["role"],len(p["facts"]),p["max_statements"]))
+        return {"status":"answered","sections":[{"heading":"Speed","statements":[
+            {"kind":"finding","text":f["text"],"cites":[{"evidence_id":f["evidence_id"],"span_ids":[f["span_id"]]}]} for f in p["facts"]]}]}
+    draft,_,_=big_case(tmp_path,30,respond)
+    findings=[x for x in seen if x[0]=="findings"]
+    assert len(findings)==3 and sum(x[1] for x in findings)==30 and all(x[1]<=12 for x in findings)
+    assert all(x[2]>=x[1]+2 for x in findings)  # statement room always covers the writer's facts
+    assert len(draft.claims)==30 and {f for c in draft.claims for f in c.fact_ids}=={f"F{i+1}" for i in range(30)}
+    # More facts than max_answer_writers can take at 12 each: each writer's share grows, no fact is dropped.
+    seen.clear();draft,_,_=big_case(tmp_path,50,respond,max_answer_writers=2)
+    assert sorted(x[1] for x in seen if x[0]=="findings")==[25,25] and len(draft.claims)==50
+
+
+def test_cut_off_writer_is_split_and_lost_facts_are_restored(tmp_path):
+    calls=[]
+    def respond(n,p):
+        calls.append(len(p["facts"]))
+        if p["role"]=="findings" and len(p["facts"])>5:
+            raise ValueError("JSON cut off at the output limit")
+        keep=p["facts"][:-1]  # each half drops its last fact
+        return {"status":"answered","sections":[{"heading":"Speed","statements":[
+            {"kind":"finding","text":f["text"].replace("seconds","s"),"cites":[{"evidence_id":f["evidence_id"],"span_ids":[f["span_id"]]}]} for f in keep]}]}
+    draft,_,_=big_case(tmp_path,10,respond)
+    assert sorted(calls)==[0,5,5,10]  # appraisal, the two halves, the first (cut-off) call
+    restored=[c for c in draft.claims if "seconds" in c.text]
+    assert len(restored)==2 and {f for c in draft.claims for f in c.fact_ids}=={f"F{i+1}" for i in range(10)}
+
+
+def test_statement_dropping_a_figure_does_not_count_and_the_fact_is_restored(tmp_path):
+    def respond(n,p):
+        f=p["facts"][0] if p["facts"] else None
+        st=[{"kind":"finding","text":"Test run number 0 was fast.","cites":[{"evidence_id":f["evidence_id"],"span_ids":[f["span_id"]]}]}] if f else []
+        return {"status":"answered","sections":[{"heading":"Speed","statements":st}]}
+    draft,_,_=big_case(tmp_path,1,respond)
+    assert [c.text for c in draft.claims]==["Test run number 0 was fast.","Test run number 0 took 1 seconds to finish."]
+
+
+def test_check_batches_scale_and_a_failed_batch_is_split(tmp_path):
+    from kb.query.types import AnswerDraft,Claim
+    store=MemoryStore({"a":["x"]})
+    numbered={"E1":Evidence(store.elements[0],["a1"])}
+    claims=[Claim(f"c{i+1}","x",["E1"],["a1"],[{"evidence_id":"E1","quote":"x"}]) for i in range(30)]
+    sizes=[]
+    def respond(n,p):
+        sizes.append(len(p["claims"]))
+        if len(p["claims"])>8: raise ValueError("verdict list cut off")
+        return {"verdicts":[{"claim_id":c["claim_id"],"verdict":"supported"} for c in p["claims"]]}
+    checked,report=verify_answer(FakeLLM(respond),AnswerDraft(claims,"answered"),numbered,settings(tmp_path))
+    assert sizes[:3]==[12,12,6] and report["accepted"]==30 and not checked.limitations

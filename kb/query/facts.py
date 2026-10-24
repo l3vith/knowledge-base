@@ -1,0 +1,86 @@
+"""Deterministic fact inventory: which verified source sentences an analytical answer must carry.
+
+Code, not the writer, decides content: a sentence is a fact when it states a result with a quantity (a number with
+a unit or a comparison) or a limitation/condition. Writers then phrase these facts, and a coverage check puts back,
+verbatim, any fact the written answer lost. Background (definitions, literature, method recipes) is not a fact."""
+import re
+from .utils import display_source
+
+_NOISE = re.compile(r"<sup>.*?</sup>|\[\d+(?:\s*[,–-]\s*\d+)*\]|\(\s*\d+(?:\.\d+)*\s*\)|\b(?:19|20)\d{2}\b|"
+                    r"\b(?:Section|Sections|Figure|Figures|Fig\.|Table|Tables|Equation|Eq\.|Theorem|Chapter|Appendix)\s*\d+(?:\.\d+)*")
+_QUANTITY = re.compile(r"\d(?:[\d,.]*\d)?\s*(?:%|percent|times|x\b|×|ms\b|milliseconds?|microseconds?|µs|seconds?|\bs\b|minutes?|"
+                       r"hours?|days?|weeks?|months?|years?|KB|MB|GB|calls?|points?|paths?|surfaces?|evaluations?|"
+                       r"samples?|parameters?|dimensions?|ranks?|cores?|bps|basis points|million|billion|USD|EUR|GBP|INR)", re.I)
+_LIMIT = re.compile(r"\b(?:cannot|can ?not|not (?:be |been |possible|guaranteed|known|tested|shown|clear)|no (?:guarantee|"
+                    r"convergence|extrapolation)|only (?:inside|within|for|if|when|valid)|outside|extrapolat\w*|limitation\w*|"
+                    r"drawback\w*|caveat\w*|assum\w*|unknown|do not know|future work|rebuil\w*|must|should|preferable|"
+                    r"recommend\w*|depend\w* on|sensitive|instabilit\w*|unstable|bias\w*|risk\w*)\b", re.I)
+# Test conditions the answer must state: hardware, data and tested scope.
+_SETUP = re.compile(r"\b(?:GPUs?|CPUs?|cores|parallelis\w*|parallel|hardware|standard PC|synthetic\w*|market data)\b", re.I)
+_BACKGROUND = re.compile(r"^(?:\*\*|#)|\b(?:is defined as|we define|let us|in this paper we|this paper|the rest of the paper|"
+                         r"is organi[sz]ed|see \[|following \[|for example|e\.g\.)", re.I)
+_STRONG_UNIT = re.compile(r"%|percent|times|x\b|×|ms\b|milli|micro|µs|seconds?|\bs\b|minutes?|hours?|days?|weeks?|months?|years?|"
+                          r"KB|MB|GB|bps|basis points|million|billion|USD|EUR|GBP|INR", re.I)
+
+
+def is_fact(sentence):
+    """A result with a quantity (a time, size, share or money unit, or a count of 100 or more such as "14,400
+    points" / "10,000 calls"), or a stated limitation/condition. Small counts ("7 points per dimension") are setup."""
+    text = display_source(sentence)
+    if len(text) < 25 or _BACKGROUND.search(text):
+        return False
+    clean = _NOISE.sub(" ", text)
+    for m in _QUANTITY.finditer(clean):
+        number = float(re.sub(r"[^\d.]", "", m.group().split()[0].rstrip(".")) or 0) if re.match(r"[\d,.]+", m.group()) else 0
+        if _STRONG_UNIT.search(m.group()) or number >= 100:
+            return True
+    # A bare count of 1,000 or more ("only 20,000 were evaluated") is a result figure too.
+    if any(float(n.replace(",", "")) >= 1000 for n in re.findall(r"\b\d{1,3}(?:,\d{3})+\b|\b\d{4,}\b", clean)):
+        return True
+    return bool(_LIMIT.search(clean) or _SETUP.search(clean))
+
+
+def numbers(text):
+    """The figures a statement must keep: numbers outside footnotes, citations, years and Section/Figure labels."""
+    return {n.replace(",", "") for n in re.findall(r"(?<![\w.])\d[\d,]*(?:\.\d+)?", _NOISE.sub(" ", display_source(text)))}
+
+
+def states(statement, fact):
+    """A written statement carries a fact only if it keeps every one of the fact's figures."""
+    return numbers(fact["text"]) <= numbers(statement)
+
+
+# A sentence that leans on the one before it (pronoun subject, lowercase continuation, "hence ...").
+LEANS = re.compile(r"(?:[a-z]|(?:It|This|These|They|Its|Their|Such|Hence|Thus|Therefore|However|Here)\b)")
+
+
+def inventory(numbered, spans, topics):
+    """Facts in source order, each assigned to ONE topic (the verifier's requested-topic tag in query order, else the
+    topic its words match, else its obligation) so exactly one writer is responsible for it. Exact repeats collapse."""
+    words = lambda s: set(re.findall(r"[a-z]{4,}", s.casefold()))
+    order = {t["id"]: i for i, t in enumerate(topics)}
+    facts, seen = [], set()
+    ranked = sorted(numbered.items(), key=lambda kv: (getattr(kv[1].element, "doc_id", ""), getattr(kv[1].element, "page_no", 0),
+                                                       getattr(kv[1].element, "idx", 0)))
+    for eid, ev in ranked:
+        quotes = [q for q in (ev.quotes or []) if q and q.strip()]
+        section = getattr(ev.element, "section", "") or ""
+        for sid, sentence in spans[eid].items():
+            if quotes and not any(sentence.strip() in q or q.strip() in sentence for q in quotes):
+                continue  # only sentences the verifier kept as support
+            key = re.sub(r"\s+", " ", display_source(sentence)).casefold()
+            if key in seen or not is_fact(sentence):
+                continue
+            seen.add(key)
+            tagged = sorted((r for r in getattr(ev, "requirement_ids", []) or [] if r in order), key=order.get)
+            topic = tagged[0] if tagged else None
+            if topic is None:
+                hits = [t for t in topics if words(t["text"]) & words(sentence + " " + section)]
+                topic = hits[0]["id"] if hits else None
+            # Restored verbatim, a sentence that leans on the previous one ("It took ...") keeps that sentence.
+            ids = list(spans[eid])
+            context = [ids[ids.index(sid)-1]] if LEANS.match(sentence.lstrip()) and ids.index(sid) > 0 else []
+            facts.append({"id": f"F{len(facts)+1}", "evidence_id": eid, "span_id": sid, "context_span_ids": context,
+                          "text": display_source(sentence), "topic": topic or (ev.aspect_ids[0] if ev.aspect_ids else ""),
+                          "doc_id": getattr(ev.element, "doc_id", "")})
+    return facts
