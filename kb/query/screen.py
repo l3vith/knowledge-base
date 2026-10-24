@@ -20,7 +20,7 @@ Navigation metadata is not evidence of a factual value. Keep relevant source fra
 Preserve entity, period, units, legal/accounting basis, negation and exceptions. Do not approve an unseen tail.
 Return JSON {keep:[{id:string,aspects:[aspect_id],support_span_ids:[string],fact_value:null|string,relevance:direct|qualification|background,requirement_ids:[string]}]}.
 requirement_ids: the supplied requested_topics IDs this fragment gives a finding for (empty if none or not supplied).
-Select the S identifiers of supplied source spans supporting each kept fragment. Never repeat source text.
+Select the identifiers offered in source_spans supporting each kept fragment. Never repeat source text.
 For a single requested numeric fact only, fact_value may be the exact short source substring giving that value and unit; otherwise null.
 Direct means a source statement that answers a requested topic: an experimental or reported finding, an explicit
 instruction, or, when the query asks about a model or method itself (its parameters, assumptions, mechanics,

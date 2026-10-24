@@ -29,13 +29,15 @@ _BACKGROUND = re.compile(r"^(?:\*\*|#)|\b(?:is defined as|we define|let us|in th
                          r"is organi[sz]ed|see \[|following \[|for example|e\.g\.)", re.I)
 _STRONG_UNIT = re.compile(r"%|percent|times|x\b|×|ms\b|milli|micro|µs|seconds?|\bs\b|minutes?|hours?|days?|weeks?|months?|years?|"
                           r"KB|MB|GB|bps|basis points|million|billion|USD|EUR|GBP|INR", re.I)
+_SMALL_RESULT = re.compile(r'\b(?:maximum|minimum|rank|dimension|parameters?)\b.{0,55}\b\d+(?:\.\d+)?\b|'
+                           r'\b\d+\s+(?:parameters?|dimensions?|ranks?)\b', re.I)
 
 
 def is_fact(sentence):
     """A result with a quantity (a time, size, share or money unit, or a count of 100 or more such as "14,400
     points" / "10,000 calls"), or a stated limitation/condition. Small counts ("7 points per dimension") are setup."""
     text = display_source(sentence)
-    if len(text) < 25 or _BACKGROUND.search(text):
+    if len(text) < 8 or (_BACKGROUND.search(text) and not (_EFFECT.search(text) or _LIMIT.search(text))):
         return False
     clean = _NOISE.sub(" ", text)
     for m in _QUANTITY.finditer(clean):
@@ -45,7 +47,7 @@ def is_fact(sentence):
     # A bare count of 1,000 or more ("only 20,000 were evaluated") is a result figure too.
     if any(float(n.replace(",", "")) >= 1000 for n in re.findall(r"\b\d{1,3}(?:,\d{3})+\b|\b\d{4,}\b", clean)):
         return True
-    return bool(_LIMIT.search(clean) or _SETUP.search(clean) or _EFFECT.search(clean))
+    return bool(_LIMIT.search(clean) or _SETUP.search(clean) or _EFFECT.search(clean) or _SMALL_RESULT.search(clean))
 
 
 # Never an answer on their own: train/test splits, measurement or sampling procedure, and sentences describing a
@@ -58,17 +60,19 @@ _PROCEDURE = re.compile(r"\b(?:obtained by|randomly sampl\w*|uniform distributio
 _PLOT = re.compile(r"^\s*(?:\*\*)?(?:Figures?|Fig\.|Table)\s*\d|\b(?:plots?|vertical line|horizontal line|heat ?maps?|x-axis|y-axis)\b", re.I)
 
 
-def trim_secondary(facts):
+def trim_secondary(facts,query=''):
     """Drop facts that are setup or presentation, not findings, and later repeats of the same figures.
     Returns (kept, [(fact, reason)])."""
     kept, trimmed = [], []
     words = lambda s: set(re.findall(r"[a-z]{4,}", s.casefold()))
+    validation_requested=bool(re.search(r'validat|monitor|controls?|soundness|train|test|method|setup|sampl|reproduc',query,re.I))
     for f in facts:
         text, figures = f["text"], numbers(f["text"])
-        reason = ("train/test split" if _SPLIT.search(text) else "procedure" if _PROCEDURE.search(text)
+        reason = ("train/test split" if _SPLIT.search(text) and not validation_requested else "procedure" if _PROCEDURE.search(text) and not validation_requested
                   else "plot description" if _PLOT.search(text) else None)
         if reason is None and figures:
             twin = next((k for k in kept if numbers(k["text"]) == figures and k["doc_id"] == f["doc_id"]
+                         and k.get('scope')==f.get('scope') and polarity(k['text'])==polarity(text)
                          and len(words(k["text"]) & words(text)) >= 0.3 * len(words(k["text"]) | words(text))), None)
             reason = "repeat of " + twin["id"] if twin else None
         (trimmed.append((f, reason)) if reason else kept.append(f))
@@ -81,8 +85,26 @@ def numbers(text):
 
 
 def states(statement, fact):
-    """A written statement carries a fact only if it keeps every one of the fact's figures."""
-    return numbers(fact["text"]) <= numbers(statement)
+    """Conservative candidate coverage, never a semantic proof: figures AND substantive words.
+
+    Previously an empty number set made *any* sentence carry a qualitative fact.
+    Semantic verification must still approve the claim and its relation to the fact.
+    """
+    source=fact['text']
+    if not numbers(source)<=numbers(statement):return False
+    if polarity(source)!=polarity(statement):return False
+    stop={'the','and','was','were','with','from','this','that','which','their','these','our','for','used','had','its','has','are','been','using','via','per','than','when','case','result','results'}
+    def words(s):
+        return {re.sub(r'(?:ing|ed|es|s)$','',w) for w in re.findall(r'[^\W\d_]+',s.casefold())
+                if w not in stop and (len(w)>2 or not w.isascii())}
+    expected=words(source);actual=words(statement)
+    return bool(expected) and len(expected & actual)>=min(2,len(expected)) and len(expected & actual)/len(expected)>=.45
+
+
+def polarity(text):
+    """Negation and epistemic mode must not disappear during local deduplication."""
+    return (bool(re.search(r'\b(?:no|not|never|cannot|without|neither|nor)\b',text,re.I)),
+            bool(re.search(r'\b(?:assum\w*|expect\w*|project\w*|would|could|estimat\w*)\b',text,re.I)))
 
 
 # A sentence that leans on the one before it (pronoun subject, lowercase continuation, "hence ...").
@@ -100,10 +122,16 @@ def inventory(numbered, spans, topics):
     for eid, ev in ranked:
         quotes = [q for q in (ev.quotes or []) if q and q.strip()]
         section = getattr(ev.element, "section", "") or ""
+        cursor=0
         for sid, sentence in spans[eid].items():
+            raw=getattr(ev.element,'text','');offset=raw.find(sentence,cursor)
+            if offset<0:continue
+            cursor=offset+len(sentence)
             if quotes and not any(sentence.strip() in q or q.strip() in sentence for q in quotes):
                 continue  # only sentences the verifier kept as support
-            key = re.sub(r"\s+", " ", display_source(sentence)).casefold()
+            parent=getattr(ev.element,'parent_element_id',None) or getattr(ev.element,'element_id','')
+            scope=(getattr(ev.element,'doc_id',''),section,parent)
+            key = (*scope,getattr(ev.element,'char_start',0)+offset)
             if key in seen or not is_fact(sentence):
                 continue
             seen.add(key)
@@ -121,5 +149,5 @@ def inventory(numbered, spans, topics):
             facts.append({"id": f"F{len(facts)+1}", "evidence_id": eid, "span_id": sid, "context_span_ids": context,
                           "text": display_source(sentence), "topic": topic or (ev.aspect_ids[0] if ev.aspect_ids else ""),
                           "doc_id": getattr(ev.element, "doc_id", ""), "page": getattr(ev.element, "page_no", None),
-                          "section": section})
+                          "section": section,"scope":scope,"char_start":getattr(ev.element,'char_start',0)+offset})
     return facts

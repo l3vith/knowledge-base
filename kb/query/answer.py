@@ -51,12 +51,18 @@ are absent. Mathematical caveats do not satisfy formal supervisory or production
 only explicit controls in source qualify as reported controls. Missing coverage must stay missing.
 Return compact IDs and verdicts only, no explanations or repeated source text.
 For ledger claims, verify the complete relationship, scope, values, units, epistemic mode and attached qualifications against exact quotes. Ledger labels themselves are untrusted extraction hypotheses. Reject a projected timing presented as measured or a number assigned to the wrong method/experiment.
-A shared topic or a quoted number alone is insufficient support for a more specific claim.
+A shared topic or a quoted number alone is insufficient support for a more specific claim. A qualitative finding
+must preserve its subject, effect, direction, negation and scope even when it has no numbers. Approving a source
+quote does not mean every claim citing that quote is supported.
 A claim with kind=calculation has its arithmetic checked by code: check only that each operand is the quoted value
 with the meaning the claim gives it.
 A claim with kind=inference is a labelled interpretation or proposed control: mark it supported when its quoted
 premises state the risk, limitation or condition it relies on, it is worded as an interpretation/proposal (not as
-the paper's or a regulator's requirement), and it adds no new fact or number."""
+the paper's or a regulator's requirement), and it adds no new fact or number.
+A claim with kind=gap must be checked against ALL supplied inspected evidence, not only quotes (it has none).
+Approve only a relevant, scoped statement that the inspected evidence does not establish the requested item.
+Reject a gap contradicted by that evidence or claiming absence from the entire paper/corpus. A gap cannot be
+approved merely because it is labelled. Do not treat a figure caption as proof of a visual pattern."""
 # Cited synthesis: ground every sentence in cited source spans (ReClaim-style interleaved reference-claim
 # generation), cover every planned obligation (nugget coverage) and state gaps, then check each claim
 # separately against its own quotes (Chain-of-Verification). Benchmark answers are written this way.
@@ -204,14 +210,22 @@ def _table_rows(text):
     return {f"S{i+1}":p for i,p in enumerate(x for x in parts if x.strip())}
 
 
-def _repeats(text,seen,docs=frozenset()):
-    """Parallel writers restate shared facts; each restatement is an extra judge point. Same numbers and at
-    least half the words in common, citing the same document, means the same statement (two documents reporting
-    the same figure are two findings)."""
+def _repeats(text,seen,docs=frozenset(),scope=None):
+    """Collapse close restatements only within the same exact cited spans and polarity.
+    Equal values alone cannot identify an experiment, method or reported/projected result.
+    """
     # ponytail: word-overlap heuristic, an embedding similarity check if paraphrased repeats still get through
     words=lambda t:set(re.findall(r"[a-z]+",t.casefold()));nums=lambda t:sorted(re.findall(r"\d[\d,.]*\d|\d",t))
     w,n=words(text),nums(text)
-    return any(nums(s)==n and len(w&words(s))>=0.5*len(w|words(s)) and (d&docs or not (d or docs)) for s,d in seen)
+    from .facts import polarity
+    for item in seen:
+        s,d,*old_scope=item
+        if scope is not None and (not old_scope or old_scope[0]!=scope):continue
+        if polarity(s)!=polarity(text):continue
+        direction=lambda t: set(re.findall(r'\b(?:increas\w*|decreas\w*|rais\w*|lower\w*|positiv\w*|negativ\w*)\b',t.casefold()))
+        if direction(s)!=direction(text):continue
+        if nums(s)==n and len(w&words(s))>=.8*len(w|words(s)) and (d&docs or not (d or docs)):return True
+    return False
 
 
 _LABELS={"calculation":("Calculated:",),"inference":("Interpretation:","Proposed control:","Assessment:","Recommendation:"),
@@ -231,10 +245,25 @@ def _synthesis_calculation(calc,spans):
     try:
         operands=[{"evidence_id":o["evidence_id"],"quote":spans[o["evidence_id"]][o["span_id"]],"value":str(o["value"]),"unit":str(o["unit"])}
                   for o in calc["operands"]]
-        return {"operation":calc["operation"],"operands":operands,"result":str(calc["result"]),"unit":str(calc["unit"]),
-                "decimals":int(calc["decimals"]) if calc.get("decimals") is not None else None}
-    except (KeyError,TypeError,ValueError,AttributeError):
+        if len(operands)!=2:return None
+        a,b=[Decimal(o['value'].replace(',','')) for o in operands]
+        if not a.is_finite() or not b.is_finite():return None
+        operation=calc['operation'];decimals=calc.get('decimals')
+        if decimals is not None and (type(decimals) is not int or not 0<=decimals<=8):return None
+        functions={'add':lambda:a+b,'subtract':lambda:a-b,'multiply':lambda:a*b,'divide':lambda:a/b,'percentage':lambda:a/b*100}
+        if operation not in functions:return None
+        result=functions[operation]()
+        if decimals is not None:result=result.quantize(Decimal(1).scaleb(-decimals),rounding=ROUND_HALF_UP)
+        return {"operation":operation,"operands":operands,"result":str(result),"unit":str(calc["unit"]),"decimals":decimals}
+    except (KeyError,TypeError,ValueError,AttributeError,InvalidOperation,ZeroDivisionError):
         return None
+
+
+def _calculation_text(calc):
+    a,b=calc['operands'];symbol={'add':'+','subtract':'−','multiply':'×','divide':'÷','percentage':'÷'}[calc['operation']]
+    expression=f"{a['value']} {a['unit']} {symbol} {b['value']} {b['unit']}"+(' × 100' if calc['operation']=='percentage' else '')
+    rounding=f" (rounded to {calc['decimals']} decimal places)" if calc['decimals'] is not None else ''
+    return f"Calculated: {expression} = {calc['result']} {calc['unit']}{rounding}."
 
 
 def _call_split(llm,ctx,name,system,payloads,limit,split):
@@ -292,7 +321,7 @@ def generate_synthesis(llm,query,plan,numbered,settings,*,ctx=None):
     spans=source_spans(numbered)
     aspect_ids={a.aspect_id for a in plan.aspects}
     topics=requested_topics(query,plan.intent)
-    facts,trimmed=trim_secondary(inventory(numbered,spans,topics))
+    facts,trimmed=trim_secondary(inventory(numbered,spans,topics),query)
     appraise=plan.intent!="factoid"
     page=lambda eid:(get(numbered[eid].element,"doc_id"),get(numbered[eid].element,"page_no"),get(numbered[eid].element,"idx",0))
     block=lambda eids:[{"id":eid,"doc_id":get(numbered[eid].element,"doc_id"),"page":get(numbered[eid].element,"page_no"),
@@ -370,14 +399,19 @@ def generate_synthesis(llm,query,plan,numbered,settings,*,ctx=None):
                 calc=_synthesis_calculation(row.get("calculation"),spans)
                 if calc is None:
                     reject("invalid_calculation");continue
-            text=_labelled(row["kind"],display_source(row["text"]))
+                for operand in calc['operands']:
+                    quote={'evidence_id':operand['evidence_id'],'quote':operand['quote']}
+                    if quote not in quotes:quotes.append(quote)
+                    eids.append(operand['evidence_id'])
+            text=_calculation_text(calc) if calc else _labelled(row["kind"],display_source(row["text"]))
             docs=frozenset(get(numbered[e].element,"doc_id") for e in eids)
-            if _repeats(text,seen,docs):
+            scope=tuple(sorted(cited)) if cited else ('gap',)
+            if _repeats(text,seen,docs,scope):
                 reject("duplicate_statement");continue
-            seen.append((text,docs))
+            seen.append((text,docs,scope))
             # A fact counts as written only if this statement cites its sentence and keeps all its figures (whether or
             # not the writer listed its ID; an appraisal statement can carry a fact too).
-            carried=[f["id"] for key in cited for f in by_span.get(key,[]) if states(text,f)]
+            carried=[f["id"] for key in cited for f in by_span.get(key,[]) if row['kind']=='finding' and states(text,f)]
             covered.update(carried)
             claims.append(Claim(f"c{len(claims)+1}",text,list(dict.fromkeys(eids)),aids,quotes,calc,
                                 section=heading.strip(),kind=row["kind"],fact_ids=carried))
@@ -408,13 +442,15 @@ def _restore_facts(missing,numbered,spans,claims,topics,verification="pending"):
     # Requested topics are short query phrases ("build cost") and make headings; obligations are long sentences.
     labels={t["id"]:t["text"][:1].upper()+t["text"][1:] for t in topics}
     restored=[]
+    next_id=max((int(c.claim_id[1:]) for c in claims if re.fullmatch(r'c\d+',c.claim_id)),default=0)+1
     for f in missing:
         ids=f.get("context_span_ids",[])+[f["span_id"]]
         quotes=[{"evidence_id":f["evidence_id"],"quote":spans[f["evidence_id"]][x]} for x in ids]
         text=display_source(" ".join(q["quote"].strip() for q in quotes))
         heading=by_eid.get(f["evidence_id"]) or labels.get(f["topic"]) or "Further findings"
-        claims.append(Claim(f"c{len(claims)+1}",text,[f["evidence_id"]],list(numbered[f["evidence_id"]].aspect_ids),quotes,
+        claims.append(Claim(f"c{next_id}",text,[f["evidence_id"]],list(numbered[f["evidence_id"]].aspect_ids),quotes,
                             section=heading,kind="finding",fact_ids=[f["id"]],verification=verification))
+        next_id+=1
         restored.append(f["id"])
     return restored
 
@@ -596,23 +632,23 @@ def verify_calculation(calc,numbered):
             return False
         value,result=operations[operation](),Decimal(str(calc["result"]).replace(",","").rstrip("%"))
         decimals=calc.get("decimals")
+        if decimals is not None and (type(decimals) is not int or not 0<=decimals<=8):return False
         # A stated rounding is checked exactly; without one the result must be exact.
         return (value.quantize(Decimal(1).scaleb(-int(decimals)),rounding=ROUND_HALF_UP) if decimals is not None else value)==result
-    except (KeyError,TypeError,InvalidOperation,ZeroDivisionError):
+    except (KeyError,TypeError,ValueError,InvalidOperation,ZeroDivisionError):
         return False
 
 
 def verify_answer(llm,draft,numbered,settings,*,ctx=None,query=""):
     if not draft.claims:
         return draft,{"accepted":0,"rejected":0,"skipped":"no claims"}
-    # A gap ("the excerpts do not show X") cites nothing, so there is nothing to check it against.
+    # Absence claims are claims too: compare them with the entire inspected portfolio.
     gaps={c.claim_id for c in draft.claims if c.kind=="gap"}
-    valid=[c for c in draft.claims if c.claim_id not in gaps and verify_calculation(c.calculation,numbered)]
-    rejected=len(draft.claims)-len(valid)-len(gaps)
+    valid=[c for c in draft.claims if verify_calculation(c.calculation,numbered)]
+    rejected=len(draft.claims)-len(valid)
     if not valid:
-        kept=[replace(c,verification="gap") for c in draft.claims if c.claim_id in gaps]
-        return AnswerDraft(kept,"partial",draft.limitations+(["All claims failed deterministic calculation checks"] if rejected else []),
-                           draft.requested_topics,draft.ledger_records),{"accepted":0,"gaps":len(gaps),"rejected":rejected}
+        return AnswerDraft([],"partial",draft.limitations+["All claims failed deterministic calculation checks"],
+                           draft.requested_topics,draft.ledger_records),{"accepted":0,"gaps":0,"rejected":rejected}
     topics=draft.requested_topics
     # Parallel batches of claims_per_check claims, each with only the evidence its claims cite; as many batches as the
     # answer needs. Output limit per batch from its size: ~25 tokens a verdict, ~40 a topic row, doubled for margin.
@@ -621,7 +657,7 @@ def verify_answer(llm,draft,numbered,settings,*,ctx=None,query=""):
         return {"query":query,"requested_topics":topics,"ledger_records":[r for r in draft.ledger_records if any(r["record_id"] in c.record_ids for c in group)],
                 "claims":[{"claim_id":c.claim_id,"kind":c.kind,"text":c.text,"quotes":c.quotes,"calculation":c.calculation,
                            "requirement_ids":c.requirement_ids,"record_ids":c.record_ids} for c in group],
-                "evidence":evidence_block({eid:ev for eid,ev in numbered.items() if any(eid in c.evidence_ids for c in group)},{}),"_group":group}
+                "evidence":evidence_block({eid:ev for eid,ev in numbered.items() if any(c.kind=='gap' or eid in c.evidence_ids for c in group)},{}),"_group":group}
     def split(p):
         g=p["_group"]
         return [payload(g[:len(g)//2]),payload(g[len(g)//2:])] if len(g)>1 else None
@@ -650,14 +686,15 @@ def verify_answer(llm,draft,numbered,settings,*,ctx=None,query=""):
     if failed==len(results):
         raise QueryError("MODEL_SCHEMA","Claim verifier must return a verdict list",503)
     ok={c.claim_id for c in valid if verdicts.get(c.claim_id)=="supported" and c.claim_id not in duplicate and c.claim_id not in background}
-    accepted=[replace(c,verification="gap" if c.claim_id in gaps else "supported") for c in draft.claims if c.claim_id in ok|gaps]
+    accepted=[replace(c,verification="gap" if c.claim_id in gaps else "supported") for c in draft.claims if c.claim_id in ok]
     rejected+=len(valid)-len(ok)
     restored=[]
     if draft.facts:
         # A fact whose statement the checker rejected still reaches the answer, as its exact verified source sentence.
         carried={f for c in accepted for f in c.fact_ids}
         spans=source_spans(numbered)
-        restored=_restore_facts([f for f in draft.facts if f["id"] not in carried and f["evidence_id"] in numbered],numbered,spans,
+        background_facts={f for c in valid if c.claim_id in background for f in c.fact_ids}
+        restored=_restore_facts([f for f in draft.facts if f["id"] not in carried|background_facts and f["evidence_id"] in numbered],numbered,spans,
                                 accepted,topics,verification="source")
     limits=draft.limitations+([f"{rejected} unsupported or uncertain claims removed"] if rejected else [])+([f"{failed} claim-check batches failed"] if failed else [])
     topics=audit_topic_coverage(topics,list(coverage.values()),[c for c in accepted if c.claim_id in ok])
@@ -682,7 +719,7 @@ def verify_answer(llm,draft,numbered,settings,*,ctx=None,query=""):
         final={f for c in accepted for f in c.fact_ids}
         if ctx:ctx.save("answer_fact_coverage",{"facts":len(draft.facts),"in_final_answer":len(final),
                                                "restored_after_check":restored,"missing":[f["id"] for f in draft.facts if f["id"] not in final]})
-    return checked,{"accepted":len(ok),"gaps":len(gaps),"rejected":rejected,"background_removed":len(background),
+    return checked,{"accepted":len(ok-gaps),"gaps":len(ok & gaps),"rejected":rejected,"background_removed":len(background),
                     "requested_topics":topics,"ledger":ledger_report,"facts_restored_after_check":len(restored),
                     "check_batches":len(pairs)}
 

@@ -34,11 +34,11 @@ def judge_consistency(metrics, answer, judge_calls=()):
         point=bp.get(key,'')
         pages=re.findall(r'\bpage\s+(\d+)\b',point,re.I)
         names=re.findall(r'[\w.-]+\.pdf',point,re.I)
-        for page in pages:
-            for name in names:
-                if re.search(re.escape(name)+r'\s+p'+page+r'\b',answer,re.I):
-                    flags.append({'kind':'citation_present_but_judge_marks_missing','benchmark_id':key})
-    truncated=[c['request_sha256'] for c in judge_calls if c.get('finish_reason')=='length' or c.get('escalated')]
+        # Page and filename may be decomposed into separate benchmark points.
+        if (pages and any(re.search(r'\bp'+p+r'\b',answer,re.I) for p in pages)) or (
+                names and any(n.casefold() in answer.casefold() for n in names)):
+            flags.append({'kind':'citation_present_but_judge_marks_missing','benchmark_id':key})
+    truncated=[c.get('request_sha256') for c in judge_calls if c.get('finish_reason') in ('length','max_tokens') or c.get('escalated')]
     if truncated:
         flags.append({'kind':'judge_response_truncated_at_notebook_limit','requests':truncated})
     return {'official_scores_unchanged':True,'flags':flags,
