@@ -277,11 +277,11 @@ _APPRAISAL_TOPICS=re.compile(r"limitation|caveat|assumption|control|safeguard|re
 def generate_synthesis(llm,query,plan,numbered,settings,*,ctx=None):
     """Code picks the content (the fact inventory), writers only phrase it, and a coverage check puts back any fact
     the written answer lost. Writers run in parallel, one per topic group, each with the evidence holding its facts."""
-    from .facts import inventory,states
+    from .facts import inventory,states,trim_secondary
     spans=source_spans(numbered)
     aspect_ids={a.aspect_id for a in plan.aspects}
     topics=requested_topics(query,plan.intent)
-    facts=inventory(numbered,spans,topics)
+    facts,trimmed=trim_secondary(inventory(numbered,spans,topics))
     appraise=plan.intent!="factoid"
     page=lambda eid:(get(numbered[eid].element,"doc_id"),get(numbered[eid].element,"page_no"),get(numbered[eid].element,"idx",0))
     block=lambda eids:[{"id":eid,"doc_id":get(numbered[eid].element,"doc_id"),"page":get(numbered[eid].element,"page_no"),
@@ -381,7 +381,8 @@ def generate_synthesis(llm,query,plan,numbered,settings,*,ctx=None):
     if ctx:
         ctx.save("answer_selection_validation",{"accepted":len(claims),"rejections":rejections,"mode":"synthesis",
                                                "writer_calls":len(pairs),"facts":len(facts),"facts_written":len(covered),
-                                               "facts_restored_verbatim":restored})
+                                               "facts_restored_verbatim":restored,
+                                               "facts_trimmed":[{"text":f["text"],"reason":why} for f,why in trimmed]})
     partial=limits or any(raw.get("status")=="partial" for _,raw in raws)
     return AnswerDraft(claims,"partial" if partial else "answered",limits,topics,facts=facts)
 
