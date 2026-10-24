@@ -60,6 +60,12 @@ class QuerySettings:
     facts_per_writer: int = 12
     max_answer_writers: int = 10
     claims_per_check: int = 12
+    # Fact selection: of each topic's facts Qwen ranks, the top share reaches the answer, at least select_min and at
+    # most select_max per topic. Measured on C18 with Qwen's ranking (only weakly informative, AUC 0.63): 0.7 / 12
+    # keeps 51 of 68 facts and 23 of 25 benchmark points; 0.4 / 5 keeps 26 facts but only 11 points.
+    select_share: float = 0.7
+    select_min: int = 2
+    select_max: int = 12
     artifact_dir: Path = Path("artifacts/runs")
     strict_observability: bool = True
     raw_token_budget_factoid: int = 12000
