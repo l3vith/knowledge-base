@@ -1,6 +1,6 @@
 # Next iteration: evidence requirements, source relationships and checked analysis
 
-Status: architecture and implementation blueprint, not an implemented or benchmarked accuracy gain. This incorporates the user's supplied four-bottleneck audit, corrected against the first-pass C26/A20/A21/C32 artifacts. No source/gold-specific rule or model change is authorized by this document alone.
+Status: core query-time worksheet iteration implemented and development-tested on C32/C26; see [implementation notes](IMPLEMENTATION.md) and [measured results](../diagnostics/task-worksheet/REPORT.md). Remaining coverage and latency limitations are recorded there. This incorporates the user's supplied four-bottleneck audit, corrected against the first-pass C26/A20/A21/C32 artifacts. No source/gold-specific rule or model change is authorized by this document alone.
 
 The highest-confidence engineering direction is to replace sentence eligibility as the answer's authority with a task-specific evidence worksheet. Keep exact source anchors, deterministic arithmetic, local retrieval, automatic metadata, collection isolation and final claim checks. A complete global knowledge graph, retriever training, a new database and unrestricted agent loops are unnecessary for this iteration.
 

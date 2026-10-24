@@ -1,0 +1,645 @@
+{
+  "baseline": {
+    "git_commit": "9eb518cc5047beecef89dc0248975480d542c88e",
+    "scope": "First available-history benchmark of three documents; four self-contained public queries, not a hidden holdout",
+    "answer_model": "qwen3.8-flash",
+    "answer_thinking": "disabled",
+    "judge_model": "glm-5.3-flash",
+    "judge_reasoning_effort": "low",
+    "status": "completed",
+    "protected_inputs_unchanged": true,
+    "computed_cost_usd": 0.05324337,
+    "cost_upper_bound_usd": 0.06412013000000001,
+    "prior_attempt": null,
+    "results": [
+      {
+        "id": "C26",
+        "document": "10.1515_econ-2022-0073 (1).pdf",
+        "query_seconds": 47.95476608298486,
+        "returned_chunks": 35,
+        "query_calls": 29,
+        "query_cost_usd": 0.015357767999999997,
+        "judge_cost_usd": 0.003000550000000001,
+        "judge_seconds": 23.76712345899432,
+        "query_error": null,
+        "judge_error": null,
+        "judge_audit": {
+          "official_scores_unchanged": true,
+          "flags": [
+            {
+              "kind": "citations_in_answer_dropped_by_decomposition"
+            },
+            {
+              "kind": "citation_present_but_judge_marks_missing",
+              "benchmark_id": "bp23"
+            },
+            {
+              "kind": "citation_present_but_judge_marks_missing",
+              "benchmark_id": "bp22"
+            }
+          ],
+          "interpretation": "Flags require review; they do not compute corrected scores or prove semantic equivalence."
+        },
+        "metrics": {
+          "answer_precision": 0.11764705882352941,
+          "answer_recall": 0.25,
+          "context_precision": 0.9714285714285714,
+          "context_recall": 1.0625
+        }
+      },
+      {
+        "id": "C32",
+        "document": "FDIC FAQ.pdf",
+        "query_seconds": 12.971617250004783,
+        "returned_chunks": 0,
+        "query_calls": 3,
+        "query_cost_usd": 0.0009352000000000041,
+        "judge_cost_usd": 0.00017627000000000614,
+        "judge_seconds": 4.300407457980327,
+        "query_error": null,
+        "judge_error": null,
+        "judge_audit": {
+          "official_scores_unchanged": true,
+          "flags": [],
+          "interpretation": "Flags require review; they do not compute corrected scores or prove semantic equivalence."
+        },
+        "metrics": {
+          "answer_precision": 0.0,
+          "answer_recall": 0.0,
+          "context_precision": 0.0,
+          "context_recall": 0.0
+        }
+      }
+    ]
+  },
+  "initial_attempt": {
+    "git_commit": "ed7413e02c0583c60b10d43ca42cc0a62fca579b",
+    "scope": "One fresh development pass on C32 and C26 after task worksheet changes; existing source indexes reused; no score-driven retries",
+    "answer_model": "qwen3.8-flash",
+    "answer_thinking": "disabled",
+    "judge_model": "glm-5.3-flash",
+    "judge_reasoning_effort": "low",
+    "status": "completed",
+    "protected_inputs_unchanged": true,
+    "computed_cost_usd": 0.00434931,
+    "cost_upper_bound_usd": 0.004804640000000001,
+    "prior_attempt": null,
+    "results": [
+      {
+        "id": "C32",
+        "document": "FDIC FAQ.pdf",
+        "query_seconds": 51.4994350829802,
+        "returned_chunks": 3,
+        "query_calls": 4,
+        "query_cost_usd": 0.00243982,
+        "judge_cost_usd": 0.0005358500000000005,
+        "judge_seconds": 9.280963666999014,
+        "query_error": null,
+        "judge_error": null,
+        "judge_audit": {
+          "official_scores_unchanged": true,
+          "flags": [
+            {
+              "kind": "citations_in_answer_dropped_by_decomposition"
+            },
+            {
+              "kind": "citation_present_but_judge_marks_missing",
+              "benchmark_id": "bp3"
+            },
+            {
+              "kind": "citation_present_but_judge_marks_missing",
+              "benchmark_id": "bp4"
+            }
+          ],
+          "interpretation": "Flags require review; they do not compute corrected scores or prove semantic equivalence."
+        },
+        "metrics": {
+          "answer_precision": 0.3333333333333333,
+          "answer_recall": 0.2857142857142857,
+          "context_precision": 0.0,
+          "context_recall": 0.0
+        },
+        "coverage_counts": {
+          "candidate_pages": 43,
+          "cards_surveyed": 0,
+          "raw_candidate_pages": 10,
+          "elements_retrieved": 96,
+          "raw_fragments_verified": 8,
+          "verification_candidates": 96,
+          "verification_remaining": 88,
+          "verification_budget_omitted": 24,
+          "recovery_batches": 0
+        },
+        "limitations": [
+          "Evidence verification budget exhausted",
+          "8 source fragments verified; 88 remain unchecked (bounded verification)",
+          "24 source fragments not verified within budget",
+          "1 unsupported or uncertain claims removed"
+        ],
+        "task_completion": [
+          {
+            "id": "T1",
+            "text": "Verify if the FDIC FAQ contains any statistical data or reports on the actual impact of CECL adoption on community bank allowance levels.",
+            "operation": "absence",
+            "status": "not_established_in_inspected_evidence",
+            "scope_status": "not_required",
+            "completion": "supported",
+            "missing_inputs": []
+          },
+          {
+            "id": "T2",
+            "text": "Search for any mention of 'percentage', 'increase', or specific quantitative outcomes related to the transition to CECL for community banks within the text.",
+            "operation": "lookup",
+            "status": "not_established_in_inspected_evidence",
+            "scope_status": "not_required",
+            "completion": "supported",
+            "missing_inputs": []
+          }
+        ],
+        "trace_steps": 10,
+        "trace_fields_per_step": 4,
+        "observability_status": "sdk_flushed_receipt_unverified",
+        "stages": [
+          {
+            "name": "query_planning",
+            "output": {}
+          },
+          {
+            "name": "routing_guard",
+            "output": {}
+          },
+          {
+            "name": "candidate_pages",
+            "output": {}
+          },
+          {
+            "name": "page_survey",
+            "output": {}
+          },
+          {
+            "name": "element_retrieval",
+            "output": {}
+          },
+          {
+            "name": "element_triage",
+            "output": {}
+          },
+          {
+            "name": "element_verification",
+            "output": {
+              "batches": 1,
+              "failed_batches": 0,
+              "elements_seen": 8,
+              "elements_kept": 3,
+              "recovery_batches": 0,
+              "remaining_candidates": 88
+            }
+          },
+          {
+            "name": "answer_generation",
+            "output": {
+              "draft_claims": 5
+            }
+          },
+          {
+            "name": "answer_verification",
+            "output": {
+              "accepted": 3,
+              "rejected": 1,
+              "background_removed": 1,
+              "source_core_repair": {
+                "attempted": 0,
+                "accepted": 0,
+                "calls": 0
+              },
+              "check_batches": 1
+            }
+          },
+          {
+            "name": "citation_render",
+            "output": {}
+          }
+        ]
+      },
+      {
+        "id": "C26",
+        "document": "10.1515_econ-2022-0073 (1).pdf",
+        "query_seconds": 21.397284041013336,
+        "returned_chunks": 0,
+        "query_calls": 1,
+        "query_cost_usd": 0.0006360200000000002,
+        "judge_cost_usd": 0.0007376199999999996,
+        "judge_seconds": 8.890808833995834,
+        "query_error": null,
+        "judge_error": null,
+        "judge_audit": {
+          "official_scores_unchanged": true,
+          "flags": [],
+          "interpretation": "Flags require review; they do not compute corrected scores or prove semantic equivalence."
+        },
+        "metrics": {
+          "answer_precision": 0.0,
+          "answer_recall": 0.0,
+          "context_precision": 0.0,
+          "context_recall": 0.0
+        },
+        "coverage_counts": {
+          "candidate_pages": 14,
+          "cards_surveyed": 0,
+          "raw_candidate_pages": 14,
+          "elements_retrieved": 179,
+          "raw_fragments_verified": 0,
+          "verification_candidates": 179,
+          "verification_remaining": 179,
+          "verification_budget_omitted": 179,
+          "recovery_batches": 0
+        },
+        "limitations": [
+          "Evidence verification budget exhausted",
+          "No evidence verified before the verification budget was exhausted",
+          "0 source fragments verified; 179 remain unchecked (bounded verification)",
+          "179 source fragments not verified within budget"
+        ],
+        "task_completion": [],
+        "trace_steps": 10,
+        "trace_fields_per_step": 4,
+        "observability_status": "sdk_flushed_receipt_unverified",
+        "stages": [
+          {
+            "name": "query_planning",
+            "output": {}
+          },
+          {
+            "name": "routing_guard",
+            "output": {}
+          },
+          {
+            "name": "candidate_pages",
+            "output": {}
+          },
+          {
+            "name": "page_survey",
+            "output": {
+              "batches": 0,
+              "failed_batches": 0
+            }
+          },
+          {
+            "name": "element_retrieval",
+            "output": {}
+          },
+          {
+            "name": "element_triage",
+            "output": {}
+          },
+          {
+            "name": "element_verification",
+            "output": {
+              "batches": 0,
+              "failed_batches": 0,
+              "elements_seen": 0,
+              "elements_kept": 0,
+              "remaining_candidates": 179
+            }
+          },
+          {
+            "name": "answer_generation",
+            "output": {
+              "draft_claims": 0
+            }
+          },
+          {
+            "name": "answer_verification",
+            "output": {
+              "accepted": 0,
+              "rejected": 0
+            }
+          },
+          {
+            "name": "citation_render",
+            "output": {}
+          }
+        ]
+      }
+    ]
+  },
+  "corrective_attempt": {
+    "git_commit": "88dae8d7b2b9ea5c5b8d9381126dbc5c342f9d2e",
+    "scope": "One fresh development pass on C32 and C26 after task worksheet changes; existing source indexes reused; no score-driven retries",
+    "answer_model": "qwen3.8-flash",
+    "answer_thinking": "disabled",
+    "judge_model": "glm-5.3-flash",
+    "judge_reasoning_effort": "low",
+    "status": "completed",
+    "protected_inputs_unchanged": true,
+    "computed_cost_usd": 0.023224404000000008,
+    "cost_upper_bound_usd": 0.028030880000000005,
+    "prior_attempt": {
+      "ledger_path": "artifacts/task_worksheet_20261024/cost-ledger.json",
+      "computed_cost_usd": 0.00434931,
+      "charged_upper_bound_usd": 0.004804640000000001
+    },
+    "results": [
+      {
+        "id": "C32",
+        "document": "FDIC FAQ.pdf",
+        "query_seconds": 53.27651749999495,
+        "returned_chunks": 4,
+        "query_calls": 7,
+        "query_cost_usd": 0.003405834000000001,
+        "judge_cost_usd": 0.0005844500000000028,
+        "judge_seconds": 11.097865874995477,
+        "query_error": null,
+        "judge_error": null,
+        "judge_audit": {
+          "official_scores_unchanged": true,
+          "flags": [
+            {
+              "kind": "citation_present_but_judge_marks_missing",
+              "benchmark_id": "bp4"
+            },
+            {
+              "kind": "citation_present_but_judge_marks_missing",
+              "benchmark_id": "bp5"
+            }
+          ],
+          "interpretation": "Flags require review; they do not compute corrected scores or prove semantic equivalence."
+        },
+        "metrics": {
+          "answer_precision": 0.6,
+          "answer_recall": 0.42857142857142855,
+          "context_precision": 0.0,
+          "context_recall": 0.0
+        },
+        "coverage_counts": {
+          "candidate_pages": 43,
+          "cards_surveyed": 0,
+          "raw_candidate_pages": 9,
+          "elements_retrieved": 105,
+          "raw_fragments_verified": 32,
+          "verification_candidates": 105,
+          "verification_remaining": 73,
+          "verification_budget_omitted": 0,
+          "recovery_batches": 2
+        },
+        "limitations": [
+          "32 source fragments verified; 73 remain unchecked (bounded verification)",
+          "The query asks for a specific statistic (percentage increase) which is not present in the provided text.",
+          "The provided evidence consists of FAQs explaining why such statistics cannot be forecasted or benchmarked generally.",
+          "1 unsupported or uncertain claims removed"
+        ],
+        "task_completion": [
+          {
+            "id": "T1",
+            "text": "Verify if the provided FDIC FAQ contains any statistical data regarding the actual impact of CECL adoption on allowance levels.",
+            "operation": "absence",
+            "status": "not_established_in_inspected_evidence",
+            "scope_status": "not_required",
+            "completion": "supported",
+            "missing_inputs": []
+          }
+        ],
+        "trace_steps": 10,
+        "trace_fields_per_step": 4,
+        "observability_status": "sdk_flushed_receipt_unverified",
+        "stages": [
+          {
+            "name": "query_planning",
+            "output": {}
+          },
+          {
+            "name": "routing_guard",
+            "output": {}
+          },
+          {
+            "name": "candidate_pages",
+            "output": {}
+          },
+          {
+            "name": "page_survey",
+            "output": {}
+          },
+          {
+            "name": "element_retrieval",
+            "output": {}
+          },
+          {
+            "name": "element_triage",
+            "output": {}
+          },
+          {
+            "name": "element_verification",
+            "output": {
+              "batches": 4,
+              "failed_batches": 0,
+              "elements_seen": 32,
+              "elements_kept": 4,
+              "recovery_batches": 2,
+              "remaining_candidates": 73
+            }
+          },
+          {
+            "name": "answer_generation",
+            "output": {
+              "draft_claims": 6
+            }
+          },
+          {
+            "name": "answer_verification",
+            "output": {
+              "accepted": 4,
+              "rejected": 1,
+              "background_removed": 1,
+              "source_core_repair": {
+                "attempted": 0,
+                "accepted": 0,
+                "calls": 0
+              },
+              "check_batches": 1
+            }
+          },
+          {
+            "name": "citation_render",
+            "output": {}
+          }
+        ]
+      },
+      {
+        "id": "C26",
+        "document": "10.1515_econ-2022-0073 (1).pdf",
+        "query_seconds": 106.33585829200456,
+        "returned_chunks": 29,
+        "query_calls": 15,
+        "query_cost_usd": 0.012056460000000003,
+        "judge_cost_usd": 0.0028283500000000003,
+        "judge_seconds": 23.917422166996403,
+        "query_error": null,
+        "judge_error": null,
+        "judge_audit": {
+          "official_scores_unchanged": true,
+          "flags": [
+            {
+              "kind": "citations_in_answer_dropped_by_decomposition"
+            },
+            {
+              "kind": "citation_present_but_judge_marks_missing",
+              "benchmark_id": "bp22"
+            },
+            {
+              "kind": "citation_present_but_judge_marks_missing",
+              "benchmark_id": "bp21"
+            }
+          ],
+          "interpretation": "Flags require review; they do not compute corrected scores or prove semantic equivalence."
+        },
+        "metrics": {
+          "answer_precision": 0.8,
+          "answer_recall": 0.34210526315789475,
+          "context_precision": 1.0,
+          "context_recall": 0.90625
+        },
+        "coverage_counts": {
+          "candidate_pages": 14,
+          "cards_surveyed": 0,
+          "raw_candidate_pages": 14,
+          "elements_retrieved": 179,
+          "raw_fragments_verified": 72,
+          "verification_candidates": 179,
+          "verification_remaining": 107,
+          "verification_budget_omitted": 107,
+          "recovery_batches": 0
+        },
+        "limitations": [
+          "Evidence verification budget exhausted",
+          "72 source fragments verified; 107 remain unchecked (bounded verification)",
+          "107 source fragments not verified within budget",
+          "3 unsupported or uncertain claims removed",
+          "Requested topics not fully supported by final claims: Identify how the prediction target (daily direction) was formally defined and labeled in the study., Examine the data preparation steps and the strategy used for splitting training, validation, and testing sets., Evaluate the reported accuracy metrics and any statistical tests or cross-validation methods used to establish robustness.",
+          "Some requested operations remain unresolved; see task worksheet"
+        ],
+        "task_completion": [
+          {
+            "id": "T1",
+            "text": "Identify how the prediction target (daily direction) was formally defined and labeled in the study.",
+            "operation": "inspect",
+            "status": "supported",
+            "scope_status": "not_required",
+            "completion": "unresolved",
+            "missing_inputs": []
+          },
+          {
+            "id": "T2",
+            "text": "Examine the data preparation steps and the strategy used for splitting training, validation, and testing sets.",
+            "operation": "inspect",
+            "status": "supported",
+            "scope_status": "not_required",
+            "completion": "unresolved",
+            "missing_inputs": []
+          },
+          {
+            "id": "T3",
+            "text": "Evaluate the reported accuracy metrics and any statistical tests or cross-validation methods used to establish robustness.",
+            "operation": "assess",
+            "status": "supported",
+            "scope_status": "not_required",
+            "completion": "unresolved",
+            "missing_inputs": []
+          },
+          {
+            "id": "T4",
+            "text": "Determine the scope of generalizability claimed by the authors and identify potential limitations when applying the model as a live trading signal.",
+            "operation": "assess",
+            "status": "supported",
+            "scope_status": "not_required",
+            "completion": "supported",
+            "missing_inputs": []
+          }
+        ],
+        "trace_steps": 10,
+        "trace_fields_per_step": 4,
+        "observability_status": "sdk_flushed_receipt_unverified",
+        "stages": [
+          {
+            "name": "query_planning",
+            "output": {}
+          },
+          {
+            "name": "routing_guard",
+            "output": {}
+          },
+          {
+            "name": "candidate_pages",
+            "output": {}
+          },
+          {
+            "name": "page_survey",
+            "output": {
+              "batches": 0,
+              "failed_batches": 0
+            }
+          },
+          {
+            "name": "element_retrieval",
+            "output": {}
+          },
+          {
+            "name": "element_triage",
+            "output": {}
+          },
+          {
+            "name": "element_verification",
+            "output": {
+              "batches": 9,
+              "failed_batches": 0,
+              "elements_seen": 72,
+              "elements_kept": 29,
+              "remaining_candidates": 107
+            }
+          },
+          {
+            "name": "answer_generation",
+            "output": {
+              "draft_claims": 18
+            }
+          },
+          {
+            "name": "answer_verification",
+            "output": {
+              "accepted": 15,
+              "rejected": 3,
+              "background_removed": 1,
+              "source_core_repair": {
+                "attempted": 1,
+                "accepted": 1,
+                "calls": 1
+              },
+              "check_batches": 2
+            }
+          },
+          {
+            "name": "citation_render",
+            "output": {}
+          }
+        ]
+      }
+    ]
+  },
+  "aggregate_cost_includes_initial_attempt": true,
+  "hard_cap_usd": 0.1,
+  "aggregate_computed_cost_usd": 0.023224404000000008,
+  "aggregate_cost_upper_bound_usd": 0.028030880000000005,
+  "total_calls": 41,
+  "failed_calls": 0,
+  "protected_source_hashes": {
+    "/Users/smit/Downloads/Hackathon/Train/Benchmarks/benchmark_100.jsonl": "bce8a3e48d493e5635fa83cfd5c0c309f02a171fc1951a2f76bd128b23cd1288",
+    "/Users/smit/Downloads/Hackathon/Train/Evaluation/Evaluation.ipynb": "f75493648896a79fc28499f04bb4909baea9bf717c1b040d0c3fb3974aa5f583",
+    "/Users/smit/Downloads/Hackathon/Train/Documents/FDIC FAQ.pdf": "0bad87e9267c7854e2222f16898d3377eb53ac65e8271786a27f3bad95760ab4",
+    "/Users/smit/Downloads/Hackathon/Train/Documents/10.1515_econ-2022-0073 (1).pdf": "650673fa7497874ee7bb4cb3517cf68dab10a61dbf40252d60acd1a216cfefb4"
+  },
+  "all_protected_inputs_unchanged": true,
+  "tests": {
+    "passed": 276,
+    "slow_deselected": 7
+  },
+  "score_adjustments": null
+}
