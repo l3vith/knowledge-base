@@ -174,3 +174,17 @@ def test_source_core_repair_budget_denial_preserves_original_valid_claims(tmp_pa
                             'reason_code':'unsupported_phrase','repair_quote_indexes':[0]}]}
     checked,report=verify_answer(FakeLLM(respond),AnswerDraft([claim],'answered',worksheet=worksheet),ev,settings(tmp_path))
     assert len(calls)==2 and not checked.claims and report['source_core_repair']['failed']
+
+
+def test_slow_planning_does_not_starve_verification_but_actual_deadline_still_applies(tmp_path):
+    import time
+    import pytest
+    from kb.query.runtime import QueryRuntime
+    from kb.query.errors import BudgetExceeded
+    ctx=QueryRuntime(settings(tmp_path,query_deadline_s=30),FakeLLM())
+    ctx.started=time.monotonic()-18
+    ctx.deadline=ctx.started+30
+    assert ctx.call('verify','Check exact source.',{'elements':[]},100)=={'keep':[]}
+    ctx.started=time.monotonic()-31
+    ctx.deadline=ctx.started+30
+    with pytest.raises(BudgetExceeded):ctx.call('verify','Check exact source.',{'elements':[]},100)

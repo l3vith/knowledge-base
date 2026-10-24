@@ -41,7 +41,10 @@ class QueryRuntime:
         # because a deadline hit there would throw away all the evidence already paid for.
         if name in FINAL:
             return
-        share = {"survey": 0.35, "verify": 0.55}.get(name, 1.0)
+        # Verification uses the remaining early-stage deadline. A slow but valid planner must not
+        # consume an arbitrary cumulative 55% cutoff and prohibit every evidence check. Answer
+        # stages already have separate call/token pools and bounded per-call completion grace.
+        share = {"survey": 0.35, "verify": 1.0}.get(name, 1.0)
         if time.monotonic() >= self.started + share * (self.deadline - self.started):
             raise BudgetExceeded("Query deadline exhausted")
 
