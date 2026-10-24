@@ -46,10 +46,11 @@ def test_budget_recovery_verifies_uncovered_task_without_another_planner_call(tm
             return [result,BudgetExceeded('budget')] if self.calls==1 else [result]
 
     ctx=Context()
-    evidence,report=verify_elements(FakeLLM(),store,plan,query,candidates,settings(tmp_path),ctx=ctx)
+    evidence,report=verify_elements(FakeLLM(),store,plan,query,candidates,
+                                   settings(tmp_path,verify_batch_elements=8),ctx=ctx)
     assert ctx.calls==2
     assert {task_id for ev in evidence for task_id in ev.requirement_ids}=={'T1','T2'}
-    assert report['task_recovery']=={'attempted':True,'unresolved_task_ids':['T2'],'selected_elements':1,'verified_fragments':1}
+    assert report['task_recovery']=={'attempted':True,'unresolved_task_ids':['T2'],'selected_elements':1,'verified_fragments':1,'batches':1}
     assert [row['status'] for row in report['verification_task_coverage']]==['minimum_met','minimum_met']
 
 
@@ -110,8 +111,9 @@ def test_zero_hit_recovery_is_bounded_and_keeps_only_verified_explanation(tmp_pa
                         for e in p['elements'] if 'cannot' in e['source_spans']['S1']]}
     ev,report=verify_elements(FakeLLM(respond),store,plan,'What percentage?',
                    [Candidate(e,['a1'],[]) for e in store.elements],settings(tmp_path))
-    assert len(calls)==4 and report['recovery_batches']==2 and len(ev)==1
-    assert report['elements_seen']==32 and report['remaining_candidates']==15
+    # The 4x factual verification budget now covers this finite source without a separate recovery pass.
+    assert len(calls)==6 and report['recovery_batches']==0 and len(ev)==1
+    assert report['elements_seen']==47 and report['remaining_candidates']==0
     assert ev[0].relevance=='counterevidence' and not ev[0].fact_value
 
 

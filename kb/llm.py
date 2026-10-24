@@ -195,9 +195,14 @@ class OpenCodeLLM(LLM):
             raise LLMError(f"{name}: {exc}") from None
         headers={**auth,"Content-Type":"application/json",**wire_headers}
         last_error: Exception | None = None
-        for attempt in range(1, s.llm_max_retries + 1):
+        repair_attempted=False
+        call_input=call_output=0;call_cost=0.0
+        for attempt in range(1, s.llm_max_retries + 2):
+            if attempt>s.llm_max_retries and not repair_attempted:
+                break
             with lf_generation(name, model, {"system": clip(system, 2000), "user": clip(user, 4000)}) as gen:
                 retry_after = None
+                content=None;finish_reason=None
                 try:
                     with _semaphore(s.llm_concurrency):
                         remaining=min(s.llm_timeout_s,max(0.001,getattr(self,"deadline",time.monotonic()+s.llm_timeout_s)-time.monotonic()))
@@ -212,7 +217,10 @@ class OpenCodeLLM(LLM):
                         raise LLMError("Provider usage missing; paid requests cannot be accounted")
                     self._account(in_tok,out_tok)
                     cost = self._cost(in_tok, out_tok)
-                    self.last_usage={"input_tokens":in_tok,"output_tokens":out_tok,"cost_usd":cost["total"] if cost else None}
+                    call_input+=in_tok;call_output+=out_tok
+                    if cost:call_cost+=cost["total"]
+                    self.last_usage={"input_tokens":call_input,"output_tokens":call_output,
+                                     "cost_usd":call_cost if cost else None}
                     self.last_response={"content":content,"finish_reason":finish_reason,"output_limit":max_tokens}
                     _record_spend(s, name, model, in_tok, out_tok, cost["total"] if cost else None)
                     gen.update(output=clip(content or "", 4000), usage_details={"input": in_tok, "output": out_tok},
@@ -226,6 +234,24 @@ class OpenCodeLLM(LLM):
                 except (requests.RequestException, LLMError, ValueError, KeyError, IndexError) as e:
                     last_error = e
                     gen.update(level="ERROR", status_message=str(e)[:300])
+                    if json_mode and isinstance(content,str) and finish_reason not in ("length","max_tokens"):
+                        if repair_attempted:
+                            # The repair response was also malformed: stop rather than pay for
+                            # repeated identical repair requests.
+                            break
+                        if s.budget_usd is not None:
+                            repair_input_tokens=max(1,(len(system.encode("utf-8"))+len((content[:12000]).encode("utf-8"))+200)//4)
+                            repair_reserve=(repair_input_tokens*s.price_input_per_m+max_tokens*s.price_output_per_m)/1e6
+                            if spent_usd(s)+repair_reserve>s.budget_usd:
+                                last_error=LLMError("spend cap leaves no room for JSON repair")
+                                break
+                        repair_attempted=True
+                        repair_user=("Repair the malformed response into one valid JSON object. Preserve its meaning and values; "
+                            "do not add fields or facts. Return JSON only.\n\nMalformed response:\n"+content[:12000])
+                        payload={**payload,"messages":[{"role":"user","content":repair_user}]}
+                        # A syntax repair is a single additional, separately accounted provider call.
+                        # Do not consume the configured transport retry count or sleep before it.
+                        continue
             if attempt < s.llm_max_retries:
                 delay = float(retry_after) if retry_after and str(retry_after).isdigit() else min(30, 2 ** attempt) + random.random()
                 time.sleep(delay)

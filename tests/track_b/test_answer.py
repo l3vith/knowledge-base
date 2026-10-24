@@ -1,6 +1,6 @@
 import pytest
 from kb.query.answer import generate_answer,verify_answer,render_verified,number_evidence,verify_calculation
-from kb.query.types import QueryPlan,Aspect,Evidence
+from kb.query.types import QueryPlan,Aspect,Evidence,Claim
 from .helpers import MemoryStore,FakeLLM,settings as _settings
 
 
@@ -139,6 +139,8 @@ def test_factoid_answer_keeps_only_the_clause_with_the_verified_value(tmp_path):
     draft=generate_answer(llm,"How many Monte Carlo paths were used?",plan,numbered,{"a":store.doc("a")},settings(tmp_path))
     # The clause naming the query's subject (Monte Carlo routine) stays; the earlier sentence does not.
     assert [c.text for c in draft.claims]==["It is a Monte Carlo based pricing routine; 60,000 paths were\nused to generate the prices in our tests."]
+
+
     assert draft.claims[0].quotes[0]["quote"] in text
     draft=generate_answer(llm,"How many paths were used?",plan,numbered,{"a":store.doc("a")},settings(tmp_path))
     assert [c.text for c in draft.claims]==["60,000 paths were\nused to generate the prices in our tests."]
@@ -147,6 +149,24 @@ def test_factoid_answer_keeps_only_the_clause_with_the_verified_value(tmp_path):
     numbered=number_evidence([Evidence(store.elements[0],["a1"])])
     draft=generate_answer(llm,"How many Monte Carlo paths were used?",plan,numbered,{"a":store.doc("a")},settings(tmp_path))
     assert [c.text for c in draft.claims]==["It is a Monte Carlo based pricing routine; 60,000 paths were\nused to generate the prices in our tests."]
+
+
+def test_narrow_factoid_uses_verified_same_metric_comparison_not_neighboring_metrics():
+    from kb.query.answer import _narrow_to_fact
+    store=MemoryStore({"a":["NPL coverage ratio 178.4%.",
+        "The NPL ratio increased to 0.97%. However, the NPL coverage ratio decreased by 3.3 ppts to 178.4% at the end of 2025.",
+        "T1 ratio was 19.2%, up 0.3 ppts YoY."]})
+    store.elements[1].section="Financial Review"
+    numbered=number_evidence([Evidence(e,["a1"],fact_value="178.4%" if i==0 else None)
+                              for i,e in enumerate(store.elements)])
+    claim=Claim("c1","NPL coverage ratio 178.4%.",
+        ["E1"],["a1"],[{"evidence_id":"E1","quote":store.elements[0].text}])
+    result=_narrow_to_fact([claim],numbered,"What was the NPL coverage ratio at the end of 2025?")
+    assert len(result)==1
+    assert "decreased by 3.3 ppts" in result[0].text
+    assert "178.4% at the end of 2025" in result[0].text
+    assert "0.97%" not in result[0].text and "19.2%" not in result[0].text
+    assert result[0].evidence_ids==["E2"]
 
 
 

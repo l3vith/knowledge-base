@@ -8,6 +8,7 @@ def fact(i, text, doc="a"):
 def test_results_limits_and_conditions_are_facts_but_background_is_not():
     assert is_fact("For the Chebyshev Tensors built in the direct way, a mesh of 14 _,_ 400 points was used.")
     assert is_fact("The evaluation time was measured at 2 milliseconds per evaluation (in Matlab).")
+    assert is_fact("down 3.3 ppts YoY")
     assert is_fact("Out of these, only 20 _,_ 000 were randomly chosen to be evaluated.")
     assert is_fact("They were obtained using a standard PC computer, with _i_ 7 cores; no parallelisation nor GPUs were used.")
     assert is_fact("Chebyshev Tensors do not extrapolate outside the domain.")

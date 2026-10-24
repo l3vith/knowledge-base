@@ -624,13 +624,41 @@ def fact_clause(ev,query="",within=None):
 
 
 def _narrow_to_fact(claims,numbered,query=""):
-    # A single fact is answered by the clause holding its verified value: every other copied sentence
-    # (provenance, method, footnotes) is an extra point that lowers answer precision.
+    # A single fact is answered from verified source text. If another verified passage states the same
+    # metric/value together with its direct comparison, prefer that complete sentence over a dashboard cell.
+    # This is a bounded scan over already verified evidence; it never broadens retrieval or admits another metric.
     out=[];seen=set()
     for c in claims:
-        clause=fact_clause(numbered[c.evidence_ids[0]],query,[q["quote"] for q in c.quotes if q["evidence_id"]==c.evidence_ids[0]])
+        primary_eid=c.evidence_ids[0]
+        primary=numbered[primary_eid]
+        clause=fact_clause(primary,query,[q["quote"] for q in c.quotes if q["evidence_id"]==primary_eid])
+        evidence_ids=list(c.evidence_ids);quotes=list(c.quotes)
+        target=get(primary,"fact_value")
+        if target:
+            value_numbers=set(re.findall(r"(?<![\w.])\d[\d,]*(?:\.\d+)?",str(target)))
+            query_terms={w for w in re.findall(r"[a-z0-9]+",query.casefold()) if len(w)>=3}
+            companions=[]
+            for eid,ev in numbered.items():
+                if eid==c.evidence_ids[0]:continue
+                if get(ev.element,"kind","text")=="table":continue
+                source=get(ev.element,"text","")
+                section=get(ev.element,"section","") or ""
+                for sentence in answer_spans(source).values():
+                    nums=set(re.findall(r"(?<![\w.])\d[\d,]*(?:\.\d+)?",display_source(sentence)))
+                    words=set(re.findall(r"[a-z0-9]+",display_source(sentence).casefold()))
+                    # Reuse only the exact verified headline value and a clear query-metric match.
+                    if not value_numbers or not value_numbers.issubset(nums):continue
+                    overlap=len(query_terms & words)
+                    if overlap<2:continue
+                    comparative=bool(re.search(r"\b(?:up|down|increas\w*|decreas\w*|rose|fell| YoY|year.over.year|quarter.over.quarter)\b",sentence,re.I))
+                    if comparative:
+                        companions.append((overlap,len(section),eid,display_source(sentence),section))
+            if companions:
+                _,_,eid,clause,_=max(companions)
+                evidence_ids=[eid]
+                quotes=[{"evidence_id":eid,"quote":clause}]
         if clause:
-            c=replace(c,text=display_source(clause),quotes=[{"evidence_id":c.evidence_ids[0],"quote":clause}])
+            c=replace(c,text=display_source(clause),evidence_ids=evidence_ids,quotes=quotes)
         if c.text not in seen:
             seen.add(c.text);out.append((clause is not None,c))
     keep=[c for has,c in out if has] or [c for _,c in out]

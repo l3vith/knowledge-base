@@ -64,9 +64,10 @@ def evaluate_file(run_path,api_key=None,notebook=None,expected_hash=EXPECTED_EVA
                                                retrieved_chunks=row["retrieved_chunks"],benchmark_chunks=row["benchmark_chunks"])
             # Official metrics untouched; alongside them, every judge request/response this score came from
             # (data/judge_cache/<request_sha256>.json) and zero-call consistency flags. Flagged rows are never re-judged.
-            from evaluation.audit import judge_consistency, checklist
+            from evaluation.audit import judge_consistency, checklist, metric_range_audit
             scored.append({"id":row["id"],**metrics,"judge_calls":client.log,
                            "consistency":judge_consistency(metrics,row["ai_answer"],client.log),
+                           "metric_audit":metric_range_audit(metrics),
                            "dev_checklist":checklist(row["id"],row["ai_answer"])})
         except Exception as exc:
             errors.append({"id":row["id"],"stage":"judge","error":f"{type(exc).__name__}: {exc}"[:300]})
@@ -78,7 +79,10 @@ def evaluate_file(run_path,api_key=None,notebook=None,expected_hash=EXPECTED_EVA
              "evaluator_sha256":expected_hash,"executed_definition_cells":ns["_executed_cells"],
              "judge_model":client.model,"judge_reasoning_effort":getattr(client,"effort",None),
              "judge_calls_over_notebook_limit":getattr(client,"over_notebook_limit",0),
-             "rows_with_consistency_flags":[r["id"] for r in scored if r["consistency"]["flags"]]}
+             "rows_with_consistency_flags":[r["id"] for r in scored if r["consistency"]["flags"]],
+             "rows_with_out_of_range_metrics":[r["id"] for r in scored if r["metric_audit"]["out_of_range"]],
+             "rows_with_unbounded_context_recall":[r["id"] for r in scored if r["metric_audit"]["unbounded_by_definition"]],
+             "metric_warning":"The official context-recall formula can exceed 1 because relevant retrieved chunks are divided by gold chunk count without unique-gold matching. Values and formulas are not modified."}
     result={"summary":summary,"per_question":scored,"errors":errors}
     Path(str(run_path)+".scores.json").write_text(json.dumps(result,ensure_ascii=False,indent=2)+"\n",encoding="utf-8")
     return result

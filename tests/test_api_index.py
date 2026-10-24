@@ -35,7 +35,7 @@ def test_api_index_ok(tmp_path, settings, monkeypatch):
                                             data={"collection_name": "c1"})
     assert r.status_code == 200, r.text
     body = r.json()
-    assert body["status"] == "ready" and body["documents"] == 1 and body["generation_id"].startswith("gen_")
+    assert body == {"status":"success","collection_name":"c1","documents_indexed":1}
 
 
 def test_api_index_errors(tmp_path, settings, monkeypatch):
@@ -43,8 +43,8 @@ def test_api_index_errors(tmp_path, settings, monkeypatch):
     r = client.post("/index", files={"file": ("d.zip", b"nope", "application/zip")}, data={"collection_name": "c1"})
     assert r.status_code == 400
     body = r.json()
-    assert body["error"]["code"] == "INVALID_ARCHIVE" and body["request_id"].startswith("req_")
+    assert set(body)=={"detail"} and "zip" in body["detail"].lower()
     r = client.post("/index", files={"file": ("d.zip", b"nope", "application/zip")}, data={"collection_name": "bad name"})
-    assert r.status_code == 422 and r.json()["error"]["code"] == "INVALID_COLLECTION_NAME"
+    assert r.status_code == 422 and r.json() == {"detail":"collection_name must match ^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$"}
     r = client.post("/index", data={"collection_name": "c1"})
     assert r.status_code == 422 and r.json()["error"]["code"] == "INVALID_REQUEST"

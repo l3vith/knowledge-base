@@ -22,7 +22,15 @@ Copy `.env.example` to `.env` and configure the organizer OpenCode key/model and
 .venv/bin/python -m scripts.serve --env-file .env --host 127.0.0.1 --port 8000
 ```
 
-POST /index takes multipart `file` (ZIP) and `collection_name`. It blocks until the current ingestion implementation activates the collection. POST /query takes JSON `{"collection_name":"demo","query":"What does the report disclose about capital?"}`. It returns answer, actual source chunks with physical pages, ten four-field trace steps, coverage, resource usage and generation/config identity. Provider failures are HTTP errors; a semantic search miss is separately reported. No public health or documentation routes are added.
+POST /index takes multipart `file` (ZIP) and `collection_name`. It blocks until indexing completes and returns `status`, `collection_name` and `documents_indexed`. POST /query takes JSON `{"collection_name":"demo","query":"What does the report disclose about capital?"}` and returns only `answer`, cited source `chunks` and `trace`; each chunk contains `content` and metadata with `file_name` and 1-based `page_numbers`. Every trace entry has `step_name`, `description`, `input` and `output`. Uncited retrieval candidates and internal diagnostics are excluded from the response. Unknown collections return HTTP 404 with `{"detail":"unknown collection"}`. No public health or documentation routes are added.
+
+To expose the API through ngrok, install and authenticate the ngrok agent once, then run:
+
+```bash
+./scripts/run_ngrok.sh
+```
+
+The script starts the API on port 8000 and opens an ngrok HTTP tunnel. Set `PORT` to use another local port, `PYTHON_BIN` to select a Python executable, or `KB_ENV_FILE` to select the environment file. The API continues to load model credentials from that local file; never commit it.
 
 Local indexing through the existing CLI:
 

@@ -47,10 +47,10 @@ def test_actual_index_to_query_two_collections_and_reindex_snapshot(tmp_path):
     two=client.post("/query",json={"collection_name":"two","query":"capital ratio"})
     assert one.status_code==two.status_code==200
     a,b=one.json(),two.json()
+    assert set(a)==set(b)=={"answer","chunks","trace"}
     assert "14 percent" in a["answer"] and "22 percent" not in a["answer"]
     assert "22 percent" in b["answer"] and "14 percent" not in b["answer"]
-    assert a["generation_id"]==first["generation_id"] and b["generation_id"]==second["generation_id"]
-    assert a["chunks"][0]["document"]=="one.pdf" and a["chunks"][0]["page"]==1
+    assert any(c["metadata"]=={"file_name":"one.pdf","page_numbers":[1]} for c in a["chunks"])
     updated=index_collection(archive(tmp_path,"new","Capital ratio was 31 percent for Cobalt Bank during FY2026 under the updated capital framework."),"one",settings=shared,llm=FoundationFakeLLM(ingestion_response),embedder=emb,use_ocr=False)
     assert updated["generation_id"]!=old_gen
     assert any("14 percent" in e.text for c in old_store.docs() for e in old_store.elements_for_pages(c.doc_id,[1],include_boilerplate=True))

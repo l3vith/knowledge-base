@@ -26,10 +26,28 @@ def test_failed_json_still_accounts_billed_usage(tmp_path,monkeypatch):
     runtime=QueryRuntime(settings(tmp_path),OpenCodeJSONClient(model="qwen3.8-flash",key="test-key"),LocalSink())
     with pytest.raises(QueryError,match="invalid JSON"):
         runtime.call("plan","system",{},100)
-    assert runtime.usage()["input_tokens"]==123
-    assert runtime.usage()["output_tokens"]==17
+    # Exactly one bounded repair attempt is made and both paid responses are accounted.
+    assert runtime.usage()["input_tokens"]==246
+    assert runtime.usage()["output_tokens"]==34
     assert runtime.usage()["cost_usd"] is None
     assert runtime.events[0]["status"]=="failed"
+
+
+def test_invalid_json_gets_one_syntax_repair_and_keeps_usage(tmp_path,monkeypatch):
+    calls=[]
+    bodies=iter([
+        {"usage":{"prompt_tokens":20,"completion_tokens":9},"choices":[{"finish_reason":"stop","message":{"content":"{bad json"}}]},
+        {"usage":{"prompt_tokens":30,"completion_tokens":11},"choices":[{"finish_reason":"stop","message":{"content":"{\"keep\":[]}"}}]},
+    ])
+    class CaptureClient(Client):
+        def post(self,url,**kwargs):
+            calls.append(kwargs["json"])
+            return Response(next(bodies))
+    monkeypatch.setattr("kb.query.provider.httpx.Client",lambda **kwargs:CaptureClient(None))
+    runtime=QueryRuntime(settings(tmp_path),OpenCodeJSONClient(model="qwen3.8-flash",key="test-key"),LocalSink())
+    assert runtime.call("verify","system",{},100)=={"keep":[]}
+    assert len(calls)==2 and "{bad json" in calls[1]["messages"][0]["content"]
+    assert runtime.usage()["input_tokens"]==50 and runtime.usage()["output_tokens"]==20
 
 
 def test_missing_model_key_is_explicit(monkeypatch):

@@ -13,7 +13,8 @@ COLLECTION_RE=re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$")
 
 
 class QueryIn(BaseModel):
-    model_config=ConfigDict(extra="forbid",strict=True)
+    # The organizer contract explicitly ignores additional request fields.
+    model_config=ConfigDict(extra="ignore",strict=True)
     collection_name: str=Field(min_length=1,max_length=64)
     query: str=Field(min_length=1,max_length=32000)
 
@@ -59,6 +60,42 @@ def bind_services(request,collection_name):
     return binder(collection_name) if callable(binder) else legacy_bind(collection_name)
 
 
+def _contract_response(result):
+    """Project the internal response onto the organizer's stable answer schema.
+
+    Only source passages cited by an accepted answer claim count as returned evidence;
+    internal diagnostics and uncited retrieval candidates stay in the private trace.
+    """
+    chunks=[]
+    seen=set()
+    for chunk in result.get("chunks",[]):
+        if not chunk.get("cited_by_claim_ids"):
+            continue
+        content=chunk.get("content") or chunk.get("text")
+        file_name=chunk.get("document") or chunk.get("source_path")
+        page=chunk.get("page")
+        if not isinstance(content,str) or not content.strip() or not isinstance(file_name,str) or not file_name:
+            continue
+        if isinstance(page,bool) or not isinstance(page,int) or page<1:
+            continue
+        file_name=file_name.replace("\\","/").rsplit("/",1)[-1]
+        key=(file_name.casefold(),page,content)
+        if key in seen:
+            continue
+        seen.add(key)
+        chunks.append({"content":content,"metadata":{"file_name":file_name,"page_numbers":[page]}})
+    trace=[{"step_name":str(step.get("step_name") or "pipeline_step"),
+            "description":str(step.get("description") or ""),
+            "input":step.get("input"),"output":step.get("output")}
+           for step in result.get("trace",[]) if isinstance(step,dict)]
+    if not trace:
+        trace=[{"step_name":"query","description":"Answer the question using the indexed collection.",
+                "input":{"collection_name":result.get("collection_name")},
+                "output":{"answer_available":bool(result.get("answer"))}}]
+    return {"answer":str(result.get("answer") or "The documents do not contain this information."),
+            "chunks":chunks,"trace":trace}
+
+
 @router.post("/query")
 async def query_route(body: QueryIn,request: Request):
     import uuid
@@ -76,12 +113,17 @@ async def query_route(body: QueryIn,request: Request):
             if services.close_store:
                 services.store.close()
     try:
-        return await run_in_threadpool(run)
+        result=await run_in_threadpool(run)
+        return _contract_response(result)
     except QueryError as exc:
+        if exc.http_status==404:
+            return JSONResponse(status_code=404,content={"detail":"unknown collection"})
         return JSONResponse(status_code=exc.http_status,content=exc.to_body(request_id))
     except Exception as exc:
         # Accept Person 1 typed errors structurally without importing its module.
         if hasattr(exc,"http_status") and callable(getattr(exc,"to_body",None)):
+            if exc.http_status==404:
+                return JSONResponse(status_code=404,content={"detail":"unknown collection"})
             return JSONResponse(status_code=exc.http_status,content=exc.to_body(request_id))
         from kb.llm import LLMError
         if isinstance(exc,LLMError):  # provider down, retries exhausted or spend cap reached

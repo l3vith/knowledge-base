@@ -10,7 +10,7 @@ _NOISE = re.compile(r"<sup>.*?</sup>|\[\d+(?:\s*[,–-]\s*\d+)*\]|\(\s*\d+(?:\.\
                     r"\b(?:Section|Sections|Figure|Figures|Fig\.|Table|Tables|Equation|Eq\.|Theorem|Chapter|Appendix)\s*\d+(?:\.\d+)*")
 _QUANTITY = re.compile(r"\d(?:[\d,.]*\d)?\s*(?:%|percent|times|x\b|×|ms\b|milliseconds?|microseconds?|µs|seconds?|\bs\b|minutes?|"
                        r"hours?|days?|weeks?|months?|years?|KB|MB|GB|calls?|points?|paths?|surfaces?|evaluations?|"
-                       r"samples?|parameters?|dimensions?|ranks?|cores?|bps|basis points|million|billion|USD|EUR|GBP|INR)", re.I)
+                       r"samples?|parameters?|dimensions?|ranks?|cores?|ppts?|bps|basis points|million|billion|USD|EUR|GBP|INR)", re.I)
 _LIMIT = re.compile(r"\b(?:cannot|can ?not|not (?:be |been |possible|guaranteed|known|tested|shown|clear)|no (?:guarantee|"
                     r"convergence|extrapolation)|only (?:inside|within|for|if|when|valid)|outside|extrapolat\w*|limitation\w*|"
                     r"drawback\w*|caveat\w*|assum\w*|unknown|do not know|future work|rebuil\w*|must|should|preferable|"
@@ -21,14 +21,14 @@ _SETUP = re.compile(r"\b(?:GPUs?|CPUs?|cores|parallelis\w*|parallel|hardware|sta
 # ("σ increases the kurtosis", "positive correlation ... increases the prices of out-of-the-money options",
 # "Lamoureux and Lastrapes (1993) present evidence that ..."). Without these, C17 (Heston) kept 15 facts and missed
 # most of its benchmark; on C18 they add 11 of 79 facts.
-_EFFECT = re.compile(r"\b(?:increase[sd]?|decrease[sd]?|raises?|lowers?|reduces?|spreads?|affects?|controls?|determines?|"
+_EFFECT = re.compile(r"\b(?:increase[sd]?|decrease[sd]?|raises?|lowers?|reduces?|spreads?|affects?|controls?|determines?|up|down|"
                      r"drives?|depends? on|leads? to|results? in|causes?|implies|is equivalent to|positively|negatively|"
                      r"has (?:little|no|a) (?:substantial |significant )?effect|fat (?:left|right) tail|"
                      r"presents? evidence|reports? that|reported that|finds? that|found that|shows? that|demonstrates?)\b", re.I)
 _BACKGROUND = re.compile(r"^(?:\*\*|#)|\b(?:is defined as|we define|let us|in this paper we|this paper|the rest of the paper|"
                          r"is organi[sz]ed|see \[|following \[|for example|e\.g\.)", re.I)
 _STRONG_UNIT = re.compile(r"%|percent|times|x\b|×|ms\b|milli|micro|µs|seconds?|\bs\b|minutes?|hours?|days?|weeks?|months?|years?|"
-                          r"KB|MB|GB|bps|basis points|million|billion|USD|EUR|GBP|INR", re.I)
+                          r"KB|MB|GB|ppts?|bps|basis points|million|billion|USD|EUR|GBP|INR", re.I)
 _SMALL_RESULT = re.compile(r'\b(?:maximum|minimum|rank|dimension|parameters?)\b.{0,55}\b\d+(?:\.\d+)?\b|'
                            r'\b\d+\s+(?:parameters?|dimensions?|ranks?)\b', re.I)
 

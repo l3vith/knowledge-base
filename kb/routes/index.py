@@ -9,6 +9,7 @@ import tempfile
 
 from fastapi import APIRouter, File, Form, UploadFile
 from fastapi.concurrency import run_in_threadpool
+from fastapi.responses import JSONResponse
 
 from kb.config import get_settings
 from kb.errors import KBError
@@ -37,13 +38,15 @@ async def index_endpoint(file: UploadFile = File(...), collection_name: str = Fo
             while chunk := await file.read(1 << 20):
                 out.write(chunk)
         try:
-            return await run_in_threadpool(_index, tmp, collection_name, settings=settings,
+            result=await run_in_threadpool(_index, tmp, collection_name, settings=settings,
                                            llm=get_llm(settings), embedder=get_embedder(settings))
-        except KBError:
-            raise
+            return {"status":"success","collection_name":collection_name,
+                    "documents_indexed":int(result.get("documents",0))}
+        except KBError as e:
+            return JSONResponse(status_code=e.http_status,content={"detail":e.message})
         except Exception as e:
             log.exception("indexing failed")
-            raise KBError("INDEXING_FAILED", f"Indexing failed: {type(e).__name__}", 500, retryable=True)
+            return JSONResponse(status_code=500,content={"detail":f"Indexing failed: {type(e).__name__}"})
     finally:
         try:
             os.remove(tmp)

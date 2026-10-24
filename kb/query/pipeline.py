@@ -42,8 +42,36 @@ def _coverage(plan,numbered,claims,limits,counts):
         supported=[c.claim_id for c in claims if aspect.aspect_id in c.aspect_ids]
         rows.append({"id":aspect.aspect_id,"text":aspect.text,"entity":aspect.entity,"period":aspect.period,
                      "evidence_ids":eids,"claim_ids":supported,"status":"supported" if supported else "unresolved"})
-    return {"aspects":rows,"obligations":rows,"limitations":list(dict.fromkeys(limits)),"counts":counts,
-            "completeness_proven":False}
+    unique_limits=list(dict.fromkeys(limits))
+    return {"aspects":rows,"obligations":rows,"limitations":unique_limits,"counts":counts,
+            # A model's claim that it is complete is not proof. Every planned obligation and
+            # literal query topic must have accepted answer support, and no known budget or
+            # provider limitation may have made the search incomplete.
+            "completeness_proven":bool(rows) and all(r["status"]=="supported" for r in rows)
+                and not unique_limits}
+
+
+def _stage_diagnostics(coverage):
+    """Explain where answer coverage was lost using only recorded pipeline evidence."""
+    counts=coverage.get("counts",{})
+    limits=coverage.get("limitations",[])
+    topics=coverage.get("requested_topics",[])
+    unresolved=[t.get("id") for t in topics if t.get("status")!="supported"]
+    issues=[]
+    if any("omitted" in x.lower() or "unchecked" in x.lower() or "budget exhausted" in x.lower() for x in limits):
+        issues.append({"stage":"retrieval_or_verification","reason":"evidence was omitted or left unchecked by a recorded budget limit"})
+    if counts.get("triage_omitted",0):
+        issues.append({"stage":"candidate_selection","reason":"relevance-ranked candidates were excluded by the verification work budget",
+                       "count":counts["triage_omitted"]})
+    if counts.get("writer_context_omitted",0):
+        issues.append({"stage":"writer_context","reason":"verified evidence did not fit in the answer writer context",
+                       "count":counts["writer_context_omitted"]})
+    if unresolved:
+        issues.append({"stage":"answer_coverage","reason":"requested topics lack accepted final claims","topic_ids":unresolved})
+    if counts.get("answer_claims_rejected",0):
+        issues.append({"stage":"answer_verification","reason":"draft claims failed source or semantic checks",
+                       "count":counts["answer_claims_rejected"]})
+    return issues
 
 
 def answer_query(collection,query,*,store,generation_id,settings,llm,embedder=None,reranker=None,mode="full",sink=None,request_id=None):
@@ -126,6 +154,9 @@ def answer_query(collection,query,*,store,generation_id,settings,llm,embedder=No
                 current_stage=5
                 _,middle,report=element_triage(candidates,plan,reranker,settings)
                 out.update(report);limits.extend(report["limitations"])
+                counts["triage_candidates"]=len(candidates)
+                counts["triage_selected"]=len(middle)
+                counts["triage_omitted"]=report["dropped_budget"]
                 if report["dropped_budget"]:
                     limits.append(f"{report['dropped_budget']} candidates omitted by verification budget")
             with ctx.stage(STEP_NAMES[6],DESCRIPTIONS[6],{"candidates":len(middle)}) as out:
@@ -140,6 +171,8 @@ def answer_query(collection,query,*,store,generation_id,settings,llm,embedder=No
                     counts['verification_candidates']=report.get('prepared_candidates',len(middle))
                     counts['verification_remaining']=report.get('remaining_candidates',0)
                     counts['verification_budget_omitted']=report['omitted_fragments']
+                    counts["verification_checked"]=report["elements_seen"]
+                    counts["verification_unchecked"]=report.get("remaining_candidates",0)
                     counts['recovery_batches']=report.get('recovery_batches',0)
                     if report.get('remaining_candidates'):
                         limits.append(f"{report['elements_seen']} source fragments verified; {report['remaining_candidates']} remain unchecked (bounded verification)")
@@ -153,6 +186,7 @@ def answer_query(collection,query,*,store,generation_id,settings,llm,embedder=No
                 left=value(settings,"max_input_tokens")-ctx.estimated_input
                 portfolio,report=select_portfolio(evidence,plan,settings,cap=max(0,left//2-8000))
                 numbered=number_evidence(portfolio)
+                counts["writer_context_omitted"]=report["omitted"]
                 if report["omitted"]:
                     limits.append(f"{report['omitted']} verified fragments omitted from writer context")
                 plan.limitations=list(dict.fromkeys(limits))
@@ -162,6 +196,7 @@ def answer_query(collection,query,*,store,generation_id,settings,llm,embedder=No
             with ctx.stage(STEP_NAMES[8],DESCRIPTIONS[8],{"claims":len(draft.claims)}) as out:
                 current_stage=8
                 draft,report=verify_answer(ctx.llm,draft,numbered,settings,ctx=ctx,query=query);out.update(report)
+                counts["answer_claims_rejected"]=report.get("rejected",0)
             with ctx.stage(STEP_NAMES[9],DESCRIPTIONS[9],{"accepted_claims":len(draft.claims)}) as out:
                 current_stage=9
                 answer,report=render_verified(draft,numbered,cards);out.update(report)
@@ -182,9 +217,14 @@ def answer_query(collection,query,*,store,generation_id,settings,llm,embedder=No
             coverage=_coverage(plan,numbered,draft.claims,limits+draft.limitations,counts)
             coverage["requested_topics"]=draft.requested_topics
             coverage['task_worksheet']=draft.worksheet
-            unresolved=any(a["status"]!="supported" for a in coverage["aspects"])
+            coverage["completeness_proven"]=(bool(coverage["aspects"])
+                and all(a["status"]=="supported" for a in coverage["aspects"])
+                and all(t.get("status")=="supported" for t in draft.requested_topics)
+                and all(t.get("completion")=="supported" for t in draft.worksheet)
+                and not coverage["limitations"])
+            coverage["stage_diagnostics"]=_stage_diagnostics(coverage)
             if draft.claims:
-                status="partial" if coverage["limitations"] or unresolved or draft.status=="partial" else "answered"
+                status="answered" if coverage["completeness_proven"] and draft.status!="partial" else "partial"
             else:
                 status="partial" if numbered else "no_answer"
                 if not numbered and NO_EVIDENCE_LIMIT in limits:

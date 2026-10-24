@@ -99,6 +99,34 @@ def test_judge_audit_flags_bad_ids_and_truncated_responses():
     assert kinds['judge_response_truncated_at_notebook_limit']['requests']==['k1']
 
 
+def test_metric_audit_explains_context_recall_above_one_without_changing_score():
+    from evaluation.audit import metric_range_audit, judge_consistency
+    metrics={'answer_precision':.5,'answer_recall':.2,'context_precision':.8,'context_recall':1.4}
+    audit=metric_range_audit(metrics)
+    assert audit['out_of_range']=={} and audit['unbounded_by_definition']=={'context_recall':1.4}
+    assert 'not deduplicated' in audit['context_recall_formula']
+    assert any(f['kind']=='context_recall_above_one_allowed_by_official_formula'
+               for f in judge_consistency(metrics,'answer')['flags'])
+    assert metrics['context_recall']==1.4
+
+
+def test_pipeline_coverage_only_proven_when_obligations_are_supported_without_limits():
+    from kb.query.pipeline import _coverage, _stage_diagnostics
+    from kb.query.types import Aspect, QueryPlan, Evidence, Claim
+    store=MemoryStore({'a':['Accuracy improved.']})
+    plan=QueryPlan('analytical',[Aspect('a1','accuracy',['accuracy'])],['a'])
+    claims=[Claim('c1','Accuracy improved.',['E1'],['a1'])]
+    evidence={'E1':Evidence(store.elements[0],['a1'])}
+    complete=_coverage(plan,evidence,claims,[],{'verification_unchecked':0})
+    assert complete['completeness_proven'] is True
+    incomplete=_coverage(plan,evidence,claims,['Evidence verification budget exhausted'],
+                         {'verification_unchecked':20,'writer_context_omitted':1})
+    incomplete['requested_topics']=[{'id':'R1','status':'unresolved'}]
+    assert incomplete['completeness_proven'] is False
+    diagnostics=_stage_diagnostics(incomplete)
+    assert {d['stage'] for d in diagnostics}>={'retrieval_or_verification','answer_coverage','writer_context'}
+
+
 def test_dev_checklist_reports_missing_facts():
     from evaluation.audit import checklist
     result=checklist('C31','It is a Monte Carlo based pricing routine; 60,000 paths were used.')

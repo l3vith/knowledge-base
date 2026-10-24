@@ -8,9 +8,9 @@ ROOT = Path(__file__).resolve().parents[1]
 
 # Cost-aware defaults: the whole project shares a $10 OpenCode budget (dev + evaluation + hidden-test run).
 DEFAULT_BUDGETS = {
-    "factoid":    {"survey_pages_per_doc": 300,  "survey_cards_total": 400,  "verify_pages": 12,  "verify_chars": 40000,  "max_evidence": 40},
-    "analytical": {"survey_pages_per_doc": 600,  "survey_cards_total": 1000, "verify_pages": 50,  "verify_chars": 120000, "max_evidence": 200},
-    "exhaustive": {"survey_pages_per_doc": 1500, "survey_cards_total": 1800, "verify_pages": 120, "verify_chars": 240000, "max_evidence": 400},
+    "factoid":    {"survey_pages_per_doc": 1200, "survey_cards_total": 1600, "verify_pages": 48,  "verify_chars": 160000, "max_evidence": 160},
+    "analytical": {"survey_pages_per_doc": 2400, "survey_cards_total": 4000, "verify_pages": 200, "verify_chars": 480000, "max_evidence": 800},
+    "exhaustive": {"survey_pages_per_doc": 6000, "survey_cards_total": 7200, "verify_pages": 480, "verify_chars": 960000, "max_evidence": 1600},
 }
 
 
@@ -46,7 +46,8 @@ class Settings:
     llm_mode: str = "live"                     # env KB_LLM_MODE: "live" | "dryrun" (no network, estimated cost)
     llm_cache: bool = True                     # env KB_LLM_CACHE=0 disables the response cache (data/llm_cache.sqlite)
     page_cards_mode: str = "extractive"        # env KB_PAGE_CARDS: "extractive" ($0, default) | "llm" (~$1.75 per 7k pages)
-    budget_usd: float | None = None            # env KB_BUDGET_USD: hard cap on total spend recorded in the ledger
+    # The user reserved most of the stated $10 credit for the demo; dev/evaluation stops at $1.50 by default.
+    budget_usd: float | None = 1.50             # env KB_BUDGET_USD overrides this hard cap
     spend_ledger: Path | None = None           # env KB_SPEND_LEDGER; default data_dir / "spend.jsonl"
     data_dir: Path = Path("data")
     embed_model: str = "BAAI/bge-small-en-v1.5"
@@ -68,16 +69,16 @@ class Settings:
     boilerplate_min_pages: int = 3
     boilerplate_page_frac: float = 0.3
     boilerplate_max_chars: int = 300
-    router_max_docs: int = 8
-    router_max_cards: int = 120
-    survey_batch_cards: int = 60
-    lexical_net_pages_per_aspect: int = 5
-    element_hits_per_aspect: int = 40
-    escape_pages: int = 10
-    max_ce_pairs: int = 800
+    router_max_docs: int = 32
+    router_max_cards: int = 480
+    survey_batch_cards: int = 60  # batch size, not a retrieval ceiling
+    lexical_net_pages_per_aspect: int = 20
+    element_hits_per_aspect: int = 160
+    escape_pages: int = 40
+    max_ce_pairs: int = 3200
     ce_tau_low: float | None = None
     ce_tau_high: float | None = None
-    verify_chars_per_call: int = 24000
+    verify_chars_per_call: int = 96000
     query_max_chars: int = 32000
     budgets: dict = field(default_factory=lambda: copy.deepcopy(DEFAULT_BUDGETS))
 

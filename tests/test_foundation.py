@@ -62,10 +62,20 @@ def test_opencode_strips_fences_and_costs(monkeypatch, settings):
     assert abs(llm.usage.cost_usd - 0.62) < 1e-9  # 1M in x $0.15 + 1M out x $0.47
 
 
+def test_invalid_json_gets_one_accounted_syntax_repair(monkeypatch, tmp_path):
+    calls=_patch_post(monkeypatch,['{"keep": }','{"keep": []}'])
+    llm=OpenCodeLLM(get_settings(data_dir=tmp_path,llm_max_retries=1,budget_usd=1.5))
+    assert llm.complete_json('verify','original request',name='verify',max_tokens=100)=={'keep':[]}
+    assert len(calls)==2 and 'Malformed response' in calls[1]['messages'][0]['content']
+    assert llm.usage.calls==2 and llm.last_usage['input_tokens']==2_000_000
+
+
 def test_unknown_price_gives_null_cost(monkeypatch, tmp_path):
     _patch_post(monkeypatch, ["hello"])
     monkeypatch.setenv("PRICE_INPUT_PER_M", "")
-    llm = OpenCodeLLM(get_settings(data_dir=tmp_path))
+    # This test exercises the intentionally uncapped/unknown-price mode explicitly;
+    # the default development budget now refuses an unpriceable paid request.
+    llm = OpenCodeLLM(get_settings(data_dir=tmp_path, budget_usd=None))
     assert llm.complete_text("s", "u", name="answer") == "hello"
     assert llm.usage.cost_usd is None
 

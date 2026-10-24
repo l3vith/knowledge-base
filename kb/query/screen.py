@@ -140,7 +140,7 @@ def verify_elements(llm,store,plan,query,middle,settings,*,ctx=None,_allow_task_
         strong=re.compile(r"\b(cannot|unable|forecast\w*|not possible|not reasonably|uncertain\w*)\b",re.I)
         tail=sorted(enumerate(tail),key=lambda x:(
             -(8*len(strong.findall(get(x[1].element,'text','')))+len(cues.findall(get(x[1].element,'text','')))),x[0]))
-        extra=max(0,min(2,value(settings,'factoid_recovery_batches')))*value(settings,'verify_batch_elements')
+        extra=max(0,min(8,value(settings,'factoid_recovery_batches')))*value(settings,'verify_batch_elements')
         prepared=prefix+[c for _,c in tail[:extra]]
         report["bounded_candidates_not_verified"] = max(0,len(tail)-extra)
         report['recovery_batches']=0
@@ -328,30 +328,27 @@ def verify_elements(llm,store,plan,query,middle,settings,*,ctx=None,_allow_task_
                 if role in c.sources or obligation_ids.intersection(c.aspect_ids)
             ]
         selected=[];selected_ids=set();round_index=0
-        while len(selected)<value(settings,"verify_batch_elements") and any(
-                len(selected_ids & {get(c.element,"element_id") for c in candidate_queues[t['id']]})<deficits[t['id']]
-                for t in unresolved):
+        recovery_cap=min(4,value(settings,"task_recovery_batches"))*value(settings,"verify_batch_elements")
+        while len(selected)<recovery_cap and any(candidate_queues[t['id']] for t in unresolved):
             made_progress=False
             for task in unresolved:
-                task_id=task['id'];queue=candidate_queues[task_id]
-                already=sum(get(c.element,"element_id") in selected_ids for c in queue)
-                if already>=deficits[task_id]:
-                    continue
+                queue=candidate_queues[task['id']]
                 candidate=next((c for c in queue if get(c.element,"element_id") not in selected_ids),None)
                 if candidate is not None:
                     selected.append(candidate);selected_ids.add(get(candidate.element,"element_id"));made_progress=True
-                    if len(selected)>=value(settings,"verify_batch_elements"):
+                    if len(selected)>=recovery_cap:
                         break
             round_index+=1
-            if not made_progress or round_index>=value(settings,"verify_batch_elements"):
+            if not made_progress or round_index>=recovery_cap:
                 break
         recovery={'attempted':bool(selected),'unresolved_task_ids':[t['id'] for t in unresolved],
-                  'selected_elements':len(selected),'verified_fragments':0}
+                  'selected_elements':len(selected),'verified_fragments':0,'batches':0}
         if selected:
             try:
                 recovered,extra=verify_elements(llm,store,plan,query,selected,settings,ctx=ctx,
                                                 _allow_task_recovery=False)
                 recovery['verified_fragments']=extra['elements_seen']
+                recovery['batches']=extra['batches']
                 report['elements_seen']+=extra['elements_seen']
                 report['batches']+=extra['batches']
                 report['failed_batches']+=extra['failed_batches']
@@ -380,7 +377,7 @@ def verify_elements(llm,store,plan,query,middle,settings,*,ctx=None,_allow_task_
         else:
             report['omitted_fragments']+=len(denied_fragments)
         report['task_recovery']=recovery
-        report['task_recovery_batches']=1 if selected else 0
+        report['task_recovery_batches']=recovery['batches']
     elif budget_denied_batches:
         report['omitted_fragments']+=sum(len(item[0]) for item in budget_denied_batches)
     report["elements_kept"]=len(kept)

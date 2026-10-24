@@ -12,6 +12,24 @@ def plan():
     return QueryPlan("analytical",[Aspect("a1","calibration speed",["speed","calibration"])],["a"])
 
 
+def test_retrieval_limits_are_four_times_the_previous_baseline():
+    from kb.config import DEFAULT_BUDGETS
+    from kb.config import get_settings
+    from kb.query.settings import QuerySettings
+    s=QuerySettings()
+    assert s.survey_cards_total==4*400
+    assert s.verify_pages==4*200
+    assert s.lexical_net_pages_per_aspect==4*5
+    assert s.element_hits_per_aspect==4*40
+    assert s.escape_pages==4*20
+    assert s.max_ce_pairs==4*400
+    assert s.verify_chars_total==4*192000
+    assert s.verify_output_tokens==4*48000
+    assert s.task_recovery_batches==4*1
+    assert DEFAULT_BUDGETS['analytical']['verify_chars']==4*120000
+    assert get_settings().budget_usd==1.50
+
+
 def test_decisive_limitation_on_the_last_page_reaches_verification(tmp_path):
     store=MemoryStore({"a":PAGES});s=settings(tmp_path)
     pool,lexical,report=candidate_pages(store,plan(),"calibration speed and limitations",None,s)

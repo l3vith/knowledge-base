@@ -4,6 +4,22 @@ from pathlib import Path
 import re
 
 CHECKLISTS=Path(__file__).with_name('checklists.json')
+OFFICIAL_METRICS=('answer_precision','answer_recall','context_precision','context_recall')
+
+
+def metric_range_audit(metrics):
+    """Audit score ranges against the unchanged notebook definitions."""
+    values={name:metrics[name] for name in OFFICIAL_METRICS
+            if isinstance(metrics.get(name),(int,float)) and metrics[name]<0}
+    values.update({name:metrics[name] for name in ('answer_precision','answer_recall','context_precision')
+                   if isinstance(metrics.get(name),(int,float)) and metrics[name]>1})
+    ctx=metrics.get('context_recall')
+    unbounded={'context_recall':ctx} if isinstance(ctx,(int,float)) and ctx>1 else {}
+    return {'official_scores_unchanged':True,'out_of_range':values,
+            'unbounded_by_definition':unbounded,
+            'context_recall_formula':'LLM-judged relevant retrieved chunks / number of benchmark chunks; retrieved chunks are not deduplicated to unique gold chunks.',
+            'status':'review' if values else ('definition_caveat' if unbounded else 'within_expected_range'),
+            'note':'Context recall can exceed 1 under the official formula. Scores are not normalized or modified.'}
 
 
 def judge_consistency(metrics, answer, judge_calls=()):
@@ -41,6 +57,15 @@ def judge_consistency(metrics, answer, judge_calls=()):
     truncated=[c.get('request_sha256') for c in judge_calls if c.get('finish_reason') in ('length','max_tokens') or c.get('escalated')]
     if truncated:
         flags.append({'kind':'judge_response_truncated_at_notebook_limit','requests':truncated})
+    metric_audit=metric_range_audit(metrics)
+    out_of_range=metric_audit['out_of_range']
+    if out_of_range:
+        flags.append({'kind':'official_metric_out_of_unit_interval','values':out_of_range,
+                      'interpretation':'Official scores are preserved; inspect the evaluator formula and denominator.'})
+    if metric_audit['unbounded_by_definition']:
+        flags.append({'kind':'context_recall_above_one_allowed_by_official_formula',
+                      'values':metric_audit['unbounded_by_definition'],
+                      'formula':metric_audit['context_recall_formula']})
     return {'official_scores_unchanged':True,'flags':flags,
             'interpretation':'Flags require review; they do not compute corrected scores or prove semantic equivalence.'}
 
