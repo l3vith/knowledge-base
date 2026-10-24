@@ -3,6 +3,7 @@ from dataclasses import replace
 import re
 from .errors import BudgetExceeded
 from .types import Aspect, QueryPlan
+from .worksheet import compile_tasks
 from .settings import value
 from .utils import compact, get, terms
 
@@ -11,7 +12,13 @@ Do not answer or invent facts. Preserve every explicit entity, reporting period,
 identifier, negation and comparison axis. Produce factual obligations with entity/period slots.
 Navigation summaries may omit facts; answerable=false cannot prove collection absence.
 Return JSON: {intent: factoid|analytical|exhaustive, aspects:[{text,keywords,entity,period,scope}],
-documents:[{doc_id,reason}], notes:string}. Select all explicitly requested scopes. No hypothetical answer."""
+documents:[{doc_id,reason}], notes:string, tasks:[{operation:lookup|compare|reconcile|assess|inspect|absence,
+description:string,query_anchor:literal substring of query,obligation_ids:[a1-style IDs],source_roles:[specific required input/section/search phrase]}]}.
+For analytical questions split each requested operation into a task (at most 12). Distinguish target definition,
+data preparation/split, reported result robustness and generalisation if actually asked. For comparison/audit
+list the sections/roles whose evidence must be paired. Never assume an inconsistency exists.
+For factual lookup include the requested quantity and its underlying concept as source roles; retrieve explanations
+and qualifications if the premise is not established. Aspect IDs are a1,a2,... in the order returned. Select all explicitly requested scopes. No hypothetical answer."""
 
 
 def field(card, name, default=None):
@@ -131,7 +138,8 @@ def plan_query(llm, query, cards, settings, *, ctx=None):
     for row in raw_documents if isinstance(raw_documents,list) else []:
         if isinstance(row,dict) and isinstance(row.get("doc_id"),str) and row["doc_id"] not in docs:
             docs.append(row["doc_id"]); reasons[row["doc_id"]]=str(row.get("reason","model route"))
-    return QueryPlan(intent,aspects,docs,reasons,True,str(raw.get("notes","")),limitations)
+    return QueryPlan(intent,aspects,docs,reasons,True,str(raw.get("notes","")),limitations,
+                     compile_tasks(query,aspects,raw.get("tasks")))
 
 
 def guard_routing(plan, query, cards, store, settings):

@@ -93,6 +93,8 @@ def element_triage(candidates,plan,reranker,settings):
     if plan.intent!="factoid":
         # Conclusion/limitation passages go first (best-scored few): they state what results do not show.
         queues.insert(0,[c for c in ordered if "structure" in c.sources][:value(settings,"endmatter_hits")])
+    for task in plan.tasks:
+        queues.append([c for c in ordered if 'task_role:'+task['id'] in c.sources][:12])
     selected=[];seen=set();used=0;cap=budget(settings,plan.intent,"verify_chars")
     # Keep original candidates intact; screen.py creates visible bounded fragments.
     for i in range(max([len(q) for q in queues] or [0])):

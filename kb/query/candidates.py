@@ -1,5 +1,6 @@
 """M7: scoped candidates with independent lexical evidence and fair slot quotas."""
 from collections import defaultdict
+import re
 from .settings import value, budget
 from .types import Candidate
 from .utils import get, terms, rrf
@@ -58,6 +59,13 @@ def candidate_pages(store, plan, query, embedder, settings):
             pages=[p for d,p,s in hits if d==doc]
             net.update(pages);topic_hits[topic['id']]=pages
             slot_lists.append([(doc,p) for p in pages])
+        role_hits={}
+        for task in plan.tasks:
+            for role in task['source_roles']:
+                hits=store.search_pages(terms(role),[doc],2)
+                pages=[p for d,p,_ in hits if d==doc]
+                net.update(pages);role_hits[task['id']+':'+role]=pages
+                slot_lists.append([(doc,p) for p in pages])
         lexical[doc]=net
         source=store.search_pages(terms(query),[doc],cap)
         dense=_dense(store,embedder,[query]+[a.text for a in plan.aspects],[doc],cap,"pages",dense_cache)
@@ -71,7 +79,7 @@ def candidate_pages(store, plan, query, embedder, settings):
         selected=list(dict.fromkeys(metadata_pages+sorted(net)+ordered))[:cap]
 
         pools[doc]=selected
-        report["documents"][doc]={"available":len(all_pages),"mode":"all" if len(selected)==len(all_pages) else "bounded", "ranked_pages":selected,"requested_topic_hits":topic_hits}
+        report["documents"][doc]={"available":len(all_pages),"mode":"all" if len(selected)==len(all_pages) else "bounded", "ranked_pages":selected,"requested_topic_hits":topic_hits,"task_role_hits":role_hits}
     # Global fair cap: lexical obligation hits first, then round-robin across documents.
     selected=[]; seen=set()
     for rank in range(max([len(x) for x in slot_lists] or [0])):
@@ -147,6 +155,19 @@ def element_retrieval(store,plan,query,picks,escape,embedder,settings,*,navigati
         for el in store.elements_by_ids(ids):
             if get(el,"doc_id") in plan.doc_ids:
                 add(el,[aspect.aspect_id],"hybrid")
+    # Independent input queues: a comparison's operands need not mention a discrepancy.
+    role_count=0
+    for task in plan.tasks:
+        for role in task['source_roles']:
+            for eid,_ in store.search_elements(terms(role),plan.doc_ids,value(settings,'task_role_hits')) if plan.doc_ids else []:
+                for el in store.elements_by_ids([eid]):
+                    if get(el,'doc_id') in plan.doc_ids:
+                        add(el,task['obligation_ids'],'task_role:'+task['id']);role_count+=1
+    acronym_hints=source_acronyms(query,[c.element for c in merged.values()])
+    for hint in acronym_hints:
+        for eid,_ in store.search_elements([hint],plan.doc_ids,4) if plan.doc_ids else []:
+            for el in store.elements_by_ids([eid]):
+                if get(el,'doc_id') in plan.doc_ids:add(el,[a.aspect_id for a in plan.aspects],'source_acronym')
     if plan.intent!="factoid" and plan.doc_ids:
         # Conclusions and limitations often sit at a document's end and rank low for any one aspect; search them
         # explicitly (element FTS indexes the section title) so page rank alone cannot drop them.
@@ -169,4 +190,18 @@ def element_retrieval(store,plan,query,picks,escape,embedder,settings,*,navigati
                 if dependency_count>=value(settings,"metadata_dependency_elements"):break
     priority={"survey_high":0,"hybrid":1,"structure":1,"survey_lexical":2,"survey_medium":3,"source_dependency":3,"escape":4}
     result=sorted(merged.values(),key=lambda c:(min(priority.get(s,5) for s in c.sources),get(c.element,"doc_id"),get(c.element,"page_no"),get(c.element,"idx",0)))
-    return result,{"total":len(result),"by_source":{s:sum(s in c.sources for c in result) for s in priority}}
+    return result,{"total":len(result),"by_source":{s:sum(s in c.sources for c in result) for s in priority},"task_role_hits":role_count,"source_acronym_hints":acronym_hints}
+
+
+def source_acronyms(query,elements):
+    """Ambiguous source-declared expansions remain alternatives, never entity mappings."""
+    words=lambda t:{w.rstrip('s') for w in terms(t) if len(w)>2}
+    q=words(query);out=[]
+    for el in elements:
+        for phrase,acronym in re.findall(r'([A-Za-z][A-Za-z -]{5,100})\s*\(([A-Z][A-Z0-9]{1,9})\)',get(el,'text','')):
+            phrase=' '.join(phrase.split()[-10:])
+            if acronym.casefold() in query.casefold() or len(words(phrase)&q)>=2:
+                for hint in (acronym,phrase):
+                    if hint not in out:out.append(hint)
+            if len(out)>=12:return out[:12]
+    return out

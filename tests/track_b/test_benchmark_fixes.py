@@ -72,7 +72,10 @@ def test_factoid_uses_reserve_and_leaves_unread_work_visible(tmp_path):
     calls=[]
     def respond(name,p):
         calls.append(p)
-        return {'keep':[]} if len(calls)==1 else FakeLLM.default(name,p)
+        if len(calls)==1:return {'keep':[]}
+        result=FakeLLM.default(name,p)
+        for row,e in zip(result['keep'],p['elements']):row['fact_value']=next(iter(e['source_spans'].values())).strip()
+        return result
     evidence,report=verify_elements(FakeLLM(respond),store,plan('factoid'),'How many trials?',
                         [Candidate(e,['a1'],['fts']) for e in store.elements],settings(tmp_path))
     assert len(calls)==2 and len(evidence)==8

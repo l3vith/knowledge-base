@@ -73,7 +73,7 @@ def answer_query(collection,query,*,store,generation_id,settings,llm,embedder=No
                     out.update(skipped=True,reason="baseline control",obligations=plain(plan.aspects))
                 else:
                     plan=plan_query(ctx.llm,query,list(cards.values()),settings,ctx=ctx)
-                    out.update(intent=plan.intent,obligations=plain(plan.aspects),notes=plan.notes,limitations=plan.limitations)
+                    out.update(intent=plan.intent,obligations=plain(plan.aspects),tasks=plan.tasks,notes=plan.notes,limitations=plan.limitations)
             with ctx.stage(STEP_NAMES[1],DESCRIPTIONS[1],{"planned_doc_ids":plan.doc_ids}) as out:
                 current_stage=1
                 if mode=="baseline":
@@ -137,6 +137,12 @@ def answer_query(collection,query,*,store,generation_id,settings,llm,embedder=No
                     evidence,report=verify_elements(ctx.llm,store,plan,query,middle,settings,ctx=ctx)
                     out.update(report);limits.extend(report["limitations"])
                     counts["raw_fragments_verified"]=report["elements_seen"]
+                    counts['verification_candidates']=report.get('prepared_candidates',len(middle))
+                    counts['verification_remaining']=report.get('remaining_candidates',0)
+                    counts['verification_budget_omitted']=report['omitted_fragments']
+                    counts['recovery_batches']=report.get('recovery_batches',0)
+                    if report.get('remaining_candidates'):
+                        limits.append(f"{report['elements_seen']} source fragments verified; {report['remaining_candidates']} remain unchecked (bounded verification)")
                     if report["omitted_fragments"]:
                         limits.append(f"{report['omitted_fragments']} source fragments not verified within budget")
                 else:
@@ -175,6 +181,7 @@ def answer_query(collection,query,*,store,generation_id,settings,llm,embedder=No
                 out.update(verified_not_in_writer_context=len(rest))
             coverage=_coverage(plan,numbered,draft.claims,limits+draft.limitations,counts)
             coverage["requested_topics"]=draft.requested_topics
+            coverage['task_worksheet']=draft.worksheet
             unresolved=any(a["status"]!="supported" for a in coverage["aspects"])
             if draft.claims:
                 status="partial" if coverage["limitations"] or unresolved or draft.status=="partial" else "answered"

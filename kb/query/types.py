@@ -23,6 +23,7 @@ class QueryPlan:
     answerable: bool = True
     notes: str = ""
     limitations: list[str] = field(default_factory=list)
+    tasks: list[dict[str, Any]] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -96,3 +97,4 @@ class AnswerDraft:
     requested_topics: list[dict[str, Any]] = field(default_factory=list)
     ledger_records: list[dict[str, Any]] = field(default_factory=list)
     facts: list[dict[str, Any]] = field(default_factory=list)  # synthesis fact inventory the final answer must carry
+    worksheet: list[dict[str, Any]] = field(default_factory=list)
