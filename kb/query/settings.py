@@ -32,6 +32,9 @@ class QuerySettings:
     factoid_reserve_elements: int = 8
     factoid_recovery_batches: int = 2  # extra targeted tranches; never an unbounded scan
     task_role_hits: int = 4
+    dynamic_evidence_selection: bool = True
+    dynamic_max_verification_batches: int = 8
+    dynamic_preview_chars: int = 220
     verify_chars_per_call: int = 12000
     verify_chars_total: int = 192000
     max_evidence: int = 450
