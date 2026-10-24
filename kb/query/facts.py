@@ -17,6 +17,14 @@ _LIMIT = re.compile(r"\b(?:cannot|can ?not|not (?:be |been |possible|guaranteed|
                     r"recommend\w*|depend\w* on|sensitive|instabilit\w*|unstable|bias\w*|risk\w*)\b", re.I)
 # Test conditions the answer must state: hardware, data and tested scope.
 _SETUP = re.compile(r"\b(?:GPUs?|CPUs?|cores|parallelis\w*|parallel|hardware|standard PC|synthetic\w*|market data)\b", re.I)
+# Qualitative findings a theory paper is made of: what a parameter or variable does, and evidence the source cites
+# ("σ increases the kurtosis", "positive correlation ... increases the prices of out-of-the-money options",
+# "Lamoureux and Lastrapes (1993) present evidence that ..."). Without these, C17 (Heston) kept 15 facts and missed
+# most of its benchmark; on C18 they add 11 of 79 facts.
+_EFFECT = re.compile(r"\b(?:increase[sd]?|decrease[sd]?|raises?|lowers?|reduces?|spreads?|affects?|controls?|determines?|"
+                     r"drives?|depends? on|leads? to|results? in|causes?|implies|is equivalent to|positively|negatively|"
+                     r"has (?:little|no|a) (?:substantial |significant )?effect|fat (?:left|right) tail|"
+                     r"presents? evidence|reports? that|reported that|finds? that|found that|shows? that|demonstrates?)\b", re.I)
 _BACKGROUND = re.compile(r"^(?:\*\*|#)|\b(?:is defined as|we define|let us|in this paper we|this paper|the rest of the paper|"
                          r"is organi[sz]ed|see \[|following \[|for example|e\.g\.)", re.I)
 _STRONG_UNIT = re.compile(r"%|percent|times|x\b|×|ms\b|milli|micro|µs|seconds?|\bs\b|minutes?|hours?|days?|weeks?|months?|years?|"
@@ -37,7 +45,7 @@ def is_fact(sentence):
     # A bare count of 1,000 or more ("only 20,000 were evaluated") is a result figure too.
     if any(float(n.replace(",", "")) >= 1000 for n in re.findall(r"\b\d{1,3}(?:,\d{3})+\b|\b\d{4,}\b", clean)):
         return True
-    return bool(_LIMIT.search(clean) or _SETUP.search(clean))
+    return bool(_LIMIT.search(clean) or _SETUP.search(clean) or _EFFECT.search(clean))
 
 
 # Never an answer on their own: train/test splits, measurement or sampling procedure, and sentences describing a

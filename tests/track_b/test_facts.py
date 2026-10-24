@@ -12,6 +12,10 @@ def test_results_limits_and_conditions_are_facts_but_background_is_not():
     assert is_fact("They were obtained using a standard PC computer, with _i_ 7 cores; no parallelisation nor GPUs were used.")
     assert is_fact("Chebyshev Tensors do not extrapolate outside the domain.")
     assert not is_fact("A grid of 7 points per dimension was chosen for the Chebyshev Tensor.")
+    # Theory papers: stated effects of parameters and evidence the source cites are findings too.
+    assert is_fact("The correlation parameter ρ positively affects the skewness of spot returns.")
+    assert is_fact("Otherwise, σ increases the kurtosis of spot returns.")
+    assert is_fact("Lamoureux and Lastrapes (1993) present evidence that this term is nonzero for equity options.")
     assert not is_fact("Section 3 describes the method in detail.")
 
 
