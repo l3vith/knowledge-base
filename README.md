@@ -60,8 +60,12 @@ Latest source-selection benchmark and remaining limitations: [extractive writer 
 
 Latest analytical routing/coverage repair and measured limits: [repair benchmark](docs/diagnostics/coverage-repair/REPORT.md).
 
-Experimental relational findings and guarded synthesis: [ledger trial](docs/diagnostics/ledger-trial/REPORT.md). Opt in with `KB_ANALYTICAL_WRITER=ledger`; default remains extractive.
+Experimental relational findings and guarded synthesis: [ledger trial](docs/diagnostics/ledger-trial/REPORT.md). Opt in with `KB_ANALYTICAL_WRITER=ledger`; the source-ID ledger remains opt-in. The current serving environment defaults to `synthesis`; bare `QuerySettings()` remains extractive.
 
 Latest **full-pipeline ledger benchmark**: [report](docs/diagnostics/ledger-full/REPORT.md). Analytical recall regressed; ledger remains off by default.
 
 Ledger source-ID repair: [implementation and zero-cost replay](docs/SOURCE_ID_LEDGER_FIX.md). Integrated mode removes the separate extraction call. [Fresh benchmark](docs/diagnostics/source-id-full/REPORT.md): zero source-ID rejections, 74.19s analytical latency; answer quality remains unresolved and judge matching is contradictory.
+
+Latest team update and evidence-integrity repairs: [implementation, offline evidence and remaining limits](docs/diagnostics/post-merge-integrity/IMPLEMENTATION.md). The source-ID ledger reports above describe historical modes/runs; use the new report for current synthesis behavior.
+
+GLM 5.3 Flash judging and post-merge fixes: [measured results, subsequent offline changes and cost accounting](docs/diagnostics/post-merge-integrity/REPORT.md). Configure the judge independently with `OPENCODE_JUDGE_MODEL`; the answer model stays Qwen.

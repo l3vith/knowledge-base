@@ -1,6 +1,6 @@
 """Regression cases for failures found after the teammate synthesis merge."""
 from dataclasses import replace
-from kb.query.facts import states, inventory, trim_secondary, is_fact
+from kb.query.facts import states, inventory, trim_secondary, is_fact, select_facts
 from kb.query.answer import (source_spans, generate_answer, verify_answer, _restore_facts,
                              _synthesis_calculation, _calculation_text, _repeats)
 from kb.query.types import Evidence, Claim, AnswerDraft, QueryPlan, Aspect
@@ -93,3 +93,39 @@ def test_split_citation_points_and_messages_truncation_are_visible():
     audit=judge_consistency(metrics,'A result. [a.pdf p15]',[{'request_sha256':'r','finish_reason':'max_tokens'}])
     assert len([f for f in audit['flags'] if f['kind']=='citation_present_but_judge_marks_missing'])==2
     assert any(f['kind']=='judge_response_truncated_at_notebook_limit' for f in audit['flags'])
+
+
+def test_shared_source_budget_preserves_limitation_and_is_id_order_invariant():
+    facts=[{'id':'F1','doc_id':'a','page':1,'text':'Build cost was 1,000 calls.','section':'Build cost'},
+        {'id':'F2','doc_id':'a','page':2,'text':'Build cost was 2,000 calls.','section':'Build cost'},
+        {'id':'F3','doc_id':'a','page':23,'text':'The surrogate cannot extrapolate outside its domain.','section':'Limitations'},
+        {'id':'F4','doc_id':'a','page':18,'text':'The accuracy error was 0.05 percent.','section':'Accuracy'}]
+    topics=[{'id':'R1','text':'build cost'},{'id':'R2','text':'accuracy'},{'id':'R3','text':'limitations'}]
+    cap=sum(len(f['text']) for f in facts)-len(facts[1]['text'])
+    a,audit=select_facts(facts,'accuracy, build cost and limitations',topics,cap)
+    b,_=select_facts([{**f,'id':'Z'+str(i)} for i,f in enumerate(reversed(facts))],
+                     'accuracy, build cost and limitations',topics,cap)
+    assert {f['text'] for f in a}=={f['text'] for f in b}
+    assert facts[2]['text'] in {f['text'] for f in a}
+    assert facts[3]['text'] in {f['text'] for f in a}
+    assert audit['source_chars']<=cap and audit['omitted_ids']
+
+
+def test_validation_request_does_not_preserve_unrelated_grid_recipes():
+    facts=[{'id':'F1','doc_id':'a','text':'The 1,000 combinations were obtained by randomly sampling the domain.'},
+        {'id':'F2','doc_id':'a','text':'For each parameter one must choose the number of points per dimension.'}]
+    kept,trimmed=trim_secondary(facts,'Assess validation and production controls')
+    assert [f['id'] for f in kept]==['F1'] and trimmed[0][0]['id']=='F2'
+
+
+def test_private_retry_metadata_is_not_sent_to_provider_and_budget_errors_do_not_split():
+    from kb.query.answer import _call_split
+    seen=[]
+    def respond(n,p):
+        seen.append(p)
+        assert '_group' not in p
+        raise RuntimeError('Hard spend ceiling: next request denied')
+    pairs=_call_split(FakeLLM(respond),None,'answer_verify','check',
+        [{'claims':[{'claim_id':'c1'}],'_group':['large repeated source metadata']}],lambda p:100,
+        lambda p: (_ for _ in ()).throw(AssertionError('budget denial must not split/retry')))
+    assert len(seen)==1 and isinstance(pairs[0][1],RuntimeError)

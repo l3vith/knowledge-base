@@ -66,9 +66,11 @@ def trim_secondary(facts,query=''):
     kept, trimmed = [], []
     words = lambda s: set(re.findall(r"[a-z]{4,}", s.casefold()))
     validation_requested=bool(re.search(r'validat|monitor|controls?|soundness|train|test|method|setup|sampl|reproduc',query,re.I))
+    method_requested=bool(re.search(r'method|setup|sampl|reproduc|how .*work|mechanic|deriv',query,re.I))
     for f in facts:
         text, figures = f["text"], numbers(f["text"])
-        reason = ("train/test split" if _SPLIT.search(text) and not validation_requested else "procedure" if _PROCEDURE.search(text) and not validation_requested
+        data_procedure=validation_requested and bool(re.search(r'sampl|synthetic|market data|training|testing',text,re.I))
+        reason = ("train/test split" if _SPLIT.search(text) and not validation_requested else "procedure" if _PROCEDURE.search(text) and not (method_requested or data_procedure)
                   else "plot description" if _PLOT.search(text) else None)
         if reason is None and figures:
             twin = next((k for k in kept if numbers(k["text"]) == figures and k["doc_id"] == f["doc_id"]
@@ -77,6 +79,60 @@ def trim_secondary(facts,query=''):
             reason = "repeat of " + twin["id"] if twin else None
         (trimmed.append((f, reason)) if reason else kept.append(f))
     return kept, trimmed
+
+
+_AXIS_TERMS=(
+    (r'accur|precision|recall|error|outcomes|validat',r'accur|error|rmse|quantile|validat|synthetic'),
+    (r'speed|latency|runtime|throughput',r'speed|faster|runtime|seconds?|minutes?|hours?|processor|parallel|gpu'),
+    (r'cost|build|construction|training',r'cost|build|construction|calls|grid|points|rank|memory|footprint|offline|reuse'),
+    (r'limit|caveat|assum|outside|domain',r'limit|caveat|cannot|not know|unknown|domain|extrapolat|convergence'),
+    (r'soundness',r'synthetic|assum|domain|tested|approximat'),
+    (r'monitor',r'market|rebuild|change|weeks|months|reuse'),
+    (r'control|safeguard|requirement',r'domain|constraint|test|validat|project|expect|rebuild|fallback'),
+)
+
+
+def select_facts(facts,query,topics,max_chars):
+    """A shared source budget; reserve coverage and limitations before extra detail.
+
+    Local topic hits guide selection, never certify support. IDs and input order do
+    not decide retention. Only selected facts are mandatory for writer restoration.
+    """
+    remaining=sorted(facts,key=lambda f:(f.get('doc_id',''),f.get('page') or 0,
+        f.get('char_start',0),f.get('section',''),f['text']))
+    chosen=[];used=0;counts={};seen=set()
+    def hits(f):
+        text=f['text']+' '+f.get('section','')
+        return {i for i,t in enumerate(topics) if any(re.search(a,t['text'],re.I) and re.search(b,text,re.I) for a,b in _AXIS_TERMS)}
+    keys={f['id']:hits(f) for f in facts}
+    def cost(f):return len(f['text'])+f.get('context_chars',0)
+    def merit(f):
+        gain=sum(1/(1+counts.get(t,0))**2 for t in keys[f['id']])
+        novelty=len(numbers(f['text'])-seen)
+        return (2*gain+.5*min(3,novelty)+.2)/max(60,cost(f))**.45
+    def add(f):
+        nonlocal used
+        chosen.append(f);remaining.remove(f);used+=cost(f);seen.update(numbers(f['text']))
+        for k in keys[f['id']]:counts[k]=counts.get(k,0)+1
+    if re.search(r'limit|control|soundness|monitor|domain',query,re.I):
+        reserve=int(max_chars*.2)
+        while True:
+            options=[f for f in remaining if _LIMIT.search(f['text']) and used+cost(f)<=reserve]
+            if not options:break
+            f=max(options,key=merit)
+            if chosen and keys[f['id']] and all(counts.get(k,0) for k in keys[f['id']]):break
+            add(f)
+    while True:
+        options=[f for f in remaining if used+cost(f)<=max_chars]
+        if not options:break
+        add(max(options,key=merit))
+    ids={f['id'] for f in chosen}
+    selected=[f for f in facts if f['id'] in ids]
+    return selected,{'candidate_facts':len(facts),'selected_facts':len(selected),'source_chars':used,
+        'source_char_cap':max_chars,'omitted_ids':[f['id'] for f in facts if f['id'] not in ids],
+        'topic_candidate_hits':{t['id']:sum(i in k for k in keys.values()) for i,t in enumerate(topics)},
+        'topic_selected_hits':{t['id']:counts.get(i,0) for i,t in enumerate(topics)},
+        'warning':'Lexical selection coverage only; not gold recall or semantic support.'}
 
 
 def numbers(text):
@@ -149,5 +205,6 @@ def inventory(numbered, spans, topics):
             facts.append({"id": f"F{len(facts)+1}", "evidence_id": eid, "span_id": sid, "context_span_ids": context,
                           "text": display_source(sentence), "topic": topic or (ev.aspect_ids[0] if ev.aspect_ids else ""),
                           "doc_id": getattr(ev.element, "doc_id", ""), "page": getattr(ev.element, "page_no", None),
-                          "section": section,"scope":scope,"char_start":getattr(ev.element,'char_start',0)+offset})
+                          "section": section,"scope":scope,"char_start":getattr(ev.element,'char_start',0)+offset,
+                          "context_chars":sum(len(spans[eid][c]) for c in context)})
     return facts

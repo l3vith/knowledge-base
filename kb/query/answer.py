@@ -267,16 +267,19 @@ def _calculation_text(calc):
 
 
 def _call_split(llm,ctx,name,system,payloads,limit,split):
-    """Run payloads in parallel. A call that fails or is cut off at its output limit (not a budget stop) is split
-    in two and run once more: the same request would fail the same way. Returns (payload, result) pairs."""
-    results=_call_many(llm,ctx,name,system,payloads,[limit(x) for x in payloads])
+    """Split a schema/truncation failure once; never retry budget or transport failures.
+    Private retry state stays local. Returns (original payload, result) pairs.
+    """
+    wire=lambda p:{k:v for k,v in p.items() if not k.startswith('_')}
+    results=_call_many(llm,ctx,name,system,[wire(p) for p in payloads],[limit(x) for x in payloads])
     out=[]
     for payload,result in zip(payloads,results):
-        halves=split(payload) if isinstance(result,Exception) and not isinstance(result,BudgetExceeded) else None
+        schema_error=(isinstance(result,ValueError) or isinstance(result,QueryError) and result.code=='MODEL_SCHEMA')
+        halves=split(payload) if schema_error and not isinstance(result,BudgetExceeded) else None
         out.append(halves or [(payload,result)])
     retry=[h for group in out if group and not isinstance(group[0],tuple) for h in group]
     if retry:
-        again=iter(zip(retry,_call_many(llm,ctx,name,system,retry,[limit(x) for x in retry])))
+        again=iter(zip(retry,_call_many(llm,ctx,name,system,[wire(p) for p in retry],[limit(x) for x in retry])))
         out=[group if isinstance(group[0],tuple) else [next(again) for _ in group] for group in out]
     return [pair for group in out for pair in group]
 
@@ -317,11 +320,13 @@ _APPRAISAL_TOPICS=re.compile(r"limitation|caveat|assumption|control|safeguard|re
 def generate_synthesis(llm,query,plan,numbered,settings,*,ctx=None):
     """Code picks the content (the fact inventory), writers only phrase it, and a coverage check puts back any fact
     the written answer lost. Writers run in parallel, one per topic group, each with the evidence holding its facts."""
-    from .facts import inventory,states,trim_secondary
+    from .facts import inventory,states,trim_secondary,select_facts
     spans=source_spans(numbered)
     aspect_ids={a.aspect_id for a in plan.aspects}
     topics=requested_topics(query,plan.intent)
     facts,trimmed=trim_secondary(inventory(numbered,spans,topics),query)
+    facts,selection=select_facts(facts,query,topics,value(settings,'analytical_fact_chars'))
+    if ctx:ctx.save('answer_fact_selection',selection)
     appraise=plan.intent!="factoid"
     page=lambda eid:(get(numbered[eid].element,"doc_id"),get(numbered[eid].element,"page_no"),get(numbered[eid].element,"idx",0))
     block=lambda eids:[{"id":eid,"doc_id":get(numbered[eid].element,"doc_id"),"page":get(numbered[eid].element,"page_no"),
@@ -367,7 +372,7 @@ def generate_synthesis(llm,query,plan,numbered,settings,*,ctx=None):
     by_span={}
     for f in facts:
         by_span.setdefault((f["evidence_id"],f["span_id"]),[]).append(f)
-    claims=[];rejections=[];gaps=0;seen=[];covered=set()
+    claims=[];rejections=[];gaps=0;seen=[];covered=set();summaries=0
     max_gaps=max(10,2*len(topics))
     for s,(payload,section) in enumerate((payload,sec) for payload,raw in raws for sec in raw["sections"]):
         rows=section.get("statements") if isinstance(section,dict) else None
@@ -404,20 +409,29 @@ def generate_synthesis(llm,query,plan,numbered,settings,*,ctx=None):
                     if quote not in quotes:quotes.append(quote)
                     eids.append(operand['evidence_id'])
             text=_calculation_text(calc) if calc else _labelled(row["kind"],display_source(row["text"]))
+            if row['kind']=='finding' and re.search(r'\b(?:supervisors?|regulator\w*)\b',text,re.I) and not any(
+                    re.search(r'\b(?:supervisors?|regulator\w*)\b',q['quote'],re.I) for q in quotes):
+                reject('unproven_supervisory_authority');continue
             docs=frozenset(get(numbered[e].element,"doc_id") for e in eids)
             scope=tuple(sorted(cited)) if cited else ('gap',)
             if _repeats(text,seen,docs,scope):
                 reject("duplicate_statement");continue
-            seen.append((text,docs,scope))
             # A fact counts as written only if this statement cites its sentence and keeps all its figures (whether or
             # not the writer listed its ID; an appraisal statement can carry a fact too).
             carried=[f["id"] for key in cited for f in by_span.get(key,[]) if row['kind']=='finding' and states(text,f)]
+            summary=payload['short_answer'] and heading.strip().casefold()=='short answer' and summaries<3
+            if facts and row['kind']=='finding' and not carried and not summary:
+                reject('finding_outside_selected_inventory');continue
+            if summary:summaries+=1
+            seen.append((text,docs,scope))
             covered.update(carried)
             claims.append(Claim(f"c{len(claims)+1}",text,list(dict.fromkeys(eids)),aids,quotes,calc,
                                 section=heading.strip(),kind=row["kind"],fact_ids=carried))
     restored=_restore_facts([f for f in facts if f["id"] not in covered],numbered,spans,claims,topics)
     raw_limits=[x for _,raw in raws for x in (raw.get("limitations") if isinstance(raw.get("limitations"),list) else []) if isinstance(x,str)]
     limits=list(plan.limitations)+raw_limits
+    if selection['omitted_ids']:
+        limits.append(f"{len(selection['omitted_ids'])} candidate facts omitted by relevance/coverage source budget")
     invalid=[r for r in rejections if r["reason"]!="duplicate_statement"]  # a repeat dropped is not missing support
     if invalid:
         limits.append(f"{len(invalid)} draft statements rejected for invalid source support")

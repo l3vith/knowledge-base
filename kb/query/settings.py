@@ -58,6 +58,7 @@ class QuerySettings:
     # Synthesis: code picks the facts, each writer phrases at most this many; writer count and every output limit are
     # computed from the facts. Claim checks run in parallel batches of claims_per_check.
     facts_per_writer: int = 12
+    analytical_fact_chars: int = 8000  # shared source budget; topic coverage beats restoring every candidate
     max_answer_writers: int = 10
     claims_per_check: int = 12
     artifact_dir: Path = Path("artifacts/runs")

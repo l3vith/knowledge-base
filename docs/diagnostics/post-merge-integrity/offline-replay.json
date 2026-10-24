@@ -1,0 +1,13 @@
+{
+  "scope": "Offline inventory replay on the same 52 saved C18 writer fragments; no fresh retrieval/generation/judging",
+  "baseline_commit": "4c5522f",
+  "source_fragments": 52,
+  "baseline_facts": 64,
+  "current_facts": 78,
+  "baseline_trimmed": 8,
+  "current_trimmed": 4,
+  "baseline_unrelated_sentence_carries_qualitative": true,
+  "current_unrelated_sentence_carries_qualitative": false,
+  "paid_calls": 0,
+  "cost_usd": 0
+}

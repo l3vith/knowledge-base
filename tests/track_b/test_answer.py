@@ -237,7 +237,7 @@ def test_synthesis_writes_each_obligation_group_in_parallel_with_its_own_evidenc
     # Two one-fact topics fit one writer (facts_per_writer), so they are packed; the appraisal writer sees everything.
     assert sorted(seen)==[(["E1","E2"],False,"appraisal"),(["E1","E2"],True,"findings")]
     texts=[c.text for c in draft.claims]
-    assert texts.count("Same sentence.")==1 and "Liquidity was 140 percent." in texts and len(texts)==3
+    assert texts.count("Same sentence.")==0 and "Liquidity was 140 percent." in texts and len(texts)==2
 
 
 def big_case(tmp_path,n_facts,respond,**kw):
@@ -285,7 +285,7 @@ def test_statement_dropping_a_figure_does_not_count_and_the_fact_is_restored(tmp
         st=[{"kind":"finding","text":"Test run number 0 was fast.","cites":[{"evidence_id":f["evidence_id"],"span_ids":[f["span_id"]]}]}] if f else []
         return {"status":"answered","sections":[{"heading":"Speed","statements":st}]}
     draft,_,_=big_case(tmp_path,1,respond)
-    assert [c.text for c in draft.claims]==["Test run number 0 was fast.","Test run number 0 took 1 seconds to finish."]
+    assert [c.text for c in draft.claims]==["Test run number 0 took 1 seconds to finish."]
 
 
 def test_check_batches_scale_and_a_failed_batch_is_split(tmp_path):

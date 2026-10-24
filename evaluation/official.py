@@ -15,7 +15,7 @@ def load_notebook_namespace(ipynb,expected_hash=EXPECTED_EVALUATOR_SHA256,config
         raise ValueError("official evaluator hash differs; inspect and explicitly pin the provided original")
     notebook=json.loads(original)
     cfg={"OPENCODE_API_KEY":os.getenv("OPENCODE_API_KEY",""),
-         "OPENCODE_MODEL":os.getenv("OPENCODE_MODEL",os.getenv("LLM_MODEL","qwen3.8-flash")),
+         "OPENCODE_MODEL":os.getenv("OPENCODE_JUDGE_MODEL",os.getenv("OPENCODE_MODEL",os.getenv("LLM_MODEL","qwen3.8-flash"))),
          "OPENCODE_BASE_URL":os.getenv("OPENCODE_BASE_URL","https://opencode.ai/inference/openai/v1/chat/completions")}
     if config:
         cfg.update(config)
@@ -87,7 +87,7 @@ def evaluate_file(run_path,api_key=None,notebook=None,expected_hash=EXPECTED_EVA
 class OfficialJudgeTransport:
     """Use the shared Messages/OpenAI transport without changing official metric logic.
 
-    A non-Qwen judge (OPENCODE_MODEL=deepseek-v4.1-flash, the notebook default) never goes through the
+    A non-Qwen judge (OPENCODE_JUDGE_MODEL=glm-5.3-flash) never goes through the
     system's Qwen-only client: it is sent exactly like the notebook's OpenCodeClient payload, plus CLI auth."""
     def __init__(self,key,model,base_url):
         from kb.config import get_settings
@@ -102,7 +102,8 @@ class OfficialJudgeTransport:
         else:
             self.client=None
             self.settings=get_settings()
-            self.prices=(float(os.getenv("JUDGE_PRICE_INPUT_PER_M","0.30")),float(os.getenv("JUDGE_PRICE_OUTPUT_PER_M","1.20")))
+            defaults=("0.15","0.50") if model=='glm-5.3-flash' else ("0.30","1.20")
+            self.prices=(float(os.getenv("JUDGE_PRICE_INPUT_PER_M",defaults[0])),float(os.getenv("JUDGE_PRICE_OUTPUT_PER_M",defaults[1])))
             # DeepSeek thinks by default and can spend the notebook's whole 10,000-token limit before answering.
             # Our runs use "low" to save credit; JUDGE_REASONING_EFFORT=default sends the notebook's exact payload.
             self.effort=os.getenv("JUDGE_REASONING_EFFORT","low")
@@ -136,7 +137,8 @@ class OfficialJudgeTransport:
             self.log.append({"request_sha256":key,"cached":True,"max_tokens":max_tokens})
             return json.loads(cached.read_text(encoding="utf-8"))
         last=None
-        for attempt in range(max_retries):
+        attempts=1 if self.model=='glm-5.3-flash' else max_retries
+        for attempt in range(attempts):
             try:
                 resp=requests.post(self.base_url,headers={**auth,"Content-Type":"application/json"},json=payload,timeout=120)
                 resp.raise_for_status();data=resp.json()
@@ -149,7 +151,7 @@ class OfficialJudgeTransport:
                 # The same request fails the same way at temperature 0, so one retry with a larger limit, never a repeat.
                 # Counted: the official notebook (10,000 tokens) would have errored on this call.
                 big=int(os.getenv("JUDGE_MAX_TOKENS_ESCALATED","32000"))
-                if choice.get("finish_reason")=="length" and max_tokens<big:
+                if self.model!='glm-5.3-flash' and choice.get("finish_reason")=="length" and max_tokens<big:
                     self.over_notebook_limit+=1
                     self.log.append({"request_sha256":key,"finish_reason":"length","output_tokens":o,"max_tokens":max_tokens,"escalated":True})
                     return self.call_structured(system_prompt,user_prompt,big,temperature,max_retries)

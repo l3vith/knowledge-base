@@ -1,0 +1,208 @@
+{
+  "git_commit": "8fb19109cdfc8373b4d9ac4e4455d84305e8b829",
+  "scope": "single-document development smoke, two public questions; not held-out accuracy",
+  "document": "2012.07440v3.pdf",
+  "model": "qwen3.8-flash",
+  "judge_model": "glm-5.3-flash",
+  "judge_reasoning_effort": "low",
+  "query_deadline_s": 30,
+  "hard_cost_cap_usd": 0.05,
+  "status": "completed",
+  "protected_inputs_unchanged": true,
+  "total_cost_usd": 0.032465984,
+  "cost_upper_bound_usd": 0.04538086000000001,
+  "interrupted_qwen_judge_cost_unknown_reserved_usd": 0.0058334,
+  "results": [
+    {
+      "id": "C31",
+      "status": "answered",
+      "query_latency_seconds": 15.058388,
+      "answer_characters": 125,
+      "returned_chunks": 1,
+      "official_metrics": {
+        "answer_precision": 0.0,
+        "answer_recall": 1.0,
+        "context_precision": 1.0,
+        "context_recall": 1.0
+      },
+      "judge_audit": {
+        "official_scores_unchanged": true,
+        "flags": [
+          {
+            "kind": "all_answer_points_extra_despite_benchmark_matches",
+            "matched_benchmark_count": 1,
+            "extra_answer_count": 3
+          }
+        ],
+        "interpretation": "Flags require review; they do not compute corrected scores or prove semantic equivalence."
+      },
+      "requested_topics": [],
+      "limitations": [],
+      "trace_steps": 10
+    },
+    {
+      "id": "C18",
+      "status": "partial",
+      "query_latency_seconds": 75.970566,
+      "answer_characters": 17349,
+      "returned_chunks": 64,
+      "official_metrics": {
+        "answer_precision": 0.34782608695652173,
+        "answer_recall": 0.8275862068965517,
+        "context_precision": 1.0,
+        "context_recall": 1.3061224489795917
+      },
+      "judge_audit": {
+        "official_scores_unchanged": true,
+        "flags": [
+          {
+            "kind": "citations_in_answer_dropped_by_decomposition"
+          }
+        ],
+        "interpretation": "Flags require review; they do not compute corrected scores or prove semantic equivalence."
+      },
+      "requested_topics": [
+        {
+          "id": "R1",
+          "text": "conceptual soundness",
+          "query_start": 49,
+          "query_end": 69,
+          "status": "supported",
+          "claim_ids": [
+            "c4",
+            "c5",
+            "c6",
+            "c7",
+            "c8",
+            "c9",
+            "c10",
+            "c18",
+            "c19",
+            "c20"
+          ]
+        },
+        {
+          "id": "R2",
+          "text": "ongoing monitoring",
+          "query_start": 71,
+          "query_end": 89,
+          "status": "unresolved",
+          "claim_ids": []
+        },
+        {
+          "id": "R3",
+          "text": "outcomes analysis",
+          "query_start": 91,
+          "query_end": 108,
+          "status": "supported",
+          "claim_ids": [
+            "c1",
+            "c11",
+            "c21",
+            "c22",
+            "c23",
+            "c24"
+          ]
+        },
+        {
+          "id": "R4",
+          "text": "outside its original purpose",
+          "query_start": 139,
+          "query_end": 167,
+          "status": "supported",
+          "claim_ids": [
+            "c12",
+            "c13",
+            "c14",
+            "c15",
+            "c16",
+            "c17"
+          ]
+        },
+        {
+          "id": "R5",
+          "text": "accuracy",
+          "query_start": 380,
+          "query_end": 388,
+          "status": "supported",
+          "claim_ids": [
+            "c1",
+            "c11",
+            "c20",
+            "c21",
+            "c22",
+            "c23",
+            "c24"
+          ]
+        },
+        {
+          "id": "R6",
+          "text": "speed",
+          "query_start": 390,
+          "query_end": 395,
+          "status": "supported",
+          "claim_ids": [
+            "c21",
+            "c23"
+          ]
+        },
+        {
+          "id": "R7",
+          "text": "build cost",
+          "query_start": 400,
+          "query_end": 410,
+          "status": "supported",
+          "claim_ids": [
+            "c21"
+          ]
+        },
+        {
+          "id": "R8",
+          "text": "controls",
+          "query_start": 421,
+          "query_end": 429,
+          "status": "supported",
+          "claim_ids": [
+            "c3",
+            "c13",
+            "c14",
+            "c15",
+            "c16",
+            "c17"
+          ]
+        },
+        {
+          "id": "R9",
+          "text": "limitations",
+          "query_start": 434,
+          "query_end": 445,
+          "status": "supported",
+          "claim_ids": [
+            "c4",
+            "c5",
+            "c6",
+            "c12",
+            "c13",
+            "c14",
+            "c15",
+            "c16",
+            "c17",
+            "c18",
+            "c19"
+          ]
+        }
+      ],
+      "limitations": [
+        "The provided evidence excerpts do not contain specific quantitative data regarding computational speed or build costs.",
+        "The evidence discusses general algorithmic properties and setup requirements but does not detail the specific implementation controls used in the cited study's successful empirical results.",
+        "100 unsupported or uncertain claims removed",
+        "17 claim-check batches failed",
+        "Requested topics not fully supported by final claims: ongoing monitoring"
+      ],
+      "trace_steps": 10
+    }
+  ],
+  "accounting_warning": "Computed cost covers known reported usage only. One interrupted Qwen judge request has unknown billed usage, conservatively reserved separately. The upper bound includes that reserve.",
+  "latest_selection_changes": "Added after this live run; validated offline only, no new accuracy score.",
+  "glm_judge_calls": 8
+}
