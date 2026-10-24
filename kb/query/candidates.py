@@ -178,6 +178,36 @@ def element_retrieval(store,plan,query,picks,escape,embedder,settings,*,navigati
     for doc,page in escape:
         for el in store.elements_for_pages(doc,[page],include_boilerplate=True):
             add(el,[a.aspect_id for a in plan.aspects],"escape")
+    # A source passage that explicitly introduces a numerical example can point to its
+    # values on the next page even when the query asks for an aggregate statistic. Follow
+    # only that source-declared continuation, and keep only nearby passages matching query
+    # or task vocabulary; this preserves the example and its qualification together.
+    example_seeds=[c for c in list(merged.values())
+                   if re.search(r"\bexample\b",get(c.element,"text",""),re.I)
+                   and re.search(r"\b(?:illustrative|illustration|following)\b",get(c.element,"text",""),re.I)]
+    query_terms=set(terms(query))
+    for task in plan.tasks:
+        query_terms.update(terms(" ".join(task.get("source_roles",[]))))
+    if example_seeds:
+        for seed in example_seeds[:4]:
+            doc=get(seed.element,"doc_id");page=get(seed.element,"page_no")
+            section=get(seed.element,"section","")
+            neighbors=store.nonblank_pages(doc)
+            later=[p for p in neighbors if page<p<=page+2]
+            added=0
+            for target_page in later:
+                page_elements=store.elements_for_pages(doc,[target_page],include_boilerplate=True)
+                for el in page_elements:
+                    if get(el,"section","")!=section:
+                        continue
+                    text=get(el,"text","");overlap=query_terms & set(terms(text))
+                    if not overlap:
+                        continue
+                    add(el,seed.aspect_ids,"source_continuation");added+=1
+                    if added>=8:
+                        break
+                if added>=8:
+                    break
     # Optional source-declared dependency seam; legacy stores may not implement it.
     dependencies=getattr(store,"dependencies",None)
     if callable(dependencies) and value(settings,"metadata_navigation_enabled"):
@@ -188,7 +218,8 @@ def element_retrieval(store,plan,query,picks,escape,embedder,settings,*,navigati
                 if get(el,"element_id") in merged:continue
                 add(el,candidate.aspect_ids,"source_dependency");dependency_count+=1
                 if dependency_count>=value(settings,"metadata_dependency_elements"):break
-    priority={"survey_high":0,"hybrid":1,"structure":1,"survey_lexical":2,"survey_medium":3,"source_dependency":3,"escape":4}
+    priority={"survey_high":0,"hybrid":1,"structure":1,"survey_lexical":2,"source_continuation":2,
+              "survey_medium":3,"source_dependency":3,"escape":4}
     result=sorted(merged.values(),key=lambda c:(min(priority.get(s,5) for s in c.sources),get(c.element,"doc_id"),get(c.element,"page_no"),get(c.element,"idx",0)))
     return result,{"total":len(result),"by_source":{s:sum(s in c.sources for c in result) for s in priority},"task_role_hits":role_count,"source_acronym_hints":acronym_hints}
 

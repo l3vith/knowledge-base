@@ -89,12 +89,24 @@ def element_triage(candidates,plan,reranker,settings):
     # Fair candidates by obligation, score is a tie-break inside each queue.
     report["metadata_boosted"]=sum(c.metadata_score>0 for c in candidates)
     ordered=sorted(candidates,key=lambda c:(c.ce_score is None,-((c.ce_score or 0)+min(2.,c.metadata_score)),get(c.element,"doc_id"),get(c.element,"page_no"),get(c.element,"idx",0)))
-    queues=[[c for c in ordered if a.aspect_id in c.aspect_ids] for a in plan.aspects]
-    if plan.intent!="factoid":
-        # Conclusion/limitation passages go first (best-scored few): they state what results do not show.
-        queues.insert(0,[c for c in ordered if "structure" in c.sources][:value(settings,"endmatter_hits")])
+    # Start with one ranked queue per requested task. Round-robin scheduling below puts a
+    # candidate for each task ahead of repeated candidates for a single broad obligation.
+    task_queues=[]
     for task in plan.tasks:
-        queues.append([c for c in ordered if 'task_role:'+task['id'] in c.sources][:12])
+        tagged=[c for c in ordered if 'task_role:'+task['id'] in c.sources]
+        if not tagged:
+            obligation_ids=set(task.get('obligation_ids',[]))
+            tagged=[c for c in ordered if obligation_ids.intersection(c.aspect_ids)]
+        task_queues.append(tagged[:12])
+    aspect_queues=[[c for c in ordered if a.aspect_id in c.aspect_ids] for a in plan.aspects]
+    structure_queue=([c for c in ordered if "structure" in c.sources][:value(settings,"endmatter_hits")]
+                     if plan.intent!="factoid" else [])
+    # Spend only the first slot in each task queue before returning to the broad ranked
+    # obligation queue. Repeating all task-role candidates first can crowd out direct matches.
+    first_task_queues=[queue[:1] for queue in task_queues]
+    remaining_task_queues=[queue[1:] for queue in task_queues]
+    queues=(first_task_queues+aspect_queues+remaining_task_queues+([structure_queue] if structure_queue else [])
+            if task_queues else ([structure_queue] if structure_queue else [])+aspect_queues)
     selected=[];seen=set();used=0;cap=budget(settings,plan.intent,"verify_chars")
     # Keep original candidates intact; screen.py creates visible bounded fragments.
     for i in range(max([len(q) for q in queues] or [0])):
@@ -110,4 +122,7 @@ def element_triage(candidates,plan,reranker,settings):
             seen.add(key);selected.append(c);used+=cost
     report["dropped_budget"]=len(candidates)-len(selected)
     report["middle"]=len(selected)
+    report['task_queue_counts']={task['id']:len(queue) for task,queue in zip(plan.tasks,task_queues)}
+    report['task_selected_counts']={task['id']:sum('task_role:'+task['id'] in c.sources for c in selected)
+                                    for task in plan.tasks}
     return [],selected,report

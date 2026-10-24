@@ -112,7 +112,7 @@ def survey_pages(llm,store,plan,query,pool,lexical_net,settings,*,ctx=None):
     return fair[:cap],report
 
 
-def verify_elements(llm,store,plan,query,middle,settings,*,ctx=None):
+def verify_elements(llm,store,plan,query,middle,settings,*,ctx=None,_allow_task_recovery=True):
     report={"batches":0,"failed_batches":0,"elements_seen":0,"elements_kept":0,"unknown_ids_ignored":0,
             "invalid_quotes":0,"background_dropped":0,"duplicates_merged":0,"omitted_fragments":0,"limitations":[]}
     maxbytes=value(settings,"verify_chars_per_call")
@@ -155,8 +155,10 @@ def verify_elements(llm,store,plan,query,middle,settings,*,ctx=None):
     kept={}
     aspects={a.aspect_id for a in plan.aspects}
     binding_catalogs={}
-    # Requested topics (literal phrases of the question) let every analytical writer split work by topic.
-    topics=[{'id':r['id'],'text':r['text']} for r in requested_topics(query,plan.intent)]
+    # Analytical task IDs let verification tag evidence to the exact requested operation;
+    # literal query topics remain the fallback for taskless plans.
+    topics=([{'id':t['id'],'text':t['text']} for t in plan.tasks]
+            if plan.tasks else [{'id':r['id'],'text':r['text']} for r in requested_topics(query,plan.intent)])
     topic_ids={r['id'] for r in topics}
     def build(batch):
         local={f"E{i+1}":candidate for i,candidate in enumerate(batch)}
@@ -192,6 +194,7 @@ def verify_elements(llm,store,plan,query,middle,settings,*,ctx=None):
             item[5]=result
     # At most one split recovery for schema failures; after a failure no new calls, paid results still used.
     recovery_used=False;stopped=False
+    verified_element_ids=set();budget_denied_batches=[]
     batch_index=0
     while batch_index<len(work):
         batch,local,spans,payload,limit,raw=work[batch_index];batch_index+=1
@@ -203,7 +206,7 @@ def verify_elements(llm,store,plan,query,middle,settings,*,ctx=None):
                 report["omitted_fragments"]+=len(batch);continue
             raw=_call_many(llm,ctx,"verify",VERIFY_SYSTEM+(ID_FINDING_SYSTEM if integrated else ""),[payload],limit)[0]
         if isinstance(raw,BudgetExceeded):
-            report["omitted_fragments"]+=sum(len(w[0]) for w in work[batch_index-1:])
+            budget_denied_batches.extend(work[batch_index-1:])
             report["limitations"].append("Evidence verification budget exhausted")
             break
         report["batches"]+=1
@@ -227,6 +230,7 @@ def verify_elements(llm,store,plan,query,middle,settings,*,ctx=None):
                 break
             continue
         report["elements_seen"]+=len(batch)
+        verified_element_ids.update(get(candidate.element,"element_id") for candidate in batch)
         for row in raw["keep"]:
             if integrated and isinstance(row,dict):
                 _,lookup=binding_catalogs[id(local)];row=dict(row)
@@ -296,10 +300,104 @@ def verify_elements(llm,store,plan,query,middle,settings,*,ctx=None):
                 if role!='direct':fact=None
                 kept[key]=Evidence(candidate.element,aids,"","llm",candidate.ce_score,quotes,fact_value=fact,relevance=role,
                     findings=[binding] if binding else [],dependencies=dependencies,requirement_ids=rids)
+    if (_allow_task_recovery and not fast and plan.tasks and budget_denied_batches
+            and value(settings,"task_recovery_batches")>0):
+        denied_fragments=[candidate for item in budget_denied_batches for candidate in item[0]]
+        denied_ids={get(c.element,"element_id") for c in denied_fragments}
+        evidence_by_task={task['id']:set() for task in plan.tasks}
+        for ev in kept.values():
+            for task_id in ev.requirement_ids:
+                if task_id in evidence_by_task:
+                    evidence_by_task[task_id].add(get(ev.element,"element_id"))
+        deficits={}
+        for task in plan.tasks:
+            minimum=2 if task.get('operation') in ('compare','reconcile','assess') else 1
+            deficits[task['id']]=max(0,minimum-len(evidence_by_task[task['id']]))
+        unresolved=[task for task in plan.tasks if deficits[task['id']]>0]
+        candidate_queues={task['id']:[] for task in unresolved}
+        by_element={}
+        for candidate in middle:
+            eid=get(candidate.element,"element_id")
+            if eid in denied_ids and eid not in verified_element_ids:
+                by_element.setdefault(eid,candidate)
+        for task in unresolved:
+            role=f"task_role:{task['id']}"
+            obligation_ids=set(task.get('obligation_ids',[]))
+            candidate_queues[task['id']]=[
+                c for eid,c in by_element.items()
+                if role in c.sources or obligation_ids.intersection(c.aspect_ids)
+            ]
+        selected=[];selected_ids=set();round_index=0
+        while len(selected)<value(settings,"verify_batch_elements") and any(
+                len(selected_ids & {get(c.element,"element_id") for c in candidate_queues[t['id']]})<deficits[t['id']]
+                for t in unresolved):
+            made_progress=False
+            for task in unresolved:
+                task_id=task['id'];queue=candidate_queues[task_id]
+                already=sum(get(c.element,"element_id") in selected_ids for c in queue)
+                if already>=deficits[task_id]:
+                    continue
+                candidate=next((c for c in queue if get(c.element,"element_id") not in selected_ids),None)
+                if candidate is not None:
+                    selected.append(candidate);selected_ids.add(get(candidate.element,"element_id"));made_progress=True
+                    if len(selected)>=value(settings,"verify_batch_elements"):
+                        break
+            round_index+=1
+            if not made_progress or round_index>=value(settings,"verify_batch_elements"):
+                break
+        recovery={'attempted':bool(selected),'unresolved_task_ids':[t['id'] for t in unresolved],
+                  'selected_elements':len(selected),'verified_fragments':0}
+        if selected:
+            try:
+                recovered,extra=verify_elements(llm,store,plan,query,selected,settings,ctx=ctx,
+                                                _allow_task_recovery=False)
+                recovery['verified_fragments']=extra['elements_seen']
+                report['elements_seen']+=extra['elements_seen']
+                report['batches']+=extra['batches']
+                report['failed_batches']+=extra['failed_batches']
+                report['unknown_ids_ignored']+=extra['unknown_ids_ignored']
+                report['invalid_quotes']+=extra['invalid_quotes']
+                report['background_dropped']+=extra['background_dropped']
+                report['duplicates_merged']+=extra['duplicates_merged']
+                report['omitted_fragments']+=max(0,len(denied_fragments)-extra['elements_seen'])
+                report['limitations'].extend(x for x in extra['limitations'] if x not in report['limitations'])
+                verified_element_ids.update(get(c.element,"element_id") for c in selected[:extra['elements_seen']])
+                for ev in recovered:
+                    key=get(ev.element,"element_id")
+                    if key in kept:
+                        current=kept[key]
+                        current.aspect_ids=list(dict.fromkeys(current.aspect_ids+ev.aspect_ids))
+                        current.quotes=list(dict.fromkeys(current.quotes+ev.quotes))
+                        current.requirement_ids=list(dict.fromkeys(current.requirement_ids+ev.requirement_ids))
+                        current.findings.extend(ev.findings)
+                        current.dependencies=list(dict.fromkeys(current.dependencies+ev.dependencies))
+                    else:
+                        kept[key]=ev
+            except QueryError as exc:
+                recovery['error']=exc.code
+                report['omitted_fragments']+=len(denied_fragments)
+                report['limitations'].append('Task-focused recovery failed')
+        else:
+            report['omitted_fragments']+=len(denied_fragments)
+        report['task_recovery']=recovery
+        report['task_recovery_batches']=1 if selected else 0
+    elif budget_denied_batches:
+        report['omitted_fragments']+=sum(len(item[0]) for item in budget_denied_batches)
     report["elements_kept"]=len(kept)
     report['prepared_candidates']=total_candidates
     report['remaining_candidates']=max(0,total_candidates-report['elements_seen'])
     report['direct_answer_found']=any(ev.relevance=='direct' and ev.fact_value for ev in kept.values())
+    if plan.tasks:
+        task_evidence={task['id']:set() for task in plan.tasks}
+        for ev in kept.values():
+            for task_id in ev.requirement_ids:
+                if task_id in task_evidence:task_evidence[task_id].add(get(ev.element,"element_id"))
+        report['verification_task_coverage']=[
+            {'task_id':task['id'],'verified_evidence_count':len(task_evidence[task['id']]),
+             'minimum_evidence_count':minimum,
+             'status':'minimum_met' if len(task_evidence[task['id']])>=minimum else 'incomplete'}
+            for task in plan.tasks
+            for minimum in [2 if task.get('operation') in ('compare','reconcile','assess') else 1]]
     if report["omitted_fragments"] and not kept and not report["failed_batches"]:
         # Budget stop is not provider failure: answer no_answer (HTTP 200) with the limitation, not a 504.
         report["limitations"].append(NO_EVIDENCE_LIMIT)

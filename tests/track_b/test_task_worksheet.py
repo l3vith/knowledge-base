@@ -22,6 +22,37 @@ def test_task_compiler_rejects_nonquery_anchor_and_unknown_obligation():
     assert len(tasks)==1 and tasks[0]['query_anchor']==q and tasks[0]['obligation_ids']==['a1']
 
 
+def test_budget_recovery_verifies_uncovered_task_without_another_planner_call(tmp_path):
+    from kb.query.errors import BudgetExceeded
+    query='Inspect target and data split'
+    aspects=[Aspect('a1',query,['target','data','split'])]
+    tasks=compile_tasks(query,aspects,[
+        {'query_anchor':query,'operation':'inspect','description':'target','obligation_ids':['a1'],'source_roles':['target']},
+        {'query_anchor':query,'operation':'inspect','description':'split','obligation_ids':['a1'],'source_roles':['split']}])
+    plan=QueryPlan('analytical',aspects,['d'],tasks=tasks)
+    store=MemoryStore({'d':[f'Task evidence {i}.' for i in range(9)]})
+    candidates=[Candidate(e,['a1'],['task_role:T1' if i<8 else 'task_role:T2'])
+                for i,e in enumerate(store.elements)]
+
+    class Context:
+        def __init__(self): self.calls=0
+        def save(self,name,data): return name
+        def call_many(self,name,system,payloads,max_tokens):
+            self.calls+=1
+            assert name=='verify'
+            assert {t['id'] for t in payloads[0]['requested_topics']}=={'T1','T2'}
+            row={'id':'E1','aspects':['a1'],'support_span_ids':['S1'],'requirement_ids':['T1' if self.calls==1 else 'T2']}
+            result={'keep':[row]}
+            return [result,BudgetExceeded('budget')] if self.calls==1 else [result]
+
+    ctx=Context()
+    evidence,report=verify_elements(FakeLLM(),store,plan,query,candidates,settings(tmp_path),ctx=ctx)
+    assert ctx.calls==2
+    assert {task_id for ev in evidence for task_id in ev.requirement_ids}=={'T1','T2'}
+    assert report['task_recovery']=={'attempted':True,'unresolved_task_ids':['T2'],'selected_elements':1,'verified_fragments':1}
+    assert [row['status'] for row in report['verification_task_coverage']]==['minimum_met','minimum_met']
+
+
 def test_advisory_inventory_allows_qualitative_finding_and_no_mandatory_restoration(tmp_path):
     store=MemoryStore({'d':['Zero changes fall in the otherwise branch.','Training took 12 seconds.']})
     ev={f'E{i+1}':Evidence(e,['a1']) for i,e in enumerate(store.elements)}
