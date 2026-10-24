@@ -60,11 +60,12 @@ class QuerySettings:
     facts_per_writer: int = 12
     max_answer_writers: int = 10
     claims_per_check: int = 12
-    # Fact selection: of each topic's facts Qwen ranks, the top share reaches the answer, at least select_min and at
-    # most select_max per topic. OFF by default (share 1.0 skips the call): Qwen's ranking is weakly informative (AUC
-    # 0.63) and varies between runs. Live C18 with 0.7 / 12 scored precision 0.48 / recall 0.77 against 0.50 / 0.90
-    # without it, because it dropped the main build-cost figures and kept second-case ones.
-    select_share: float = 1.0
+    # Fact selection before the writers: off | quota (Qwen ranks each topic, code keeps the top select_share, at least
+    # select_min, at most select_max) | setr (Qwen lists the answer's requirements and the fewest facts covering each).
+    # OFF by default: quota ranking is weakly informative (AUC 0.63); live C18 with 0.7 / 12 scored precision 0.48 /
+    # recall 0.77 against 0.50 / 0.90 without selection.
+    select_mode: str = "off"
+    select_share: float = 0.7
     select_min: int = 2
     select_max: int = 12
     artifact_dir: Path = Path("artifacts/runs")
